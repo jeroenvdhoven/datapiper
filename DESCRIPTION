@@ -1,0 +1,26 @@
+Package: datapiper
+Type: Package
+Title: datapiper
+Version: 0.1.2.999
+Date: 2016-10-19
+Author: Jeroen van den Hoven <jvandenhoven@mobiquityinc.com>
+Maintainer: Jeroen van den Hoven <jvandenhoven@mobiquityinc.com>
+Description: A collection of tools for building data pipelines and making them deployable.
+License: MIT
+LazyData: FALSE
+RoxygenNote: 6.0.0
+Depends: R(>= 3.4.3)
+Imports:
+  utils,
+  magrittr,
+  purrr,
+  dplyr,
+  xgboost,
+  data.table,
+  data.table,
+  igraph,
+  devtools,
+  httr,
+  jsonlite
+Suggests: 
+  testthat
