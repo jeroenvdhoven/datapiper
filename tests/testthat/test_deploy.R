@@ -43,7 +43,7 @@ describe("build_model_package()", {
 
         result <- datapiper::build_model_package(model_function = full_pipe,
                                                  package_name = library_name,
-                                                 libraries = c("dplyr", "magrittr", "datapiper"),
+                                                 libraries = c("datapiper"),
                                                  tar_file = tar_file_name,
                                                  may_overwrite_tar_file = T)
         expect_true(object = result, info = "Build function returned a success")
@@ -82,12 +82,12 @@ describe("build_docker()", {
 
             package_result <- datapiper::build_model_package(model_function = full_pipe,
                                                      package_name = library_name,
-                                                     libraries = c("dplyr", "magrittr", "datapiper"),
+                                                     libraries = c("datapiper"),
                                                      tar_file = tar_file_name, prediction_precision = 12,
                                                      may_overwrite_tar_file = T)
             expect_true(object = package_result, info = "Build function returned a success")
 
-            result <- build_docker(model_library_file = tar_file_name, package_name = library_name, libraries = c("dplyr", "xgboost"),
+            result <- build_docker(model_library_file = tar_file_name, package_name = library_name, libraries = c("datapiper"),
                          docker_image_name = image_name, may_overwrite_docker_image = T)
             expect_true(object = result, info = "Build function returned a success")
 

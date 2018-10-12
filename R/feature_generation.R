@@ -159,6 +159,7 @@ feature_create_all_generic_stats <- function(train, stat_cols = colnames(train)[
 #' This allows us to ensure no NA values will be present in generated columns
 #'
 #' @importFrom data.table as.data.table
+#' @import dplyr
 #' @return A named list containing the modified train dataset and the statistics table.
 feature_create_generic_stats <- function(train, statistics_col, response, functions, too_few_observations_cutoff = 30){
     if(is.null(names(functions))) names(functions) <- paste("gen", 1:length(functions))
