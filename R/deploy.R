@@ -29,7 +29,7 @@ delete_image <- function(image_name) {
     image_exists <- any(grepl(pattern = image_name, x = all_images, fixed = T))
     if(image_exists) {
         system2(command = "docker", args = paste("rmi", image_name))
-    } else return(T)
+    }
 }
 
 #' Builds a package from your pipeline
@@ -161,8 +161,6 @@ predict_model <- function(input){
 #' By default we use the opencpu/base image. See opencpu.org for details on configuration.
 #'
 #' @return A logical: TRUE for success and FALSE for failure
-#' @importFrom devtools install_github
-#' @importFrom jsonlite toJSON fromJSON
 #' @export
 build_docker <- function(model_library_file, package_name = "deploymodel", libraries = utils::sessionInfo()$otherPkgs, docker_image_name = "model_image",
                          additional_build_commands = "", may_overwrite_docker_image = F){
@@ -180,8 +178,8 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
     )
 
     if(!"jsonlite" %in% libraries) libraries <- c(libraries, "jsonlite")
-    if("datapiper" %in% libraries) libraries[libraries == "datapiper"] <- "Jeroentjeh/datapiper"
-    else if(!"Jeroentjeh/datapiper" %in% libraries) libraries <- c(libraries, "Jeroentjeh/datapiper")
+    if("datapiper" %in% libraries) libraries[libraries == "datapiper"] <- "jeroenvdhoven/datapiper"
+    else if(!"jeroenvdhoven/datapiper" %in% libraries) libraries <- c(libraries, "jeroenvdhoven/datapiper")
 
 
     # Prep directory for building
@@ -260,6 +258,7 @@ RUN ", add_preloaded_library_command, "
 #'
 #' @return A dataframe of predictions, one row per row in \code{data}
 #' @export
+#' @importFrom jsonlite toJSON fromJSON
 #' @importFrom httr POST GET
 test_docker <- function(data, image_name, process_name = image_name, package_name = "deploymodel", batch_size = nrow(data), ping_time = 5, verbose = T) {
     stopifnot(

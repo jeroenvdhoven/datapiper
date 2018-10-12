@@ -60,6 +60,7 @@ describe("build_model_package()", {
     })
 })
 
+# This test takes a VERY VERY LONG time to run, since it has to install dependencies.
 describe("build_docker()", {
 
     it("can build a docker image around a previously packaged model image", {
@@ -68,7 +69,7 @@ describe("build_docker()", {
             curl::nslookup("www.r-project.org")
             connectivity <- T
         }, error = function(e) warning(e))
-return()
+
         if(connectivity){
             r <- generate_model_function()
             train <- r$train
@@ -92,6 +93,8 @@ return()
 
             docker_prediction <- test_docker(data = test, image_name = image_name, process_name = process_name,
                                              package_name = library_name, batch_size = 1e3, ping_time = 5, verbose = T)
+
+            install.packages(tar_file_name, repos = NULL, type = "source")
             lib_prediction <- get_library_predictions(library_name = library_name, test = test)
             pipe_prediction <- full_pipe(test)
 
