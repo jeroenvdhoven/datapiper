@@ -117,7 +117,7 @@ impute_predict <- function(data, column, NA_value, tree, exclude_columns){
     }
 
     target <- data[column]
-    data <- select_(data, .dots = paste0("-", exclude_columns))
+    if(length(exclude_columns) > 0) data <- select_(data, .dots = paste0("-", exclude_columns))
 
     if(is.vector(tree) && length(tree) == 1){
         target[missing_values, column] <- tree

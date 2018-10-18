@@ -16,6 +16,11 @@ describe("impute_all", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
+    it("does not error when not setting exclude_columns and choosing mean imputation", {
+        r <- ctest_for_no_errors(to_eval = impute_all(train = dataset1, type = "mean"),
+                                 error_message = "Can't run impute with mean without setting exclude_columns")
+    })
+
     it("can set columns to ignore while imputing", {
         excluded <- c("z", "y", "x", "z2")
         r_exclude <- impute_all(train = dataset1, exclude_columns = excluded, type = "lm")
