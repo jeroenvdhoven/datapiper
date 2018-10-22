@@ -17,7 +17,6 @@ Imports:
   dplyr,
   xgboost,
   data.table,
-  data.table,
   igraph,
   devtools,
   httr,
