@@ -38,8 +38,6 @@ find_model <- function(train, test, response,
         !missing(train), is.data.frame(train),
         !missing(test) , is.data.frame(test),
         is.character(response), length(response) == 1,
-        response %in% colnames(train),
-        response %in% colnames(test),
         is.logical(prepend_data_checker),
         is.list(models),
         parameter_sample_rate <= 1, parameter_sample_rate > 0,
@@ -84,6 +82,12 @@ find_model <- function(train, test, response,
         pipe <- piped$.predict
         piped_test <- pipe(test)
         pipe_name <- pipe_names[preprocess_index]
+
+        # Make sure response is in the final training / testing dataset
+        stopifnot(
+            response %in% colnames(piped_train),
+            response %in% colnames(piped_test)
+        )
 
         # Try each model
         for(model_index in seq_along(models)) {

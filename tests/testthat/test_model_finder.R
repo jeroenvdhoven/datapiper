@@ -195,7 +195,25 @@ describe("find_model()", {
         no_required_column <- select(dataset1, -y)
         expect_error(object = pipe(no_required_column), regexp = "not present while expected")
     })
+
+    it("only checks if the response is present after piping", {
+        p_3 <- datapiper::pipeline(
+            segment(.segment = p_1),
+            segment(.segment = pipeline_mutate, Target = "x"),
+            segment(.segment = pipeline_function, f = standard_column_names)
+        )
+
+        r <- ctest_for_no_errors(
+            error_message = "find_model does not check for response after piping",
+            to_eval = find_model(train = dataset1, test = test, response = "target", verbose = F,
+                                            preprocess_pipes = list("one" = p_3),
+                                            models = list("lm" = model_lm), metrics = list("rmse" = m_1),
+                                            parameter_sample_rate = 1, seed = 1, prepend_data_checker = F))
+    })
 })
+
+
+
 
 describe("find_best_models()", {
     train_indices <- seq_len(nrow(dataset1) / 2)
