@@ -97,7 +97,7 @@ utils::data(model, package = pkg, envir = parent.env(environment()))
 
 #\' Call predict on the provided model and the new input
 #\'
-#\' @param input
+#\' @param input Either a dataframe or a JSON string.
 #\'
 #\' @return Predictions
 #\' @export
@@ -107,7 +107,11 @@ predict_model <- function(input){
         library(lib, character.only = T)
     }
 
-    input_df <- jsonlite::fromJSON(txt = input, flatten = T)
+    if(is.data.frame(input)) {
+        input_df <- input
+    } else {
+        input_df <- jsonlite::fromJSON(txt = input, flatten = T)
+    }
     predictions <- model_function(input_df)
 
     # res <- jsonlite::toJSON(x = predictions, dataframe = "rows",

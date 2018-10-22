@@ -52,9 +52,11 @@ describe("build_model_package()", {
         install.packages(tar_file_name, repos = NULL, type = "source")
 
         lib_predictions <- get_library_predictions(library_name = library_name, test = test)
+        lib_df_predictions <- predict_model(test)
         function_predictions <- full_pipe(test)
 
         expect_equal(lib_predictions$one_lm_1, function_predictions$one_lm_1)
+        expect_equal(lib_df_predictions$one_lm_1, function_predictions$one_lm_1)
         remove.packages(pkgs = library_name)
         expect_true(file.remove(tar_file_name))
     })
