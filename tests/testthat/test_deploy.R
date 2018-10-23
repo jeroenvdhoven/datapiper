@@ -83,31 +83,34 @@ describe("build_docker()", {
             process_name <- "datapiper.test"
 
             package_result <- datapiper::build_model_package(model_function = full_pipe,
-                                                     package_name = library_name,
-                                                     libraries = c("datapiper"),
-                                                     tar_file = tar_file_name, prediction_precision = 12,
-                                                     may_overwrite_tar_file = T)
+                                                             package_name = library_name,
+                                                             libraries = c("datapiper"),
+                                                             tar_file = tar_file_name, prediction_precision = 12,
+                                                             may_overwrite_tar_file = T)
             expect_true(object = package_result, info = "Build function returned a success")
 
-            result <- build_docker(model_library_file = tar_file_name, package_name = library_name, libraries = c("datapiper"),
-                         docker_image_name = image_name, may_overwrite_docker_image = T)
-            expect_true(object = result, info = "Build function returned a success")
+            ctest_for_no_errors({
+                result <- build_docker(model_library_file = tar_file_name, package_name = library_name, libraries = c("datapiper"),
+                                       docker_image_name = image_name, may_overwrite_docker_image = T)
+                expect_true(object = result, info = "Build function returned a success")
 
-            docker_prediction <- test_docker(data = test, image_name = image_name, process_name = process_name,
-                                             package_name = library_name, batch_size = 1e3, ping_time = 5, verbose = T)
+                docker_prediction <- test_docker(data = test, image_name = image_name, process_name = process_name,
+                                                 package_name = library_name, batch_size = 1e3, ping_time = 5, verbose = T)
 
-            install.packages(tar_file_name, repos = NULL, type = "source")
-            lib_prediction <- get_library_predictions(library_name = library_name, test = test)
-            pipe_prediction <- full_pipe(test)
+                install.packages(tar_file_name, repos = NULL, type = "source")
+                lib_prediction <- get_library_predictions(library_name = library_name, test = test)
+                pipe_prediction <- full_pipe(test)
 
-            mean_abs_error_pipe <- mean(abs(unlist(pipe_prediction - docker_prediction)))
-            expect_lte(mean_abs_error_pipe / mean(test$x), 1e-5, label = "Prediction error from docker differ too much from pipe prediction")
+                mean_abs_error_pipe <- mean(abs(unlist(pipe_prediction - docker_prediction)))
+                expect_lte(mean_abs_error_pipe / mean(test$x), 1e-5, label = "Prediction error from docker differ too much from pipe prediction")
 
-            mean_abs_error_lib <- mean(abs(unlist(lib_prediction - docker_prediction)))
-            expect_lte(mean_abs_error_lib / mean(test$x), 1e-5, label = "Prediction error from docker differ too much from pipe prediction")
+                mean_abs_error_lib <- mean(abs(unlist(lib_prediction - docker_prediction)))
+                expect_lte(mean_abs_error_lib / mean(test$x), 1e-5, label = "Prediction error from docker differ too much from pipe prediction")
 
-            delete_image(image_name = image_name)
-            remove.packages(pkgs = library_name)
+                delete_image(image_name = image_name)
+                remove.packages(pkgs = library_name)
+            }, error_message = "build_model_package failed for some reason. Is docker running?")
+
             expect_true(file.remove(tar_file_name))
         } else {
             expect_error(c, info = "Error: no internet connectivity, can't test build_docker")
