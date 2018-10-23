@@ -84,10 +84,18 @@ describe("pipeline_function", {
 })
 
 describe("pipeline_check", {
-    r <- pipeline_check(dataset1, response = "x", on_missing_column = "add", on_extra_column = "remove", on_type_error = "ignore")
+    r <- ctest_for_no_errors(
+        pipeline_check(dataset1, response = "x", on_missing_column = "add", on_extra_column = "remove", on_type_error = "ignore"),
+        error_message = "pipeline_check does not work with defaults")
 
     it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
+    })
+
+    it("does not need to have response in its column names", {
+        ctest_for_no_errors(
+            pipeline_check(dataset1, response = "another column", on_missing_column = "add", on_extra_column = "remove", on_type_error = "ignore"),
+            error_message = "pipeline_check does not work when the response is missing")
     })
 
     it("saves the state of the current dataframe", {

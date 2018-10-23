@@ -194,6 +194,7 @@ pipeline_function <- function(train, f, ...) {
 #'
 #' @param train Data frame containing the train data.
 #' @param response The response variable. Will be used as an optional column name.
+#' Does not have to exist in the train dataset (useful when it is added in later in the pipeline)
 #' @param on_missing_column What to do when a new dataset misses columns.
 #' Either "error", which causes an error, or "add", which adds the missing columns with only NA's filled in.
 #' @param on_extra_column What to do when a new dataset has extra column.s
@@ -212,7 +213,6 @@ pipeline_check <- function(train,
     stopifnot(
         is.data.frame(train),
         !missing(response), is.character(response),
-        response %in% colnames(train),
         on_missing_column %in% c("error", "add"),
         on_extra_column %in% c("remove", "error"),
         on_type_error %in% c("ignore", "error")
@@ -220,7 +220,8 @@ pipeline_check <- function(train,
 
     # Save column names, excluding the response
     cols = colnames(train)[colnames(train) != response]
-    train <- train[, c(response, cols)]
+    if(response %in% colnames(train)) train <- train[, c(response, cols)]
+    else train <- train[, cols]
 
     # Save column types
     col_types = purrr::map_chr(train, class)

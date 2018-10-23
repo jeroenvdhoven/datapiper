@@ -11,7 +11,8 @@ pipeline_check(train, response, on_missing_column = c("error", "add")[1],
 \arguments{
 \item{train}{Data frame containing the train data.}
 
-\item{response}{The response variable. Will be used as an optional column name.}
+\item{response}{The response variable. Will be used as an optional column name.
+Does not have to exist in the train dataset (useful when it is added in later in the pipeline)}
 
 \item{on_missing_column}{What to do when a new dataset misses columns.
 Either "error", which causes an error, or "add", which adds the missing columns with only NA's filled in.}
