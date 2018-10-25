@@ -1,6 +1,10 @@
 describe("cor_remove_high_correlation_features", {
 
-    r <- datapiper::cor_remove_high_correlation_features(train = dataset1)
+    r <- ctest_for_no_errors(
+        to_eval = datapiper::cor_remove_high_correlation_features(train = dataset1),
+        error_message = "cor_remove_high_correlation_features() does not work with defaults"
+    )
+
     it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })

@@ -17,7 +17,7 @@ feature_NA_indicators(train, conditions = list(is.na),
 \item{force_column}{If true, always add new columns, even if no missing values were found.}
 }
 \value{
-The datasets (in a list) with NA's properly processed.
+A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 }
 \description{
 Takes the dataset, scans the given columns for values that have been listed as indicating NA, and adds a column indicating if this is a NA

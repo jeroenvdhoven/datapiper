@@ -15,6 +15,7 @@ dataset1 <- dplyr::data_frame(
     m = sample(x = c(1:5, NA), size = N, replace = T),
     m2 = sample(x = c(1:5, NA), size = N, replace = T),
     z = "A",
+    boolean = sample(c(T,F), size = N, replace = T),
     z2 = sample(c("A", NA), size = N, replace = T)
 )
 

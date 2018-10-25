@@ -15,7 +15,7 @@ cor_remove_high_correlation_features(train, exclude_columns = character(0),
 \item{threshold}{If the correlation is between two columns is larger than this, both will be considered for removal}
 }
 \value{
-A list of train set and the columns that were preserved
+A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 }
 \description{
 Removes highly correlated features whilst keeping as many as possible, using heuristics.

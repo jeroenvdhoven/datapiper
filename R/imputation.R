@@ -174,7 +174,7 @@ impute_predict_all <- function(data, columns, na_function, trees, exclude_column
 #' @param controls Controls for xgboost, if needed. Default to NA.
 #' @param verbose Whether xgboost should print anything.
 #'
-#' @return A list containing the train dataset, imputed, a .predict function, and all necesities to recreate the imputation process
+#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 #' @export
 impute_all <- function(train, columns,
                        na_function = is.na, exclude_columns, type = "lm",

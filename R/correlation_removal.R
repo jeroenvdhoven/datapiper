@@ -4,7 +4,7 @@
 #' @param exclude_columns Columns that should not be considered for removal.
 #' @param threshold If the correlation is between two columns is larger than this, both will be considered for removal
 #'
-#' @return A list of train set and the columns that were preserved
+#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 #' @export
 #' @importFrom igraph graph.data.frame V
 cor_remove_high_correlation_features <- function(train, exclude_columns = character(0), threshold = .8) {
@@ -36,7 +36,7 @@ cor_high_correlation_features <- function(data, exclude_columns = character(0), 
     stopifnot(!any(!exclude_columns %in% colnames(data)))
 
     if(length(exclude_columns) > 0) data %<>% dplyr::select_(.dots = paste0("-",exclude_columns))
-    stopifnot(!any(!purrr::map_lgl(data, is.numeric)))
+    stopifnot(!any(!purrr::map_lgl(data, ~ is.numeric(.) || is.logical(.))))
 
     correlation_matrix <- data %>% as.matrix %>% stats::cor(use = "complete.obs")
     correlation_matrix[upper.tri(correlation_matrix, diag = T)] <- 0

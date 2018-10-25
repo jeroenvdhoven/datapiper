@@ -23,7 +23,7 @@ Any function that return a single value from a scalar would do (e.g. quantile, s
 \item{pca_tol}{The \code{tol} of \code{\link[stats]{prcomp}}}
 }
 \value{
-A list of the transformed train dataset and the one-hot encoding used.
+A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 }
 \description{
 Train one-hot encoding

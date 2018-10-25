@@ -22,7 +22,7 @@ If names are provided, the name will be prepended to the generate column. If the
 If not enough observations are present, the statistics will be generated on the entire response column. Default: 30.}
 }
 \value{
-A named list containing the modified train dataset and the statistics table.
+A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 }
 \description{
 Calculates stats based on custom functions on the response variable for each group provided in stat_cols.

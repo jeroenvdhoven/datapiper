@@ -40,14 +40,7 @@ quantiles to remove non-sensical thresholds. Non-negative integer, defaults to 1
 }}
 }
 \value{
-A list of four components:
-\itemize{
-\item train: the transformed train set
-\item test: the transformed test set
-\item models: a list of used models
-\item scales: a list of min/max values used to rescale the results of the models to [0,1] ranges. These are based solely on \code{train},
-so when applying the scales to a new dataset, new values may be outside of the given range.
-}
+A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 }
 \description{
 Use classification models to classify if the response is larger than a series of given values for regression tasks

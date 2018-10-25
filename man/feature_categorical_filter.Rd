@@ -21,7 +21,7 @@ feature_categorical_filter(train, response,
 \item{threshold_function}{A function that takes the train dataset and produces a scalar value: the minimum number of times a value has to occur if it should be preserved.}
 }
 \value{
-A list of train, a .predict function to repeat the process for new data and all variables needed to reproduce the process.
+A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 }
 \description{
 Remove values from categorical variables that do not occur often enough

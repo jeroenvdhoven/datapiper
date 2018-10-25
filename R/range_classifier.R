@@ -22,15 +22,7 @@
 #'
 #' @details If multiple values out of \code{quantiles}, \code{even_spreads}, or \code{values} are chosen, all options will be applied.
 #'
-#' @return A list of four components:
-#' \itemize{
-#' \item train: the transformed train set
-#' \item test: the transformed test set
-#' \item models: a list of used models
-#' \item scales: a list of min/max values used to rescale the results of the models to [0,1] ranges. These are based solely on \code{train},
-#' so when applying the scales to a new dataset, new values may be outside of the given range.
-#' }
-#'
+#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 #' @importFrom xgboost xgb.train xgb.DMatrix
 #' @export
 range_classifier <- function(train, response_col, exclude_columns = response_col,

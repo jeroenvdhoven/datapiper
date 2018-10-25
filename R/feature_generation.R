@@ -7,7 +7,7 @@
 #' @param columns The columns to check for missing values. Can be provided as logicals, integers, or characters
 #' @param force_column If true, always add new columns, even if no missing values were found.
 #'
-#' @return The datasets (in a list) with NA's properly processed.
+#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 #' @export
 #'
 #' @import magrittr
@@ -92,7 +92,7 @@ feature_NA_indicators_predict <- function(data, conditions, columns){
 #' @param interaction_level Either a 1 or 2. Should we gather statistics only for one column, or also for combinations of columns?
 #' @param too_few_observations_cutoff An integer denoting the minimum required observations for a combination of values in statistics_col to be used.
 #' If not enough observations are present, the statistics will be generated on the entire response column. Default: 30.
-#' @return A named list containing the modified train dataset and the statistics table.
+#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 #'
 #' #' @details This function will also generate default values for all generated columns that use the entire response column.
 #' This allows us to ensure no NA values will be present in generated columns when, for instance, a new category is detected or when values are cut-off by
@@ -160,7 +160,7 @@ feature_create_all_generic_stats <- function(train, stat_cols = colnames(train)[
 #'
 #' @importFrom data.table as.data.table
 #' @import dplyr
-#' @return A named list containing the modified train dataset and the statistics table.
+#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 feature_create_generic_stats <- function(train, statistics_col, response, functions, too_few_observations_cutoff = 30){
     if(is.null(names(functions))) names(functions) <- paste("gen", 1:length(functions))
 
@@ -245,7 +245,7 @@ feature_create_predict <- function(data, stat_cols, tables, interaction_level, d
 #' @param train train data frame to select columns from to remove.
 #' @param na_function A function that returns true when a value is considered missing, and should be removed. Defaults to removing no values.
 #'
-#' @return The same data frame, without single-value columns
+#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 #' @export
 remove_single_value_columns <- function(train, na_function = function(x){F}){
     keep_cols <- purrr::map_dbl(train, function(x) {
@@ -285,7 +285,8 @@ preserve_columns_predict <- function(data, preserved_columns) {
 #' will generate ALL 2-way interactions between variables and ALL 3-way interactions between variables. Caution is advised to not set this value too high. Defaults to 2.
 #'
 #' @details Thanks Eduardo.
-#' @return A named list containing the modified train and the used columns and column means for reproducability.
+#' @return A named list containing the modified train and the used columns and column means for reproducability,
+#' as well as a .predict function
 #' @export
 feature_interactions <- function(train, response, columns = 10L, max_interactions = 2){
     if(is.numeric(columns) && columns >= 2) {

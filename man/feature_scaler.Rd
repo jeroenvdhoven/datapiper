@@ -22,7 +22,7 @@ feature_scaler(train, response,
 }}
 }
 \value{
-A list of train dataset and the centers and scales that can be fed to the \code{\link[base]{scale}} function to recreate the process.
+A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 }
 \description{
 Rescales data to standardised ranges

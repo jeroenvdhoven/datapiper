@@ -72,7 +72,6 @@ feature_transform_col <- function(train, response, transform_functions, transfor
 #' @param transform_functions Result of \code{\link{feature_transformer}}
 #'
 #' @return Returns
-#' @export
 feature_transformer_predict <- function(data, transform_columns, transform_functions){
     #test input
     stopifnot(
@@ -100,7 +99,7 @@ feature_transformer_predict <- function(data, transform_columns, transform_funct
 #' \item \code{"N(0,1)"}: rescales the columns to mean 0 and sd 1
 #' }
 #'
-#' @return A list of train dataset and the centers and scales that can be fed to the \code{\link[base]{scale}} function to recreate the process.
+#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 #' @export
 feature_scaler <- function(train, response,
                            columns = colnames(train)[purrr::map_lgl(train, is.numeric)], type = "[0-1]"){
@@ -150,7 +149,7 @@ feature_scaler <- function(train, response,
 #' Any function that return a single value from a scalar would do (e.g. quantile, sd).
 #' @param response String denoting the name of the column that should be used as the response variable. Mandatory
 #'
-#' @return A list of the transformed train dataset and the one-hot encoding used.
+#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 #' @export
 feature_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(train, function(x) return(!(is.numeric(x) || is.logical(x))))],
                                    stat_functions, response,
@@ -283,7 +282,7 @@ stat_transformer_for_one_hot <- function(data, stats_transformer, orignal_column
 #'
 #' @details Be careful: if for instance only one value gets substituted in a column, then the \code{insufficient_occurance_marker} value will just replace that one, preserving the problem.
 #'
-#' @return A list of train, a .predict function to repeat the process for new data and all variables needed to reproduce the process.
+#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 #' @export
 feature_categorical_filter <- function(
     train, response, insufficient_occurance_marker = "insignificant_category",

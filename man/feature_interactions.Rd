@@ -19,7 +19,8 @@ ordinal columns using numeric representations.}
 will generate ALL 2-way interactions between variables and ALL 3-way interactions between variables. Caution is advised to not set this value too high. Defaults to 2.}
 }
 \value{
-A named list containing the modified train and the used columns and column means for reproducability.
+A named list containing the modified train and the used columns and column means for reproducability,
+as well as a .predict function
 }
 \description{
 Generates permutation interaction effects between sets of numeric variables
