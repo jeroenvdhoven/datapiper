@@ -15,7 +15,7 @@
 #' @param type The type of algorithm to use for imputation. Options: mean, lm, and xgboost. Mean will calculate the mean for numeric sets and the mode for non-numerics.
 #'
 #' @return The model built based on \code{type} If train_fraction is below 1, will also return the prediction results on the train and test set.
-impute_tree <- function(data, column, NA_value = is.na, exclude_columns, train_fraction = .9, controls = NA, type = "xgboost"){
+impute_model <- function(data, column, NA_value = is.na, exclude_columns, train_fraction = .9, controls = NA, type = "xgboost"){
     if(is.function(NA_value)) missing <- NA_value(data[column])
     else stop('NA_value must be a function')
     if(sum(missing) / nrow(data) > .33) warning(paste("Warning:", sum(missing) / nrow(data) * 100L, "% of the data in column", column, "is missing\n"))
@@ -40,74 +40,38 @@ impute_tree <- function(data, column, NA_value = is.na, exclude_columns, train_f
 
     if(type == "mean"){
         target_vector <- unlist(train_data[column])
-        if(is.numeric(target_vector)) tree <- mean(target_vector)
-        else tree <- unique(target_vector) %>% .[which.max(tabulate(match(target_vector, .)))]
+        if(is.numeric(target_vector)) model <- mean(target_vector)
+        else model <- unique(target_vector) %>% .[which.max(tabulate(match(target_vector, .)))]
     }
-    else if(type == "lm") tree <- lm(formula = form, data = train_data)
+    else if(type == "lm") model <- lm(formula = form, data = train_data)
     else if(type == "xgboost") {
         reduced_data <- colnames(data) %in% c(exclude_columns, column)
         reduced_data <- data[,!reduced_data]
         xgbm <- xgboost::xgb.DMatrix(data = as.matrix(reduced_data), label = unlist(data[column]))
-        tree <- xgboost::xgb.train(params = controls, nrounds = controls$nrounds, verbose = F, data = xgbm)
+        model <- xgboost::xgb.train(params = controls, nrounds = controls$nrounds, verbose = F, data = xgbm)
     }
     else error("Invalid type argument for imputation")
 
     if(train_fraction < 1){
         if(type == "xgboost") f = as.matrix
         else f = function(x){x}
-        train_result <- predict(object = tree, newdata = train_data %>% f) %>% as.character()
+        train_result <- predict(object = model, newdata = train_data %>% f) %>% as.character()
         train_result <- list(original = train_data[column] %>% unlist, predicted <- train_result)
-        test_result <- predict(object = tree, newdata = test_data %>% f) %>% as.character()
+        test_result <- predict(object = model, newdata = test_data %>% f) %>% as.character()
         test_result <- list(original = test_data[column] %>% unlist, predicted <- test_result)
         return(list(
-            tree = tree,
+            model = model,
             train_result = train_result,
             test_result = test_result
         ))
     }else{
-        return(tree)
+        return(model)
     }
-}
-
-#' Impute multiple missing columns using mean / mode, lm or xgboost
-#'
-#' @param train train dataset.
-#' @param columns the columns to impute.
-#' @param na_function what value represents missing values. Defaults to is.na. Either:
-#' \itemize{
-#' \item A function, which returns TRUE when a value is missing and FALSE otherwise. Will apply this function to each column. Must take one column vector as input.
-#' \item A list of functions, all in the same format as above. Must be as long as \code{columns}.
-#' }
-#' @param exclude_columns what columns should not be used as predictors? Can be integers, logicals or column names.
-#' @param type mean, tree, or xgboost.
-#' @param controls controls for the decision tree or xgboost, if needed. Default to NA.
-#' @param verbose whether xgboost should print anything
-#'
-#' @return A list of models to impute NA's in the columns.
-impute_all_trees <- function(train, columns = colnames(train)[purrr::map_lgl(train, na_function)], na_function = is.na,
-                             exclude_columns, type = "lm",
-                             controls = NA, verbose = T){
-    stopifnot(
-        is.function(na_function) || is.list(na_function),
-        !any(!exclude_columns %in% colnames(train)),
-        is.character(columns),
-        type %in% c("lm", "xgboost", "mean"),
-        !any(!columns %in% colnames(train)),
-        is.function(na_function)
-    )
-
-    models <- purrr::map(.x = columns, .f = function(x, train, columns, na_function, exclude_columns, controls, type){
-        if(verbose) print(x)
-        impute_tree(data = train, column = x, NA_value = na_function, train_fraction = 1, exclude_columns = exclude_columns, controls = controls, type = type)
-    }, train = train, columns = columns, na_function = na_function, exclude_columns = exclude_columns, controls = controls, type = type)
-
-    names(models) <- columns
-    return(models)
 }
 
 #----------------------------------------------------------------#
 
-impute_predict <- function(data, column, NA_value, tree, exclude_columns){
+impute_predict <- function(data, column, NA_value, model, exclude_columns){
     if(is.function(NA_value)) missing_values <- NA_value(unlist(data[column]))
     else stop('NA_value must be a function')
 
@@ -119,43 +83,42 @@ impute_predict <- function(data, column, NA_value, tree, exclude_columns){
     target <- data[column]
     if(length(exclude_columns) > 0) data <- select_(data, .dots = paste0("-", exclude_columns))
 
-    if(is.vector(tree) && length(tree) == 1){
-        target[missing_values, column] <- tree
+    if(is.vector(model) && length(model) == 1){
+        target[missing_values, column] <- model
     } else {
-        if(class(tree) == "xgb.Booster") data %<>% as.matrix
-        target[missing_values, column] <- data[missing_values, , drop = F] %>% predict(object = tree, newdata = .)
-        if(class(tree) == "xgb.Booster") data %<>% as.data.frame
+        if(class(model) == "xgb.Booster") data %<>% as.matrix
+        target[missing_values, column] <- data[missing_values, , drop = F] %>% predict(object = model, newdata = .)
+        if(class(model) == "xgb.Booster") data %<>% as.data.frame
     }
     data
     return(target)
 }
 
-#' Use the models from \code{impute_all_trees} to impute the selected columns in data.
+#' Use the models from \code{impute_all} to impute the selected columns in data.
 #'
 #'
 #' @param data data dataset to impute.
 #' @param columns the columns to impute.
 #' @param na_function Function which returns TRUE when a value is missing and FALSE otherwise.
-#' @param trees The models generated by \code{impute_all_trees}
+#' @param models The models generated by \code{impute_all_models}
 #' @param exclude_columns what columns should not be used as predictors? Can be integers, logicals or column names.
 #' @param verbose whether xgboost should print anything
 #'
 #' @return The same dataset as the imputed, but with NA values in the selected columns replaced by their estimated values.
 #' @export
-impute_predict_all <- function(data, columns, na_function, trees, exclude_columns, verbose = F){
-    trees
+impute_predict_all <- function(data, columns, na_function, models, exclude_columns, verbose = F){
     stopifnot(
         is.character(columns),
         !any(!columns %in% colnames(data)),
         is.function(na_function),
-        length(trees) == length(columns)
+        length(models) == length(columns)
     )
 
     temp <- data[,0]
     for(i in seq_along(columns)){
         if(verbose) print(columns[i])
         temp[columns[i]] <- impute_predict(data = data, column = columns[i], NA_value = na_function,
-                                           tree = trees[[i]], exclude_columns = exclude_columns)
+                                           model = models[[i]], exclude_columns = exclude_columns)
     }
 
     for(i in colnames(temp))
@@ -164,7 +127,7 @@ impute_predict_all <- function(data, columns, na_function, trees, exclude_column
     return(data)
 }
 
-#' Impute multiple missing columns using lm, decision trees or xgboost, and perform imputation
+#' Impute multiple missing columns using lm, mean, or xgboost, and perform imputation
 #'
 #' @param train Train dataset.
 #' @param columns The columns to impute, as strings.
@@ -204,13 +167,16 @@ impute_all <- function(train, columns,
         exclude_columns <- c(exclude_columns, columns[!columns %in% exclude_columns])
     }
 
-    trees <- impute_all_trees(train, columns = columns, na_function = na_function, exclude_columns =
-                                  exclude_columns, type = type, controls = controls, verbose = verbose)
+    models <- purrr::map(.x = columns, .f = function(x, train, columns, na_function, exclude_columns, controls, type){
+        if(verbose) print(x)
+        impute_model(data = train, column = x, NA_value = na_function, train_fraction = 1, exclude_columns = exclude_columns, controls = controls, type = type)
+    }, train = train, columns = columns, na_function = na_function, exclude_columns = exclude_columns, controls = controls, type = type)
+    names(models) <- columns
 
-    predict_function <- function(data) impute_predict_all(data = data, columns = columns, na_function = na_function, trees = trees,
+    predict_function <- function(data) impute_predict_all(data = data, columns = columns, na_function = na_function, models = models,
                                                           exclude_columns = exclude_columns)
     train <- predict_function(train)
-    return(list(train = train, columns = columns, na_function = na_function, trees = trees, .predict = predict_function))
+    return(list(train = train, columns = columns, na_function = na_function, models = models, .predict = predict_function))
 }
 
 

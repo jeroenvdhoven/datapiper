@@ -2,7 +2,7 @@
 % Please edit documentation in R/imputation.R
 \name{impute_all}
 \alias{impute_all}
-\title{Impute multiple missing columns using lm, decision trees or xgboost, and perform imputation}
+\title{Impute multiple missing columns using lm, mean, or xgboost, and perform imputation}
 \usage{
 impute_all(train, columns, na_function = is.na, exclude_columns,
   type = "lm", controls = NA, verbose = F)
@@ -26,5 +26,5 @@ impute_all(train, columns, na_function = is.na, exclude_columns,
 A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 }
 \description{
-Impute multiple missing columns using lm, decision trees or xgboost, and perform imputation
+Impute multiple missing columns using lm, mean, or xgboost, and perform imputation
 }
