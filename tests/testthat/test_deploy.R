@@ -7,10 +7,17 @@ get_library_predictions <- function(library_name, test){
     return(predict_model(test_json))
 }
 
-generate_model_function <- function(){
-    pipe <- datapiper::pipeline(
-        segment(.segment = pipeline_select, "x", "a", "b", "c", "s")
-    )
+generate_model_function <- function(extra_pipe){
+    if(missing(extra_pipe)){
+        pipe <- datapiper::pipeline(
+            segment(.segment = pipeline_select, "x", "a", "b", "c", "s")
+        )
+    } else {
+        pipe <- datapiper::pipeline(
+            segment(.segment = pipeline_select, "x", "a", "b", "c", "s"),
+            extra_pipe
+        )
+    }
     m <- datapiper::find_template_formula_and_data(response = "x", training_function = lm)
 
     train_indices <- seq_len(nrow(dataset1) / 2)
@@ -38,6 +45,50 @@ describe("build_model_package()", {
         train <- r$train
         test <- r$test
         full_pipe <- r$full_pipe
+        tar_file_name <- "tmp_test_package.tar.gz"
+        library_name <- "test.package"
+
+        result <- datapiper::build_model_package(model_function = full_pipe,
+                                                 package_name = library_name,
+                                                 libraries = c("datapiper"),
+                                                 tar_file = tar_file_name,
+                                                 may_overwrite_tar_file = T)
+        expect_true(object = result, info = "Build function returned a success")
+        expect_true(file.exists(tar_file_name))
+
+        install.packages(tar_file_name, repos = NULL, type = "source")
+
+        lib_predictions <- get_library_predictions(library_name = library_name, test = test)
+        lib_df_predictions <- predict_model(test)
+        function_predictions <- full_pipe(test)
+
+        expect_equal(lib_predictions$one_lm_1, function_predictions$one_lm_1)
+        expect_equal(lib_df_predictions$one_lm_1, function_predictions$one_lm_1)
+        remove.packages(pkgs = library_name)
+        expect_true(file.remove(tar_file_name))
+    })
+
+    it("can build a package around a model pipeline with a custom pipeline function", {
+        custom_pipe <- function(train) {
+            shuffle <- sample.int(n = nrow(train), size = nrow(train))
+            train <- train[shuffle, ]
+
+            # Using create_predict_function since this needs to run when we don't have access to custom_pipe_predict directly
+            predict_function <- create_predict_function(.predict_function = custom_pipe_predict, shuffle = shuffle)
+
+            return(list(train = train, .predict = predict_function))
+        }
+
+        custom_pipe_predict <- function(data, shuffle) {
+            return(data[shuffle, ])
+        }
+
+        r <- generate_model_function(segment(.segment = custom_pipe))
+        train <- r$train
+        test <- r$test
+        full_pipe <- r$full_pipe
+        rm(custom_pipe, custom_pipe_predict)
+
         tar_file_name <- "tmp_test_package.tar.gz"
         library_name <- "test.package"
 

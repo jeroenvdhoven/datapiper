@@ -273,27 +273,20 @@ pipeline_check_predict <- function(data, response, cols, col_types, on_missing_c
     return(data)
 }
 
-# library(dplyr)
-# x <- data_frame(x = rnorm(n = 10), y = x + 2, z = "a")
-# y1 <- data_frame(x = rnorm(n = 10), y = 1L, z = "b")
-# y2 <- data_frame(x = rnorm(n = 10), y = "1")
-# y3 <- data_frame(x = rnorm(n = 10), y = 1, z = "c", a = "a", b = "c")
-# y4 <- data_frame(x = rnorm(n = 10), y = 1, z = 1:10)
-# y5 <- data_frame(x = rnorm(n = 10), y = "banana", z = 1:10)
-# r <- pipeline_check(x)
-# identical(r$train, x)
-# r$.predict(x)
-# r$.predict(y1)
-# r$.predict(y2)
-# r$.predict(y3)
-# r$.predict(y4)
-# r$.predict(y5)
-#
-# r <- pipeline_check(x, on_missing_column = "add")
-# r$.predict(y2)
-#
-# r <- pipeline_check(x, on_extra_column = "error")
-# r$.predict(y3)
-#
-# r <- pipeline_check(x, on_type_error = "error")
-# r$.predict(y5)
+#' Ensures a predict function can be called for custom pipeline functions
+#'
+#' @param .predict_function The function that will be used for applying learned transformations to a new dataset.
+#' @param ... Arguments to \code{.predict_function}.
+#'
+#' @return A function that takes a \code{data} argument (for new data) and uses the provided arguments in \code{...}.
+#' @export
+#'
+#' @details The predict function of custom pipeline segments can cause problems when being redeployed if the predict function is not properly supplied to the function.
+#' In these cases, this helper function can assist. It will force evaluation of its function argument before using it in a new function, ensuring no
+#' delayed evaluation occurs. This should prevent errors along the likes of "predict function not found" when deploying the pipeline in a clean environment.
+create_predict_function <- function(.predict_function, ...) {
+    force(x = .predict_function)
+    return(function(data) {
+        .predict_function(data = data, ...)
+    })
+}

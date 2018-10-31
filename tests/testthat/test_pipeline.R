@@ -200,3 +200,40 @@ describe("pipeline()", {
         ctest_pipe_has_correct_fields(r_no_missing)
     })
 })
+
+describe("create_predict_function()", {
+    it("saves a function for reuse later, even when removing the original function from memory", {
+        f <- function(data) data[1,]
+        saved_f <- create_predict_function(.predict_function = f)
+
+        without_removing_result <- saved_f(dataset1)
+        rm(f)
+        with_removing_result <- saved_f(dataset1)
+
+        expect_equal(without_removing_result, with_removing_result)
+    })
+
+    it("can forward parameters to .predict_function", {
+        f <- function(data, rows) data[rows,]
+        saved_f <- create_predict_function(.predict_function = f, rows = 1:10)
+
+        without_removing_result <- saved_f(dataset1)
+        rm(f)
+        with_removing_result <- saved_f(dataset1)
+
+        expect_equal(without_removing_result, with_removing_result)
+    })
+
+    it("can forward calculated parameters to .predict_function", {
+        f <- function(data, rows) data[rows,]
+        rows <- 1:10
+        saved_f <- create_predict_function(.predict_function = f, rows = rows + 1)
+
+        without_removing_result <- saved_f(dataset1)
+        rm(f, rows)
+        with_removing_result <- saved_f(dataset1)
+
+        expect_equal(without_removing_result, with_removing_result)
+    })
+})
+
