@@ -7,7 +7,8 @@
 create_predict_function(.predict_function, ...)
 }
 \arguments{
-\item{.predict_function}{The function that will be used for applying learned transformations to a new dataset.}
+\item{.predict_function}{The function that will be used for applying learned transformations to a new dataset. It should take at least
+a \code{data} argument for new data to apply transformations to.}
 
 \item{...}{Arguments to \code{.predict_function}.}
 }

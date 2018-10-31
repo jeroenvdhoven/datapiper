@@ -278,7 +278,8 @@ pipeline_check_predict <- function(data, response, cols, col_types, on_missing_c
 
 #' Ensures a predict function can be called for custom pipeline functions
 #'
-#' @param .predict_function The function that will be used for applying learned transformations to a new dataset.
+#' @param .predict_function The function that will be used for applying learned transformations to a new dataset. It should take at least
+#' a \code{data} argument for new data to apply transformations to.
 #' @param ... Arguments to \code{.predict_function}.
 #'
 #' @return A function that takes a \code{data} argument (for new data) and uses the provided arguments in \code{...}.
@@ -289,6 +290,12 @@ pipeline_check_predict <- function(data, response, cols, col_types, on_missing_c
 #' delayed evaluation occurs. This should prevent errors along the likes of "predict function not found" when deploying the pipeline in a clean environment.
 create_predict_function <- function(.predict_function, ...) {
     force(x = .predict_function)
+
+    stopifnot(
+        is.function(.predict_function),
+        "data" %in% formalArgs(.predict_function)
+    )
+
     return(function(data) {
         .predict_function(data = data, ...)
     })
