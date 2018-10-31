@@ -11,6 +11,9 @@
 #'
 #' @details Since this function returns a \code{.predict} function, it should be possible to use pipelines within pipelines.
 #'
+#' Note: when using custom pipeline functions, especially those with complex prediction functions, use \code{\link{create_predict_function}}. It will ensure
+#' that the generated pipeline can find your prediction function when it is packaged and loaded in a clean environment.
+#'
 #' @return A function, taking as arguments \code{train}. This function will return a list of the transformed \code{train} dataset after running it through all pipeline functions,
 #' as well as a function that reproduces the process for new data and a list containing the parameters of each pipeline segment.
 #' @export

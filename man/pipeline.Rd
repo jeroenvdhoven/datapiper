@@ -26,6 +26,9 @@ Create a train/test pipeline from individual functions
 }
 \details{
 Since this function returns a \code{.predict} function, it should be possible to use pipelines within pipelines.
+
+Note: when using custom pipeline functions, especially those with complex prediction functions, use \code{\link{create_predict_function}}. It will ensure
+that the generated pipeline can find your prediction function when it is packaged and loaded in a clean environment.
 }
 \examples{
 library(dplyr)
