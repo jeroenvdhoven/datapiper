@@ -63,6 +63,7 @@ build_model_package <- function(model_function, package_name = "deploymodel", li
     )
 
     current_ws <- getwd()
+    on.exit(setwd(current_ws))
     has_succeeded <- F
 
     tryCatch({
@@ -181,10 +182,9 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
         is.character(additional_build_commands)
     )
 
-    if(!"jsonlite" %in% libraries) libraries <- c(libraries, "jsonlite")
-    if("datapiper" %in% libraries) libraries[libraries == "datapiper"] <- "jeroenvdhoven/datapiper"
-    else if(!"jeroenvdhoven/datapiper" %in% libraries) libraries <- c(libraries, "jeroenvdhoven/datapiper")
-
+    # Datapiper will be installed separately at the beginning to improve the installation process.
+    # if(!"jsonlite" %in% libraries) libraries <- c(libraries, "jsonlite")
+    libraries <- libraries[!libraries %in% c("datapiper", "jeroenvdhoven/datapiper")]
 
     # Prep directory for building
     daemon_name = "opencpu/base"
@@ -211,7 +211,6 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
                                yes = paste0("RUN R -e 'install.packages(", to_string_array(cran_libs), ")'"))
         github_command <- ifelse(length(github_libs) > 0, no = "# No github command needed",
                                  yes = paste0(
-                                     "RUN R -e 'install.packages(\"devtools\")' \n",
                                      "RUN R -e 'devtools::install_github(", to_string_array(github_libs), ")'"
                                  ))
         add_preloaded_library_command <- sed_inplace(
@@ -222,7 +221,11 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
         # Create dockerfile
         dockerfile_content <- paste0("
 FROM ", daemon_name, "
-# Install dependency R packages
+# Install base dependencies
+RUN R -e 'install.packages(\"devtools\")'
+RUN R -e 'devtools::install_github(\"jeroenvdhoven/datapiper\")'
+
+# Install other required R packages
 ", cran_command, "
 ", github_command, "
 
