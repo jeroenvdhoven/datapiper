@@ -200,12 +200,12 @@ testthat::describe("feature_categorical_filter()", {
 
     it("can create a pipeline that handles new values well", {
         d <- mutate(dataset1, y = "henk")
-        expect_equal(r$.predict(d)$y, rep("marker", N))
+        expect_equal(invoke(r$pipe, d)$y, rep("marker", N))
     })
 
     it("can create a pipeline that handles missing values well", {
         d <- mutate(dataset1, y = NA_character_)
-        expect_equal(r$.predict(d)$y, rep("marker", N))
+        expect_equal(invoke(r$pipe, d)$y, rep("marker", N))
     })
 
     it("ignores non-numeric input", {

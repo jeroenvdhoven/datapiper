@@ -40,7 +40,7 @@ quantiles to remove non-sensical thresholds. Non-negative integer, defaults to 1
 }}
 }
 \value{
-A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+A list containing the transformed train dataset and a trained pipe.
 }
 \description{
 Use classification models to classify if the response is larger than a series of given values for regression tasks

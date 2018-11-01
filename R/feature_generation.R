@@ -7,7 +7,7 @@
 #' @param columns The columns to check for missing values. Can be provided as logicals, integers, or characters
 #' @param force_column If true, always add new columns, even if no missing values were found.
 #'
-#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+#' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 #'
 #' @import magrittr
@@ -41,8 +41,8 @@ feature_NA_indicators <- function(train, conditions = list(is.na), columns = col
     }
 
     train <- data[train_pos,]
-    predict_function <- function(data) feature_NA_indicators_predict(data = data, columns = final_columns, conditions = conditions)
-    return(list("train" = train, "conditions" = conditions, "columns" = final_columns, .predict = predict_function))
+    predict_pipe <- pipe(.function = feature_NA_indicators_predict, columns = final_columns, conditions = conditions)
+    return(list("train" = train, "pipe" = predict_pipe))
 }
 
 #' Indicate which fields are NA
@@ -92,7 +92,7 @@ feature_NA_indicators_predict <- function(data, conditions, columns){
 #' @param interaction_level Either a 1 or 2. Should we gather statistics only for one column, or also for combinations of columns?
 #' @param too_few_observations_cutoff An integer denoting the minimum required observations for a combination of values in statistics_col to be used.
 #' If not enough observations are present, the statistics will be generated on the entire response column. Default: 30.
-#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+#' @return A list containing the transformed train dataset and a trained pipe.
 #'
 #' #' @details This function will also generate default values for all generated columns that use the entire response column.
 #' This allows us to ensure no NA values will be present in generated columns when, for instance, a new category is detected or when values are cut-off by
@@ -139,9 +139,9 @@ feature_create_all_generic_stats <- function(train, stat_cols = colnames(train)[
     defaults <- purrr::map_dbl(.x = functions, .f = function(x, y) x(y), y = target)
     names(defaults) <- names(functions)
 
-    predict_function <- function(data) feature_create_predict(data = data, tables = tables, stat_cols = stat_cols, interaction_level = interaction_level, defaults = defaults)
-    result <- list("train" = train, tables = tables, "stat_cols" = stat_cols, "interaction_level" = interaction_level, .predict = predict_function, defaults = defaults)
-    return(result)
+    predict_pipe <- pipe(.function = feature_create_predict, tables = tables, stat_cols = stat_cols,
+                         interaction_level = interaction_level, defaults = defaults)
+    return(list("train" = train, "pipe" = predict_pipe))
 }
 
 #' Calculates stats based on custom functions on the response variable for each group provided in stat_cols.
@@ -245,7 +245,7 @@ feature_create_predict <- function(data, stat_cols, tables, interaction_level, d
 #' @param train train data frame to select columns from to remove.
 #' @param na_function A function that returns true when a value is considered missing, and should be removed. Defaults to removing no values.
 #'
-#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+#' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 remove_single_value_columns <- function(train, na_function = function(x){F}){
     keep_cols <- purrr::map_dbl(train, function(x) {
@@ -257,8 +257,9 @@ remove_single_value_columns <- function(train, na_function = function(x){F}){
         names
 
     train %<>% .[,keep_cols, drop = F]
-    predict_function <- function(data) preserve_columns_predict(data = data, preserved_columns = keep_cols)
-    return(list("train" = train, "preserved_columns" = keep_cols, .predict = predict_function))
+
+    predict_pipe <- pipe(.function = preserve_columns_predict, preserved_columns = keep_cols)
+    return(list("train" = train, "pipe" = predict_pipe))
 }
 
 #' Only keep previously selected columns
@@ -285,8 +286,8 @@ preserve_columns_predict <- function(data, preserved_columns) {
 #' will generate ALL 2-way interactions between variables and ALL 3-way interactions between variables. Caution is advised to not set this value too high. Defaults to 2.
 #'
 #' @details Thanks Eduardo.
-#' @return A named list containing the modified train and the used columns and column means for reproducability,
-#' as well as a .predict function
+#' @return A list containing the transformed train dataset and a trained pipe.
+#'
 #' @export
 feature_interactions <- function(train, response, columns = 10L, max_interactions = 2){
     if(is.numeric(columns) && columns >= 2) {
@@ -323,14 +324,8 @@ feature_interactions <- function(train, response, columns = 10L, max_interaction
         }
     }
 
-    predict_function <- function(data) feature_interactions_predict(data = data, column_means = col_means, columns = columns, max_interactions = max_interactions)
-    return(list(
-        "train" = train,
-        "column_means" = col_means,
-        "columns" = columns,
-        "max_interactions" = max_interactions,
-        .predict = predict_function
-    ))
+    predict_pipe <- pipe(.function = feature_interactions_predict, column_means = col_means, columns = columns, max_interactions = max_interactions)
+    return(list("train" = train, "pipe" = predict_pipe))
 }
 
 #' Computes interaction effects for a new dataset

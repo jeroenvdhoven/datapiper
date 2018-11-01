@@ -7,7 +7,7 @@
 #' @param k The number of clusters.
 #' @param metric The distance metric used. Currently only 'euclidean' and 'manhattan' are supported.
 #'
-#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+#' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 #'
 #' @importFrom cluster clara
@@ -48,13 +48,10 @@ clustering <- function(train, cluster_column = "cluster", exclude_columns = char
     train[cluster_column] <- as.character(clustering$clustering)
     clustering$medoids <- as_data_frame(clustering$medoids)
 
-    predict_function <- function(data) {
-        clustering_predict(data = data, metric = metric, centroids = clustering$medoids,
-                               exclude_columns = exclude_columns, cluster_column = cluster_column)
-    }
+    predict_pipe <- pipe(.function = clustering_predict, metric = metric, centroids = clustering$medoids,
+                         exclude_columns = exclude_columns, cluster_column = cluster_column)
 
-    return(list(train = train, .predict = predict_function, centroids = clustering$medoids,
-                exclude_columns = exclude_columns, metric = metric, cluster_column = cluster_column))
+    return(list(train = train, pipe = predict_pipe))
 }
 
 clustering_predict <- function(data, metric, centroids, cluster_column, exclude_columns) {

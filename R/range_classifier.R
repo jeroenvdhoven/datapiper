@@ -22,7 +22,7 @@
 #'
 #' @details If multiple values out of \code{quantiles}, \code{even_spreads}, or \code{values} are chosen, all options will be applied.
 #'
-#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+#' @return A list containing the transformed train dataset and a trained pipe.
 #' @importFrom xgboost xgb.train xgb.DMatrix
 #' @export
 range_classifier <- function(train, response_col, exclude_columns = response_col,
@@ -146,17 +146,9 @@ range_classifier <- function(train, response_col, exclude_columns = response_col
     scales <- scales[conserved_models]
     column_names <- column_names[conserved_models]
 
-    predict_function <- function(data) range_predict(data = data, models = models, column_names = column_names,
-                                                     scales = scales, excluded_columns = exclude_columns)
-    res <- list(
-        train = train,
-        models = models,
-        scales = scales,
-        column_names = column_names,
-        .predict = predict_function
-    )
-    # if(test_contains_response) res$aucs <- aucs
-    return(res)
+    predict_pipe <- pipe(.function = range_predict, models = models, column_names = column_names,
+                         scales = scales, excluded_columns = exclude_columns)
+    return(list(train = train, pipe = predict_pipe))
 }
 
 #' Use generated models and scales to create features for a new dataset

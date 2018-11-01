@@ -19,7 +19,7 @@ feature_transformer(train, response, transform_columns, missing_func = is.na,
 \item{transform_functions}{A list of function used to transform features. Should be one-to-one transformations like sqrt or log.}
 }
 \value{
-A list of train set and a function lists used to transform each feature.
+A list containing the transformed train dataset and a trained pipe.
 }
 \description{
 Applies different transformations to each numeric feature and selects the one with the highest correlation to the response per feature

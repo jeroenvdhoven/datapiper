@@ -1,10 +1,10 @@
-p_1 <- datapiper::pipeline(
+p_1 <- datapiper::train_pipeline(
     segment(.segment = datapiper::feature_categorical_filter, threshold_function = function(x) 2, response = "x"),
     segment(.segment = datapiper::remove_single_value_columns, na_function = is.na),
     segment(.segment = datapiper::feature_one_hot_encode),
     segment(.segment = datapiper::impute_all, exclude_columns = "x", columns = c("m", "m2"), type = "mean")
 )
-p_2 <- datapiper::pipeline(
+p_2 <- datapiper::train_pipeline(
     segment(.segment = p_1),
     segment(.segment = datapiper::feature_scaler, response = "x")
 )
@@ -58,7 +58,7 @@ describe("find_model()", {
         ctest_has_correct_content(column = r$params, "list", "data.frame")
         ctest_has_correct_content(column = r$.train, "list", "function")
         ctest_has_correct_content(column = r$.predict, "list", "function")
-        ctest_has_correct_content(column = r$.preprocess_pipe, "list", "function")
+        ctest_has_correct_content(column = r$.preprocess_pipe, "list", "pipeline")
 
         ctest_has_correct_content(column = r$.id, "character")
         ctest_has_correct_content(column = r$train_rmse, "numeric")
@@ -81,7 +81,7 @@ describe("find_model()", {
         train_rmse <- m_1(model_lm$.predict(model, pipe$train), train$x)
         expect_equivalent(train_rmse, r$train_rmse)
 
-        test_rmse <- m_1(model_lm$.predict(model, pipe$.predict(test)), test$x)
+        test_rmse <- m_1(model_lm$.predict(model, invoke(pipe$pipe, test)), test$x)
         expect_equivalent(test_rmse, r$test_rmse)
     })
 
@@ -92,8 +92,8 @@ describe("find_model()", {
                                    parameter_sample_rate = 1, seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 2)
         expect_equal(r$.id, c("one_lm", "two_lm"))
-        expect_equal(r$.preprocess_pipe[[1]], p_1(train)$.predict)
-        expect_equal(r$.preprocess_pipe[[2]], p_2(train)$.predict)
+        expect_equal(r$.preprocess_pipe[[1]], p_1(train)$pipe)
+        expect_equal(r$.preprocess_pipe[[2]], p_2(train)$pipe)
     })
 
     it("can use multiple models", {
@@ -157,7 +157,7 @@ describe("find_model()", {
         train_rmse <- m_1(model_lm$.predict(model, pipe$train), train$x)
         expect_equivalent(train_rmse, r$train_rmse[1])
 
-        test_rmse <- m_1(model_lm$.predict(model, pipe$.predict(test)), test$x)
+        test_rmse <- m_1(model_lm$.predict(model, invoke(pipe$pipe, test)), test$x)
         expect_equivalent(test_rmse, r$test_rmse[1])
     })
 
@@ -190,14 +190,14 @@ describe("find_model()", {
         pipe <- r$.preprocess_pipe[[1]]
 
         no_response <- select(dataset1, -x)
-        expect_equal(object = select(pipe(no_response), -x), expected = select(pipe(dataset1), -x))
+        expect_equal(object = select(invoke(pipe, no_response), -x), expected = select(invoke(pipe, dataset1), -x))
 
         no_required_column <- select(dataset1, -y)
-        expect_error(object = pipe(no_required_column), regexp = "not present while expected")
+        expect_error(object = invoke(pipe, no_required_column), regexp = "not present while expected")
     })
 
     it("only checks if the response is present after piping", {
-        p_3 <- datapiper::pipeline(
+        p_3 <- datapiper::train_pipeline(
             segment(.segment = p_1),
             segment(.segment = pipeline_mutate, Target = "x"),
             segment(.segment = pipeline_function, f = standard_column_names)
@@ -239,15 +239,15 @@ describe("find_best_models()", {
     it("can find the best model given the result of find_model() and train it", {
         r <- find_best_models(train = train, find_model_result = find_model_result,
                               metric = "test_rmse", higher_is_better = F, top_n = 1, per_model = F)
-        expect_named(r, c("models", ".predict"))
-        expect_named(r$models, paste0(find_model_result$.id[which.min(find_model_result$test_rmse)], "_1"))
-        ctest_has_correct_content(column = r$models, "list", "lm")
-        ctest_has_correct_content(column = r$.predict, "function")
+        models <- r[[1]]$args$models
+        expect_true(is.pipeline(r))
+        expect_named(models, paste0(find_model_result$.id[which.min(find_model_result$test_rmse)], "_1"))
+        ctest_has_correct_content(column = models, "list", "lm")
     })
 
     it("returns a function that runs the full pipeline and the models", {
         r <- find_best_models(train = train, find_model_result = find_model_result, metric = "test_rmse", higher_is_better = F, top_n = 1)
-        predictions <- r$.predict(test)
+        predictions <- invoke(r, test)
         ctest_best_model_result(test = test, res = predictions)
     })
 
@@ -256,25 +256,26 @@ describe("find_best_models()", {
         dummy_find_model_result$test_dummy <- seq_len(nrow(dummy_find_model_result))
         r <- find_best_models(train = train, find_model_result = dummy_find_model_result, metric = "test_dummy", higher_is_better = F, top_n = 1)
 
-        ctest_has_correct_content(column = r$models, "list", "randomForest")
+        models <- r[[1]]$args$models
+        ctest_has_correct_content(column = models, "list", "randomForest")
     })
 
     it("can set if the metric should be high or low", {
         r_lm <- find_best_models(train = train, find_model_result = find_model_result,
                               metric = "test_rmse", higher_is_better = F, top_n = 1)
-        ctest_has_correct_content(column = r_lm$models, "list", "lm")
+        ctest_has_correct_content(column = r_lm[[1]]$args$models, "list", "lm")
 
         r_rf <- find_best_models(train = train, find_model_result = find_model_result,
                                  metric = "test_rmse", higher_is_better = T, top_n = 1)
-        ctest_has_correct_content(column = r_rf$models, "list", "randomForest")
+        ctest_has_correct_content(column = r_rf[[1]]$args$models, "list", "randomForest")
     })
 
     it("can select multiple models for training", {
         r <- find_best_models(train = train, find_model_result = find_model_result,
                          metric = "test_rmse", higher_is_better = F, top_n = 3)
 
-        expect_equal(length(r$models), 3)
-        predictions <- r$.predict(test)
+        expect_equal(length(r[[1]]$args$models), 3)
+        predictions <- invoke(r, test)
         ctest_best_model_result(test = test, res = predictions, n_models = 3)
     })
 
@@ -282,8 +283,9 @@ describe("find_best_models()", {
         r <- find_best_models(train = train, find_model_result = find_model_result, per_model = T,
                               metric = "test_rmse", higher_is_better = F, top_n = 3)
 
-        expect_equal(length(r$models), 4)
-        predictions <- r$.predict(test)
+        models <- r[[1]]$args$models
+        expect_equal(length(models), 4)
+        predictions <- invoke(r, test)
         ctest_best_model_result(test = test, res = predictions, n_models = 4)
 
         expect_named(predictions, c("one_lm_1", "one_forest_1", "one_forest_2", "one_forest_3"), ignore.order = T)
@@ -302,8 +304,8 @@ describe("find_best_models()", {
         r_plain <- find_best_models(train = train, find_model_result = find_model_result, per_model = F,
                                    metric = "test_rmse", higher_is_better = F, top_n = 3, aggregate_func = NA)
 
-        pred_mean <- r_mean$.predict(test)
-        pred_plain <- r_plain$.predict(test)
+        pred_mean <- invoke(r_mean, test)
+        pred_plain <- invoke(r_plain, test)
 
         ctest_best_model_result(test = test, res = pred_mean, n_models = 1)
         meaned <- data_frame(value = apply(pred_plain, 1 , mean))

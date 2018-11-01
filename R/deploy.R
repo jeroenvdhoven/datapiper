@@ -34,7 +34,7 @@ delete_image <- function(image_name) {
 
 #' Builds a package from your pipeline
 #'
-#' @param model_function The model function from \code{find_best_models}
+#' @param trained_pipeline The model function from \code{find_best_models}
 #' @param package_name The name of the package
 #' @param libraries A list of library names required by the package. Defaults to all loaded non-base packages
 #' @param tar_file The name and path of the final tarred package
@@ -47,9 +47,9 @@ delete_image <- function(image_name) {
 #' @return A logical: TRUE for success and FALSE for failure
 #' @importFrom devtools document build create
 #' @export
-build_model_package <- function(model_function, package_name = "deploymodel", libraries = utils::sessionInfo()$otherPkgs, tar_file = "deploy.tar.gz",
+build_model_package <- function(trained_pipeline, package_name = "deploymodel", libraries = utils::sessionInfo()$otherPkgs, tar_file = "deploy.tar.gz",
                                 prediction_precision = 8, may_overwrite_tar_file = F) {
-    stopifnot(!missing(model_function), is.character(libraries))
+    stopifnot(!missing(trained_pipeline), is.character(libraries))
     is_valid_package_name <- grepl(pattern = "^[a-zA-Z0-9\\.]+$", libraries)
 
     if(any(!is_valid_package_name)) warning(paste("Possible typo in package name:", paste0(collapse = ", ", libraries[!is_valid_package_name])))
@@ -57,7 +57,7 @@ build_model_package <- function(model_function, package_name = "deploymodel", li
     stopifnot(
         is.logical(may_overwrite_tar_file),
         may_overwrite_tar_file || !file.exists(tar_file),
-        is.function(model_function),
+        is.pipe(trained_pipeline) || is.pipeline(trained_pipeline),
         is.character(libraries),
         is.numeric(prediction_precision), prediction_precision >= 0
     )
@@ -79,7 +79,7 @@ build_model_package <- function(model_function, package_name = "deploymodel", li
         if(!package_name %in% libraries) libraries <- c(libraries, package_name)
 
         dir.create("data")
-        save(model_function, file = "data/model.rda")
+        save(trained_pipeline, file = "data/model.rda")
         save(libraries, file = "data/libraries.rda")
 
         target_script_file <- file(description = "file://R/deploy_model.R", open = "w")
@@ -113,7 +113,7 @@ predict_model <- function(input){
     } else {
         input_df <- jsonlite::fromJSON(txt = input, flatten = T)
     }
-    predictions <- model_function(input_df)
+    predictions <- invoke(trained_pipeline, input_df)
 
     # res <- jsonlite::toJSON(x = predictions, dataframe = "rows",
     #                         Date = "ISO8601", POSIXt = "ISO8601", factor = "string", complex = "list", raw = "base64",
@@ -336,7 +336,7 @@ test_docker <- function(data, image_name, process_name = image_name, package_nam
 # package_n <- "the.model"
 # lib_file <- paste0(package_n, ".tar.gz")
 # image_name <- paste0(package_n, ".image")
-# build_model_package(model_function = best_models$.predict, tar_file = lib_file, libraries = c("dplyr", "xgboost", "magrittr", "datapiper"), may_overwrite_tar_file = T, package_name = package_n)
+# build_model_package(trained_pipeline = best_models$.predict, tar_file = lib_file, libraries = c("dplyr", "xgboost", "magrittr", "datapiper"), may_overwrite_tar_file = T, package_name = package_n)
 # build_docker(model_library_file = lib_file, docker_image_name = image_name, libraries = c("dplyr", "xgboost"), package_name = package_n)
 # res <- test_docker(data = train, image_name = image_name, process_name = image_name, package_name = package_n)
 

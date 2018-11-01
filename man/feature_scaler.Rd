@@ -22,7 +22,7 @@ feature_scaler(train, response,
 }}
 }
 \value{
-A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+A list containing the transformed train dataset and a trained pipe.
 }
 \description{
 Rescales data to standardised ranges

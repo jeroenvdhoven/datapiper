@@ -9,7 +9,8 @@ pipeline_function(train, f, ...)
 \arguments{
 \item{train}{Data frame containing the train data.}
 
-\item{f}{The function to be put into the pipeline. It is important that the function can be applied to new datasets without using any information from the train dataset, e.g. lowercasing column names.}
+\item{f}{The function to be put into the pipeline. It is important that the function can be applied to new datasets without using any information from the train dataset, e.g. lowercasing column names.
+It should take a \code{data} argumet}
 
 \item{...}{Additional arguments to be provided to \code{f}}
 }

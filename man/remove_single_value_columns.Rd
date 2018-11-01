@@ -12,7 +12,7 @@ remove_single_value_columns(train, na_function = function(x) {     F })
 \item{na_function}{A function that returns true when a value is considered missing, and should be removed. Defaults to removing no values.}
 }
 \value{
-A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+A list containing the transformed train dataset and a trained pipe.
 }
 \description{
 Remove all columns that have only a single value

@@ -4,7 +4,7 @@
 #' @param exclude_columns Columns that should not be considered for removal.
 #' @param threshold If the correlation is between two columns is larger than this, both will be considered for removal
 #'
-#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+#' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 #' @importFrom igraph graph.data.frame V
 cor_remove_high_correlation_features <- function(train, exclude_columns = character(0), threshold = .8) {
@@ -19,8 +19,8 @@ cor_remove_high_correlation_features <- function(train, exclude_columns = charac
 
     train %<>% .[,keep_cols, drop = F]
 
-    predict_function <- function(data) preserve_columns_predict(data = data, preserved_columns = keep_cols)
-    return(list("train" = train, "preserved_columns" = keep_cols, ".predict" = predict_function))
+    predict_pipe <- pipe(.function = preserve_columns_predict, preserved_columns = keep_cols)
+    return(list("train" = train, "pipe" = predict_pipe))
 }
 
 #' Determines which columns are too highly correlated.

@@ -12,6 +12,143 @@ describe("segment", {
     })
 })
 
+### Pipe
+
+describe("pipe", {
+    additional_argument <- "a + 1"
+    r <- pipe(.function = range_predict, models = additional_argument)
+    it("generates a pipe object with predict_function and args elements, of which andere will be part", {
+        expect_false(any(class(r) != c("pipe", "list")))
+        expect_true("predict_function" %in% names(r))
+        expect_true("args" %in% names(r))
+        expect_true("models" %in% names(r$args))
+        expect_equal(additional_argument, r$args$models)
+    })
+
+    it("generates errors when the input is incorrect", {
+        expect_error(info = "Expect crash on not giving a function", object = pipe(.function = "A"))
+        expect_error(info = "Expect crash on not giving a function with a data argument", object = pipe(.function = mean))
+        expect_error(info = "Expect crash on giving a wrong argument to the function", object = pipe(.function = range_predict, a = 1))
+        expect_error(info = "Expect crash on giving a non-named argument when the function does not allow it", object = pipe(.function = range_predict, 1))
+        expect_error(info = "Expect crash on giving a data argument", object = pipe(.function = range_predict, data = 1))
+    })
+
+    it("saves a function for reuse later, even when removing the original function from memory", {
+        f <- function(data) data[1,]
+        saved_f <- pipe(.function = f)
+
+        without_removing_result <- invoke(saved_f, dataset1)
+        rm(f)
+        with_removing_result <- invoke(saved_f, dataset1)
+
+        expect_equal(without_removing_result, with_removing_result)
+    })
+
+    it("can forward parameters to .predict_function", {
+        f <- function(data, rows) data[rows,]
+        saved_f <- pipe(.function = f, rows = 1:10)
+
+        without_removing_result <- invoke(saved_f, dataset1)
+        rm(f)
+        with_removing_result <- invoke(saved_f, dataset1)
+
+        expect_equal(without_removing_result, with_removing_result)
+    })
+
+    it("can forward calculated parameters to .predict_function", {
+        f <- function(data, rows) data[rows,]
+        rows <- 1:10
+        saved_f <- pipe(.function = f, rows = rows + 1)
+
+        without_removing_result <- invoke(saved_f, dataset1)
+        rm(f, rows)
+        with_removing_result <- invoke(saved_f, dataset1)
+
+        expect_equal(without_removing_result, with_removing_result)
+    })
+})
+
+describe("is.pipe", {
+    it("return true when an object is a pipe and false otherwise", {
+        r <- pipe(.function = range_predict, models = "1")
+        expect_true(is.pipe(r))
+        expect_false(is.pipe(1))
+        expect_false(is.pipe(list()))
+    })
+})
+
+describe("invoke.pipe", {
+    it("applies new data to a trained pipe", {
+        add_one <- function(data, value) data + value
+        r <- pipe(.function = add_one, value = 10)
+
+        result <- invoke(r, 1:10)
+        expect_equal((1:10) + 10, result)
+    })
+})
+
+### Pipeline
+
+describe("pipeline", {
+    additional_argument <- "a + 1"
+    p1 <- pipe(.function = range_predict, models = additional_argument)
+    p2 <- pipe(.function = range_predict, models = additional_argument)
+
+    it("runs with basic settings", {
+        ctest_for_no_errors(pipeline(p1, p2), error_message = "Simple pipeline doesn't work")
+        ctest_for_no_errors(pipeline(p1, p2, pipeline(p1, p2)), error_message = "Simple pipeline doesn't work")
+    })
+
+    r <- pipeline(p1, p2)
+    r_nested <- pipeline(p1, p2, r)
+
+    it("generates a pipeline from pipes", {
+        expect_false(any(class(r) != c("pipeline", "list")))
+        expect_false(any(!purrr::map_lgl(.x = r, .f = ~ is.pipe(.) || is.pipeline(.))))
+
+        expect_false(any(class(r_nested) != c("pipeline", "list")))
+        expect_false(any(!purrr::map_lgl(.x = r_nested, .f = ~ is.pipe(.) || is.pipeline(.))))
+    })
+
+    it("generates errors when the input is incorrect", {
+        expect_error(info = "Expect crash on not giving a function", object = pipeline("A"))
+    })
+})
+
+describe("is.pipeline", {
+    it("return true when an object is a pipe and false otherwise", {
+        p1 <- pipe(.function = range_predict, models = "1")
+        p2 <- pipe(.function = range_predict, models = "2")
+        r <- pipeline(p1, p2)
+        r_nested <- pipeline(p1, p2, r)
+
+        expect_true(is.pipeline(r))
+        expect_true(is.pipeline(r_nested))
+        expect_false(is.pipeline(1))
+        expect_false(is.pipeline(p1))
+        expect_false(is.pipeline(list()))
+    })
+})
+
+describe("invoke.pipeline", {
+    it("applies new data to a trained pipe", {
+        add_one <- function(data, value) data + value
+        p1 <- pipe(.function = add_one, value = 10)
+        p2 <- pipe(.function = add_one, value = -20)
+
+        r <- pipeline(p1, p2)
+        r_nested <- pipeline(p1, p2, r)
+
+        result <- invoke(r, 1:10)
+        expect_equal((1:10) + 10 - 20, result)
+
+        result <- invoke(r_nested, 1:10)
+        expect_equal((1:10) + (10 - 20) * 2, result)
+    })
+})
+
+
+# Pipeline pieces
 describe("pipeline_dplyr", {
     it("generates a pipeline function for dplyr functions when used", {
         r <- pipeline_dplyr(select_)
@@ -61,7 +198,7 @@ describe("pipeline_mutate", {
 })
 
 describe("pipeline_function", {
-    applied_function <- function(d) return(d[, purrr::map_lgl(d, is.numeric)])
+    applied_function <- function(data) return(data[, purrr::map_lgl(data, is.numeric)])
     r <- pipeline_function(dataset1, f = applied_function)
     it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
@@ -76,7 +213,7 @@ describe("pipeline_function", {
     })
 
     it("can provide additional arguments that will be fed into the provided function", {
-        filter_by <- function(d, func) return(d[, purrr::map_lgl(d, func)])
+        filter_by <- function(data, func) return(data[, purrr::map_lgl(data, func)])
         r_with_arg <- pipeline_function(dataset1, f = filter_by, func = is.character)
 
         expect_false(any(!purrr::map_lgl(r_with_arg$train, is.character)))
@@ -99,35 +236,37 @@ describe("pipeline_check", {
     })
 
     it("saves the state of the current dataframe", {
-        expect_false(any(!r$cols %in% colnames(dataset1)))
-        expect_false("x" %in% r$cols)
-        expect_equal(length(r$cols), ncol(dataset1) - 1) # For missing response
+        params <- r$pipe$args
+        expect_false(any(!params$cols %in% colnames(dataset1)))
+        expect_false("x" %in% params$cols)
+        expect_equal(length(params$cols), ncol(dataset1) - 1) # For missing response
 
         expect_equal(purrr::map_chr(dataset1, class), purrr::map_chr(r$train, class))
-        expect_equal(purrr::map_chr(dataset1, class), r$col_types)
+        expect_equal(purrr::map_chr(dataset1, class), params$col_types)
     })
 
     it("can always handle missing responses", {
         r_missing <- pipeline_check(dataset1, response = "x", on_missing_column = "error", on_extra_column = "remove", on_type_error = "ignore")
-        t_ <- ctest_for_no_errors(r_missing$.predict(select(dataset1, -x)),
+        t_ <- ctest_for_no_errors(invoke(r_missing$pipe, select(dataset1, -x)),
                                   error_message = "Expected no crash when response is missing")
     })
 
     it("will error when a column is not found in a new dataset", {
         r_missing <- pipeline_check(dataset1, response = "x", on_missing_column = "error", on_extra_column = "remove", on_type_error = "ignore")
-        expect_error(r_missing$.predict(select(dataset1, -a)), info = "Expected crash on missing column when configured as such")
+        expect_error(invoke(r_missing$pipe, select(dataset1, -a)), info = "Expected crash on missing column when configured as such")
 
         r_additional <- pipeline_check(dataset1, response = "x", on_missing_column = "add", on_extra_column = "error", on_type_error = "ignore")
-        expect_error(r_additional$.predict(mutate(dataset1, new = "new column")), info = "Expected crash on additional column when configured as such")
+        expect_error(invoke(r_additional$pipe, mutate(dataset1, new = "new column")), info = "Expected crash on additional column when configured as such")
 
         r_type <- pipeline_check(dataset1, response = "x", on_missing_column = "add", on_extra_column = "remove", on_type_error = "error")
-        expect_error(r_type$.predict(mutate(dataset1, a = "b")), info = "Expected crash on type error when configured as such")
-        t_ <- ctest_for_no_errors(r_type$.predict(mutate(dataset1, a = as.character(a))),
+        expect_error(invoke(r_type$pipe, mutate(dataset1, a = "b")), info = "Expected crash on type error when configured as such")
+
+        t_ <- ctest_for_no_errors(invoke(r_type$pipe, mutate(dataset1, a = as.character(a))),
                             error_message = "Expected no crash when types are converted without problem")
     })
 
     it("generates an NA dataset when the most lenient settings are used with identical types", {
-        empty_dataset <- r$.predict(data_frame(new_column = 1))
+        empty_dataset <- invoke(r$pipe, data_frame(new_column = 1))
         ctest_dataset_has_columns(empty_dataset, colnames(r$train))
 
         expect_equal(purrr::map_chr(r$train, class), purrr::map_chr(empty_dataset, class))
@@ -138,9 +277,9 @@ describe("pipeline_check", {
     })
 })
 
-describe("pipeline()", {
+describe("train_pipeline()", {
     r <- ctest_for_no_errors(
-        pipeline(
+        train_pipeline(
             segment(.segment = pipeline_mutate, a = "5"),
             segment(.segment = pipeline_select, "-b")
         ), error_message = "Can't make pipeline"
@@ -157,13 +296,13 @@ describe("pipeline()", {
     })
 
     it("trains a pipeline that can be applied to new data", {
-        piped <- pipe_result$.predict(dataset1)
+        piped <- invoke(pipe_result$pipe, dataset1)
         ctest_dataset_does_not_have_columns(dataset = piped, "b")
         expect_equal(piped$a, rep(5, N))
     })
 
     it("can take the result of one pipeline and pipe it into another", {
-        r_2 <- pipeline(
+        r_2 <- train_pipeline(
             segment(.segment = r),
             segment(.segment = pipeline_select, "c", "x")
         )
@@ -174,66 +313,29 @@ describe("pipeline()", {
 
     it("checks the input for correctness", {
         # all have .segment, all are functions, all have train arguments
-        expect_error(datapiper::pipeline(1, list()), info = "Will crash if any input is not a list")
+        expect_error(datapiper::train_pipeline(1, list()), info = "Will crash if any input is not a list")
 
-        expect_error(datapiper::pipeline(list(.segment = ""), list()), info = "Will crash if any input doesn't have a .segment entry")
+        expect_error(datapiper::train_pipeline(list(.segment = ""), list()), info = "Will crash if any input doesn't have a .segment entry")
 
-        expect_error(datapiper::pipeline(list(.segment = function(x) {}), list(.segment = "")),
+        expect_error(datapiper::train_pipeline(list(.segment = function(x) {}), list(.segment = "")),
                      info = "Will crash if any input doesn't have a .segment entry that is a function")
 
-        expect_error(datapiper::pipeline(list(.segment = function(train) {}), list(.segment = function(x) {})),
+        expect_error(datapiper::train_pipeline(list(.segment = function(train) {}), list(.segment = function(x) {})),
                      info = "Will crash if any input doesn't have a .segment entry that is a function with a train argument")
     })
 
     it("can automatically add `response` to functions that need it but don't have it assigned yet", {
-        p_missing <- ctest_for_no_errors(pipeline(
+        p_missing <- ctest_for_no_errors(train_pipeline(
             segment(.segment = datapiper::feature_scaler),
             response = "x"
         ), error_message = "pipeline errored when adding `response` variable")
         r_missing <- ctest_for_no_errors(p_missing(dataset1), error_message = "executing pipeline with `response` variable resulted in an error")
         ctest_pipe_has_correct_fields(r_missing)
 
-        p_no_missing <- ctest_for_no_errors(pipeline(
+        p_no_missing <- ctest_for_no_errors(train_pipeline(
             segment(.segment = datapiper::feature_scaler, response = "x")
         ), error_message = "pipeline errored when not adding `response` variable")
         r_no_missing <- ctest_for_no_errors(p_no_missing(dataset1), error_message = "executing pipeline without `response` variable resulted in an error")
         ctest_pipe_has_correct_fields(r_no_missing)
     })
 })
-
-describe("create_predict_function()", {
-    it("saves a function for reuse later, even when removing the original function from memory", {
-        f <- function(data) data[1,]
-        saved_f <- create_predict_function(.predict_function = f)
-
-        without_removing_result <- saved_f(dataset1)
-        rm(f)
-        with_removing_result <- saved_f(dataset1)
-
-        expect_equal(without_removing_result, with_removing_result)
-    })
-
-    it("can forward parameters to .predict_function", {
-        f <- function(data, rows) data[rows,]
-        saved_f <- create_predict_function(.predict_function = f, rows = 1:10)
-
-        without_removing_result <- saved_f(dataset1)
-        rm(f)
-        with_removing_result <- saved_f(dataset1)
-
-        expect_equal(without_removing_result, with_removing_result)
-    })
-
-    it("can forward calculated parameters to .predict_function", {
-        f <- function(data, rows) data[rows,]
-        rows <- 1:10
-        saved_f <- create_predict_function(.predict_function = f, rows = rows + 1)
-
-        without_removing_result <- saved_f(dataset1)
-        rm(f, rows)
-        with_removing_result <- saved_f(dataset1)
-
-        expect_equal(without_removing_result, with_removing_result)
-    })
-})
-

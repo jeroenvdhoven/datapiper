@@ -20,7 +20,7 @@ Non-numerical columns will automatically be excluded}
 \item{metric}{The distance metric used. Currently only 'euclidean' and 'manhattan' are supported.}
 }
 \value{
-A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+A list containing the transformed train dataset and a trained pipe.
 }
 \description{
 Add cluster labels to a training set

@@ -72,15 +72,15 @@ find_model <- function(train, test, response,
     for(preprocess_index in seq_along(preprocess_pipes)){
         preprocess_pipe <- preprocess_pipes[[preprocess_index]]
         if(prepend_data_checker){
-            preprocess_pipe <- datapiper::pipeline(
-                segment(.segment = datapiper::pipeline_check, response = response,
+            preprocess_pipe <- train_pipeline(
+                segment(.segment = pipeline_check, response = response,
                      on_missing_column = on_missing_column, on_extra_column = on_extra_column, on_type_error = on_type_error),
                 segment(.segment = preprocess_pipe))
         }
         piped <- preprocess_pipe(train)
         piped_train <- piped$train
-        pipe <- piped$.predict
-        piped_test <- pipe(test)
+        trained_pipeline <- piped$pipe
+        piped_test <- invoke(trained_pipeline, test)
         pipe_name <- pipe_names[preprocess_index]
 
         # Make sure response is in the final training / testing dataset
@@ -130,7 +130,7 @@ find_model <- function(train, test, response,
                 test_preds <- f_predict(model, piped_test)
                 test_metrics_calculated <- purrr::map_dbl(.x = metrics, function(f) f(unlist(piped_test[response]), test_preds))
 
-                tmp <- list(".train" = list(f_train), ".predict" = list(f_predict), ".id" = paste0(pipe_name, "_", model_name), "params" = list(parameter_grid[r,]), ".preprocess_pipe" = list(pipe))
+                tmp <- list(".train" = list(f_train), ".predict" = list(f_predict), ".id" = paste0(pipe_name, "_", model_name), "params" = list(parameter_grid[r,]), ".preprocess_pipe" = list(trained_pipeline))
                 tmp[paste0("train_", metric_names)] <- train_metrics_calculated
                 tmp[paste0("test_", metric_names)] <- test_metrics_calculated
                 res <- bind_rows(res, tmp)
@@ -151,7 +151,7 @@ find_model <- function(train, test, response,
 #' @param top_n The top n models to return
 #' @param aggregate_func Aggregation function to apply. Useful if you choose more than 1 model. Set this to NA to skip it.
 #'
-#' @return A list of the selected trained models and a predict function.
+#' @return A pipeline to create predictions for new data
 #' @export
 find_best_models <- function(train, find_model_result, metric, higher_is_better, per_model = F, top_n = 1, aggregate_func = NA) {
     stopifnot(
@@ -170,20 +170,30 @@ find_best_models <- function(train, find_model_result, metric, higher_is_better,
         mutate(model_name = paste0(.id, "_", row_number()))
 
     models <- apply(X = find_model_result, MARGIN = 1, function(r){
-        d <- r$.preprocess_pipe(train)
+        d <- invoke(r$.preprocess_pipe, train)
         m <- do.call(what = r$.train, args = list(data = d) %>% c(unlist(r$params)))
         return(m)
     }) %>% as.list
     names(models) <- find_model_result$model_name
 
-    .predict <- function(data) {
-        purrr::pmap_df(list(model = models, pred_func = find_model_result$.predict, pipe_func = find_model_result$.preprocess_pipe), function(model, pred_func, pipe_func) pred_func(model, pipe_func(data)))
-    }
+    model_pipe <- pipe(.function = model_prediction, models = models, pipes = find_model_result$.preprocess_pipe,
+                       model_predict_functions = find_model_result$.predict)
 
-    if(is.function(aggregate_func)) .predict_function <- function(data)
-        dplyr::as_data_frame(apply(X = .predict(data), MARGIN = 1, FUN = aggregate_func))
-    else .predict_function <- .predict
-    return(list("models" = models, ".predict" = .predict_function))
+    if(is.function(aggregate_func)) {
+        aggreation_pipe_function <- function(data, func)
+            dplyr::as_data_frame(apply(X = data, MARGIN = 1, FUN = func))
+
+        full_pipe <- pipeline(
+            model_pipe,
+            pipe(.function = aggreation_pipe_function, func = aggregate_func)
+        )
+    } else full_pipe <- pipeline(model_pipe)
+    return(full_pipe)
+}
+
+model_prediction <- function(data, models, pipes, model_predict_functions) {
+    purrr::pmap_df(list(model = models, pred_func = model_predict_functions, trained_pipeline = pipes),
+                   function(model, pred_func, trained_pipeline) pred_func(model, invoke(trained_pipeline, data)))
 }
 
 #' Wrapper function for model inputs to \code{find_model}

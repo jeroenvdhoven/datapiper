@@ -70,7 +70,7 @@ describe("feature_create_all_generic_stats", {
                 train = train, response = "x", interaction_level = 1,
                 too_few_observations_cutoff = 5, functions = f_list)
 
-        transformed_test <- r_sub$.predict(test)
+        transformed_test <- invoke(r_sub$pipe, test)
         expected_columns <- purrr::map(names(f_list), ~ paste0(., "_", c("y", "s", "z"))) %>% unlist
 
         expect_false(any(!expected_columns %in% colnames(transformed_test)))
@@ -170,7 +170,7 @@ describe("feature_interactions", {
 
     it("ignores non-numeric input", {
         r_no_numerics <- datapiper::feature_interactions(dataset1, response = "x", max_interactions = 2, columns = 2)
-        expect_false(any(!purrr::map_lgl(dataset1[, r_no_numerics$columns], is.numeric)), info = "All used columns should be numeric")
+        expect_false(any(!purrr::map_lgl(dataset1[, r_no_numerics$pipe$args$columns], is.numeric)), info = "All used columns should be numeric")
     })
 
     it("handles missing values", {

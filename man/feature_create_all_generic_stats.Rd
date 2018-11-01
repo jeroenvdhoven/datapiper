@@ -24,7 +24,7 @@ If names are provided, the name will be prepended to the generate column. If the
 If not enough observations are present, the statistics will be generated on the entire response column. Default: 30.}
 }
 \value{
-A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+A list containing the transformed train dataset and a trained pipe.
 
 #' @details This function will also generate default values for all generated columns that use the entire response column.
 This allows us to ensure no NA values will be present in generated columns when, for instance, a new category is detected or when values are cut-off by

@@ -4,12 +4,12 @@
 \alias{build_model_package}
 \title{Builds a package from your pipeline}
 \usage{
-build_model_package(model_function, package_name = "deploymodel",
+build_model_package(trained_pipeline, package_name = "deploymodel",
   libraries = utils::sessionInfo()$otherPkgs, tar_file = "deploy.tar.gz",
   prediction_precision = 8, may_overwrite_tar_file = F)
 }
 \arguments{
-\item{model_function}{The model function from \code{find_best_models}}
+\item{trained_pipeline}{The model function from \code{find_best_models}}
 
 \item{package_name}{The name of the package}
 

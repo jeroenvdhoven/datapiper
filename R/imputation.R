@@ -32,7 +32,7 @@ impute_model <- function(data, column, NA_value = is.na, exclude_columns, train_
             (!grepl(pattern = column, x = ., fixed = T)) #All columns that contain exactly the same column name.
         ]
 
-    form <- column %>% paste0(., " ~ `", paste0(included_cols, collapse = '` + `'), "`") %>% as.formula
+    form <- paste0(column, " ~ `", paste0(included_cols, collapse = '` + `'), "`") %>% as.formula
 
     if(is.na(controls)) {
         if(type == "xgboost") controls = list(nrounds = 50)
@@ -81,7 +81,8 @@ impute_predict <- function(data, column, NA_value, model, exclude_columns){
     }
 
     target <- data[column]
-    if(length(exclude_columns) > 0) data <- select_(data, .dots = paste0("-", exclude_columns))
+    if(length(exclude_columns) > 0 && any(exclude_columns %in% colnames(data)))
+        data <- select_(data, .dots = paste0("-", exclude_columns[exclude_columns %in% colnames(data)]))
 
     if(is.vector(model) && length(model) == 1){
         target[missing_values, column] <- model
@@ -137,7 +138,7 @@ impute_predict_all <- function(data, columns, na_function, models, exclude_colum
 #' @param controls Controls for xgboost, if needed. Default to NA.
 #' @param verbose Whether xgboost should print anything.
 #'
-#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+#' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 impute_all <- function(train, columns,
                        na_function = is.na, exclude_columns, type = "lm",
@@ -154,7 +155,7 @@ impute_all <- function(train, columns,
         if(type == "mean") exclude_columns = character(0)
         else if(type == "lm") {
             # Ensure single value columns are not used
-            keep_columns <- datapiper::remove_single_value_columns(train, na_function)$preserved_columns
+            keep_columns <- datapiper::remove_single_value_columns(train, na_function)$pipe$args$preserved_columns
             exclude_columns <- colnames(train)[!colnames(train) %in% keep_columns]
         } else if (type == "xgboost") {
             # Ensure no non-numeric columns are used
@@ -173,10 +174,10 @@ impute_all <- function(train, columns,
     }, train = train, columns = columns, na_function = na_function, exclude_columns = exclude_columns, controls = controls, type = type)
     names(models) <- columns
 
-    predict_function <- function(data) impute_predict_all(data = data, columns = columns, na_function = na_function, models = models,
-                                                          exclude_columns = exclude_columns)
-    train <- predict_function(train)
-    return(list(train = train, columns = columns, na_function = na_function, models = models, .predict = predict_function))
+    predict_pipe <- pipe(.function = impute_predict_all, columns = columns, na_function = na_function, models = models,
+                         exclude_columns = exclude_columns)
+    train <- invoke(predict_pipe, train)
+    return(list(train = train, pipe = predict_pipe))
 }
 
 

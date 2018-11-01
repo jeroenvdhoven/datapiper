@@ -2,51 +2,16 @@
 % Please edit documentation in R/pipeline.R
 \name{pipeline}
 \alias{pipeline}
-\title{Create a train/test pipeline from individual functions}
+\title{Creates a pipeline out of a set of pipes}
 \usage{
-pipeline(..., response)
+pipeline(...)
 }
 \arguments{
-\item{...}{Pipe segments. Each pipe segment is a list containing at least a \code{.segment} argument, which holds the function. Other parts of the list will be treated as additional arguments to that function.
-
-These arguments are evaluated at time of calling (so once you call the pipeline function), however if you wish to create arguments based on the datasets just before starting the processing,
-remember you can always wrap a pipe with another function so you can do the calculations there.
-
-The function should always accept at least a \code{train} argument for the train dataset.
-It should also return a list with (at a minimum) two named items: \code{train} and \code{.predict}, the function used to reconstruct the pipeline for new pipes.}
-
-\item{response}{Since \code{response} is a parameter often used in this package, you can set it here to have it automatically set in pipeline where needed.}
+\item{...}{Pipes create with \code{\link{pipe}} or \code{\link{pipeline}}}
 }
 \value{
-A function, taking as arguments \code{train}. This function will return a list of the transformed \code{train} dataset after running it through all pipeline functions,
-as well as a function that reproduces the process for new data and a list containing the parameters of each pipeline segment.
+A pipeline object, which can be applied to new data using \code{\link{invoke}}
 }
 \description{
-Create a train/test pipeline from individual functions
-}
-\details{
-Since this function returns a \code{.predict} function, it should be possible to use pipelines within pipelines.
-
-Note: when using custom pipeline functions, especially those with complex prediction functions, use \code{\link{create_predict_function}}. It will ensure
-that the generated pipeline can find your prediction function when it is packaged and loaded in a clean environment.
-}
-\examples{
-library(dplyr)
-set.seed(1)
-train <- data_frame(a = 1:10, b = sample(c(1,2, NA), size = 10,
-    replace = TRUE), c = sample(c(1,2), size = 10, replace = TRUE))
-test <- data_frame(a = 1:10, b = sample(c(1,2, NA), size = 10,
-    replace = TRUE), c = sample(c(1,2), size = 10, replace = TRUE))
-
-pipeline = pipeline(
-    list(.segment = datapiper::feature_NA_indicators),
-    list(.segment = datapiper::impute_all, exclude_columns = "a"),
-    list(.segment = datapiper::cor_remove_high_correlation_features, exclude_columns = "a"),
-    list(.segment = datapiper::feature_create_all_generic_stats, stat_cols = "b",
-         response = "a", functions = list("mean" = mean, "sd" = sd),
-         too_few_observations_cutoff = 0)
-)
-res <- pipeline(train)
-trained_pipeline <- res$.predict
-test <- trained_pipeline(test)
+Creates a pipeline out of a set of pipes
 }

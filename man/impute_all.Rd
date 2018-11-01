@@ -23,7 +23,7 @@ impute_all(train, columns, na_function = is.na, exclude_columns,
 \item{verbose}{Whether xgboost should print anything.}
 }
 \value{
-A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+A list containing the transformed train dataset and a trained pipe.
 }
 \description{
 Impute multiple missing columns using lm, mean, or xgboost, and perform imputation

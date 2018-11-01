@@ -1,18 +1,15 @@
 #' Create a train/test pipeline from individual functions
 #'
-#' @param ... Pipe segments. Each pipe segment is a list containing at least a \code{.segment} argument, which holds the function. Other parts of the list will be treated as additional arguments to that function.
+#' @param ... Pipe segments. Each pipe segment is a list containing at least a \code{\link{.segment}} argument, which holds the function. Other parts of the list will be treated as additional arguments to that function.
 #'
 #' These arguments are evaluated at time of calling (so once you call the pipeline function), however if you wish to create arguments based on the datasets just before starting the processing,
 #' remember you can always wrap a pipe with another function so you can do the calculations there.
 #'
 #' The function should always accept at least a \code{train} argument for the train dataset.
-#' It should also return a list with (at a minimum) two named items: \code{train} and \code{.predict}, the function used to reconstruct the pipeline for new pipes.
+#' It should also return a list with (at a minimum) two named items: \code{train} and \code{pipe}, a trained pipe segment. You can create these using \code{\link{pipe}}.
 #' @param response Since \code{response} is a parameter often used in this package, you can set it here to have it automatically set in pipeline where needed.
 #'
-#' @details Since this function returns a \code{.predict} function, it should be possible to use pipelines within pipelines.
-#'
-#' Note: when using custom pipeline functions, especially those with complex prediction functions, use \code{\link{create_predict_function}}. It will ensure
-#' that the generated pipeline can find your prediction function when it is packaged and loaded in a clean environment.
+#' @details Since this function returns a \code{pipe} function, it should be possible to use pipelines within pipelines.
 #'
 #' @return A function, taking as arguments \code{train}. This function will return a list of the transformed \code{train} dataset after running it through all pipeline functions,
 #' as well as a function that reproduces the process for new data and a list containing the parameters of each pipeline segment.
@@ -35,9 +32,9 @@
 #'          too_few_observations_cutoff = 0)
 #' )
 #' res <- pipeline(train)
-#' trained_pipeline <- res$.predict
-#' test <- trained_pipeline(test)
-pipeline <- function(..., response){
+#' trained_pipeline <- res$pipe
+#' test <- invoke(trained_pipeline, test)
+train_pipeline <- function(..., response){
     pipes <- list(...)
     # TODO: add prediction pipeline?
     # TODO: add CV pipeline
@@ -60,12 +57,12 @@ pipeline <- function(..., response){
     }))) stop("Error: one of your functions doesn't take a 'train' argument")
 
     res <- function(train) {
-        pipeline <- list()
-        pipeline_params <- list()
-        mandatory_variables <- c("train", ".predict")
+        trained_pipelines <- as.list(seq_along(pipes))
+        mandatory_variables <- c("train", "pipe")
 
         # Construct and train the pipeline
-        for (pipe_ in pipes) {
+        for (i in seq_along(pipes)) {
+            pipe_ <- pipes[[i]]
             f <- pipe_$.segment
             other_args <- pipe_[names(pipe_) != ".segment"]
             other_args$train <- train
@@ -87,18 +84,12 @@ pipeline <- function(..., response){
                 stop(paste("Error: function", faulty_index, "did not return a list containing", paste(mandatory_variables, collapse = ", "), "\nMissing:", paste(missing_names, collapse = ", ")))
             }
             train <- pipe_res$train
-            pipeline_params <- c(pipeline_params, list(pipe_res[!names(pipe_res) %in% c("train", ".predict")]))
-            pipeline <- c(pipeline, pipe_res$.predict)
+            trained_pipelines[[i]] <- pipe_res$pipe
         }
 
-        # Construct the trained pipeline function
-        trained_pipeline <- function(data) {
-            for(pipe_ in pipeline){
-                data <- pipe_(data)
-            }
-            return(data)
-        }
-        return(list("train" = train, ".predict" = trained_pipeline, "pipe_segments" = pipeline))
+        trained_pipeline <- do.call(what = pipeline, args = trained_pipelines)
+
+        return(list("train" = train, "pipe" = trained_pipeline))
     }
     return(res)
 }
@@ -139,9 +130,10 @@ pipeline_dplyr <- function(dplyr_function, stop_on_missing_names = F) {
         }
 
         train <- dplyr_function(train, ...)
+        dplyr_wrapper <- function(data, ...) dplyr_function(data, ...)
 
-        predict_function <- function(data) dplyr_function(data, ...)
-        return(list(train = train, .predict = predict_function))
+        predict_pipe <- pipe(.function = dplyr_wrapper, ...)
+        return(list(train = train, pipe = predict_pipe))
     })
 }
 
@@ -167,6 +159,7 @@ pipeline_mutate <- pipeline_dplyr(mutate_, stop_on_missing_names = T)
 #'
 #' @param train Data frame containing the train data.
 #' @param f The function to be put into the pipeline. It is important that the function can be applied to new datasets without using any information from the train dataset, e.g. lowercasing column names.
+#' It should take a \code{data} argumet
 #' @param ... Additional arguments to be provided to \code{f}
 #'
 #' @return A list of the transformed train dataset and a .predict function to be used on new data.
@@ -187,10 +180,14 @@ pipeline_mutate <- pipeline_dplyr(mutate_, stop_on_missing_names = T)
 #' predictions <- pipe$.predict(data)
 
 pipeline_function <- function(train, f, ...) {
-    train <- f(train, ...)
+    stopifnot(
+        is.function(f),
+        "data" %in% formalArgs(f)
+    )
+    train <- f(data = train, ...)
 
-    predict_function <- function(data) f(data, ...)
-    return(list(train = train, .predict = predict_function))
+    predict_pipe <- pipe(.function = f, ...)
+    return(list(train = train, pipe = predict_pipe))
 }
 
 #' Create a pipeline step that learns what the data looks like
@@ -229,12 +226,11 @@ pipeline_check <- function(train,
     # Save column types
     col_types = purrr::map_chr(train, class)
 
-    .predict = function(data) pipeline_check_predict(data = data, response = response, cols = cols, col_types = col_types,
-                                                     on_missing_column = on_missing_column, on_extra_column = on_extra_column,
-                                                     on_type_error = on_type_error)
-    return(list(train = train, .predict = .predict, response = response, cols = cols, col_types = col_types,
-                on_missing_column = on_missing_column, on_extra_column = on_extra_column,
-                on_type_error = on_type_error))
+    predict_pipe <- pipe(.function = pipeline_check_predict, response = response, cols = cols, col_types = col_types,
+                         on_missing_column = on_missing_column, on_extra_column = on_extra_column,
+                         on_type_error = on_type_error)
+
+    return(list(train = train, pipe = predict_pipe))
 }
 
 pipeline_check_predict <- function(data, response, cols, col_types, on_missing_column, on_extra_column, on_type_error) {
@@ -276,27 +272,104 @@ pipeline_check_predict <- function(data, response, cols, col_types, on_missing_c
     return(data)
 }
 
-#' Ensures a predict function can be called for custom pipeline functions
+#' Creates a pipe object out of a predict_function and a list of arguments
 #'
-#' @param .predict_function The function that will be used for applying learned transformations to a new dataset. It should take at least
-#' a \code{data} argument for new data to apply transformations to.
-#' @param ... Arguments to \code{.predict_function}.
+#' @param .function A function to repeat transformations from a trained pipeline on new data. Will be checked for being a function and taking a \code{data} argument.
+#' @param ... Other arguments to \code{.function}. Non-named arguments are only accepted if \code{.function} takes a \code{...} argument. Named arguments will be checked to
+#' be in the argument list of \code{.function}.
 #'
-#' @return A function that takes a \code{data} argument (for new data) and uses the provided arguments in \code{...}.
+#' @return A pipe object with two entries:
+#' \itemize{
+#' \item \code{predict_function}: A function to repeat transformations from a trained pipeline on new data.
+#' \item \code{args}: Arguments for \code{predict_function}
+#' }
+#'
 #' @export
-#'
-#' @details The predict function of custom pipeline segments can cause problems when being redeployed if the predict function is not properly supplied to the function.
-#' In these cases, this helper function can assist. It will force evaluation of its function argument before using it in a new function, ensuring no
-#' delayed evaluation occurs. This should prevent errors along the likes of "predict function not found" when deploying the pipeline in a clean environment.
-create_predict_function <- function(.predict_function, ...) {
-    force(x = .predict_function)
-
+pipe <- function(.function, ...) {
+    args <- list(...)
     stopifnot(
-        is.function(.predict_function),
-        "data" %in% formalArgs(.predict_function)
+        is.function(.function),
+        "data" %in% formalArgs(.function)
     )
 
-    return(function(data) {
-        .predict_function(data = data, ...)
-    })
+    if(length(args) > 0) {
+        stopifnot(
+            !"data" %in% names(args),
+            !("" %in% names(args) || is.null(names(args))) || "..." %in% formalArgs(.function),
+            names(args)[names(args) != ""] %in% formalArgs(.function) || "..." %in% formalArgs(.function)
+        )
+    }
+
+    result <- list(predict_function = .function, args = args)
+    class(result) <- c("pipe", "list")
+
+    return(result)
+}
+
+#' Creates a pipeline out of a set of pipes
+#'
+#' @param ... Pipes create with \code{\link{pipe}} or \code{\link{pipeline}}
+#'
+#' @return A pipeline object, which can be applied to new data using \code{\link{invoke}}
+#' @export
+pipeline <- function(...) {
+    pipes <- list(...)
+    stopifnot(
+        !any(!purrr::map_lgl(.x = pipes, ~ is.pipe(.) || is.pipeline(.)))
+    )
+
+    class(pipes) <- c("pipeline", "list")
+    return(pipes)
+}
+
+#' @export
+invoke <- function(x, ...) UseMethod("invoke", x)
+
+
+#' Applies a pipe to new data
+#'
+#' @param pipe The pipe to be applied
+#' @param data A new dataframe
+#'
+#' @return The transformed dataset
+#' @export
+invoke.pipe <- function(pipe, data) {
+    arg_list <- pipe$args
+    arg_list$data <- data
+    return(do.call(what = pipe$predict_function, args = arg_list))
+}
+
+#' Applies a pipeline to new data
+#'
+#' @param pipeline The pipeline to be applied
+#' @param data A new dataframe
+#'
+#' @return The transformed dataset
+#' @export
+invoke.pipeline <- function(pipeline, data) {
+    for(pipe_ in pipeline){
+        data <- invoke(pipe_, data)
+    }
+
+    return(data)
+}
+
+#' Tests if an object inherits from pipe
+#'
+#' @param x object to be tested
+#'
+#' @return A boolean indicating if \code{x} inherits from \code{\link{pipe}}
+#' @export
+is.pipe <- function(x) {
+    inherits(x, "pipe")
+}
+
+#' Tests if an object inherits from pipeline
+#'
+#' @param x object to be tested
+#'
+#' @return A boolean indicating if \code{x} inherits from \code{\link{pipeline}}
+#' @export
+is.pipeline <- function(x) {
+    inherits(x, "pipeline")
 }

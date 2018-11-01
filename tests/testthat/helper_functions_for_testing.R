@@ -32,7 +32,7 @@ dataset1 <- dplyr::data_frame(
 
 ctest_pipe_has_correct_fields <- function(pipe_res) {
     expect_false(is.null(pipe_res$train))
-    expect_false(is.null(pipe_res$.predict))
+    expect_false(is.null(pipe_res$pipe))
 }
 
 ctest_dataset_has_columns <- function(dataset, columns) {
@@ -44,7 +44,7 @@ ctest_dataset_does_not_have_columns <- function(dataset, columns) {
 }
 
 ctest_pipe_has_working_predict_function <- function(pipe_res, data) {
-    piped <- pipe_res$.predict(data)
+    piped <- invoke(pipe_res$pipe, data)
     expect_equal(piped, pipe_res$train)
 }
 

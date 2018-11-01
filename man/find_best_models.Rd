@@ -23,7 +23,7 @@ find_best_models(train, find_model_result, metric, higher_is_better,
 \item{aggregate_func}{Aggregation function to apply. Useful if you choose more than 1 model. Set this to NA to skip it.}
 }
 \value{
-A list of the selected trained models and a predict function.
+A pipeline to create predictions for new data
 }
 \description{
 Select top models from the find_model function

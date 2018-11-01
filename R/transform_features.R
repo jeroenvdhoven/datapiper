@@ -6,7 +6,7 @@
 #' @param missing_func A function that determines if an observation is missing, e.g. \code{is.na}, \code{is.nan}, or \code{function(x) x == 0}. Defaults to \code{is.na}. Set to NA to skip NA feature generation and imputation.
 #' @param transform_functions A list of function used to transform features. Should be one-to-one transformations like sqrt or log.
 #'
-#' @return A list of train set and a function lists used to transform each feature.
+#' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 feature_transformer <- function(train, response, transform_columns, missing_func = is.na,
                                 transform_functions = list(sqrt, log, function(x)x^2)){
@@ -26,8 +26,8 @@ feature_transformer <- function(train, response, transform_columns, missing_func
         func_list %<>% c(res$best_function)
     }
 
-    predict_function <-  function(data) feature_transformer_predict(data = data, transform_columns = transform_columns, transform_functions = func_list)
-    return(list("train" = train, "function_list" = func_list, "transform_columns" = transform_columns, ".predict" = predict_function))
+    predict_pipe <- pipe(.function = feature_transformer_predict, transform_columns = transform_columns, transform_functions = func_list)
+    return(list("train" = train, "pipe" = predict_pipe))
 }
 
 feature_transform_col <- function(train, response, transform_functions, transform_column, missing_func = is.na, comparison_method){
@@ -99,7 +99,7 @@ feature_transformer_predict <- function(data, transform_columns, transform_funct
 #' \item \code{"N(0,1)"}: rescales the columns to mean 0 and sd 1
 #' }
 #'
-#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+#' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 feature_scaler <- function(train, response,
                            columns = colnames(train)[purrr::map_lgl(train, is.numeric)], type = "[0-1]"){
@@ -127,16 +127,13 @@ feature_scaler <- function(train, response,
 
     train[, columns] %<>% scale(center = centers, scale = scales)
 
-    predict_function <- function(data) {
+    predict_function <- function(data, centers, scales, columns) {
         data[, columns] %<>% scale(center = centers, scale = scales)
         return(data)
     }
-    return(list(
-        "train" = train,
-        "centers" = centers,
-        "scales" = scales,
-        ".predict" = predict_function
-    ))
+
+    predict_pipe <- pipe(.function = predict_function, centers = centers, scales = scales, columns = columns)
+    return(list("train" = train, "pipe" = predict_pipe))
 }
 
 #' Train one-hot encoding
@@ -149,7 +146,7 @@ feature_scaler <- function(train, response,
 #' Any function that return a single value from a scalar would do (e.g. quantile, sd).
 #' @param response String denoting the name of the column that should be used as the response variable. Mandatory
 #'
-#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+#' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 feature_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(train, function(x) return(!(is.numeric(x) || is.logical(x))))],
                                    stat_functions, response,
@@ -186,36 +183,30 @@ feature_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_l
         if(length(delete_cols) > 0) train_dt_set[, (delete_cols) := NULL]
 
         stats_transformer <- NA
-        stats_transformer_predict <- NA
+        stats_transformer_pipe <- NA
     } else {
         stats_transformer <- feature_create_all_generic_stats(
             train = train, stat_cols = columns, response = response, functions = stat_functions,
             interaction_level = 1, too_few_observations_cutoff = 0)
 
         current_columns <- colnames(train)
-        stats_transformer_predict <- function(data)
-            stat_transformer_for_one_hot(data = data, stats_transformer = stats_transformer$.predict,
-                                         orignal_column = current_columns)
+        stats_transformer_pipe <- pipe(.function = stat_transformer_for_one_hot, stats_transformer = stats_transformer$pipe,
+                                       orignal_column = current_columns)
 
         one_hot_parameters <- as.list(columns)
         names(one_hot_parameters) <- columns
-        train_dt_set <- stats_transformer_predict(train)
+        train_dt_set <- invoke(stats_transformer_pipe, train)
     }
 
     if(use_pca){
         pca <- prcomp(x = train_dt_set, center = T, scale. = T, tol = pca_tol, retx = F)
         train_dt_set <- predict(pca, newdata = train_dt_set) %>% as_data_frame
-    }
+    } else pca <- NA
     train %<>% select_(.dots = paste0("-", columns)) %>% dplyr::bind_cols(train_dt_set)
 
-    predict_function <- function(data) feature_one_hot_encode_predict(
-        data = data, one_hot_parameters = one_hot_parameters,
-        use_pca = use_pca, pca = pca, stat_transformer = stats_transformer_predict)
-    res <- list(train = train, one_hot_parameters = one_hot_parameters,
-                use_pca = use_pca, .predict = predict_function, stats_transformer = stats_transformer)
-    if(use_pca) res$pca <- pca
-
-    return(res)
+    predict_pipe <- pipe(.function = feature_one_hot_encode_predict, one_hot_parameters = one_hot_parameters,
+                         use_pca = use_pca, pca = pca, stat_transformer = stats_transformer_pipe)
+    return(list(train = train, pipe = predict_pipe))
 }
 
 #' Apply one-hot encoding
@@ -238,7 +229,7 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
 
     stopifnot(columns %in% colnames(data) %>% not %>% any %>% not)
 
-    if(!is.function(stat_transformer)){
+    if(!is.pipe(stat_transformer) && !is.pipeline(stat_transformer)){
         test_dt_set <- data %>% data.table::as.data.table() %>% .[, columns, with = F]
         for(colname in columns){
             unique_values <- one_hot_parameters[colname] %>% unlist
@@ -251,7 +242,7 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
         delete_cols <- colnames(test_dt_set) %>% .[grepl(x = ., pattern = "_(<NA>)|(NA)$")]
         if(length(delete_cols) > 0) test_dt_set[, (delete_cols) := NULL]
     } else {
-        test_dt_set <- stat_transformer(data)
+        test_dt_set <- invoke(stat_transformer, data)
     }
 
     if(use_pca) {
@@ -267,7 +258,7 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
 }
 
 stat_transformer_for_one_hot <- function(data, stats_transformer, orignal_column) {
-    data <- stats_transformer(data)
+    data <- invoke(stats_transformer, data)
     data <- data[, !colnames(data) %in% orignal_column]
     return(data)
 }
@@ -282,7 +273,7 @@ stat_transformer_for_one_hot <- function(data, stats_transformer, orignal_column
 #'
 #' @details Be careful: if for instance only one value gets substituted in a column, then the \code{insufficient_occurance_marker} value will just replace that one, preserving the problem.
 #'
-#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+#' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 feature_categorical_filter <- function(
     train, response, insufficient_occurance_marker = "insignificant_category",
@@ -312,16 +303,11 @@ feature_categorical_filter <- function(
         mappings[[i]] <- mapping
     }
 
-    predict_function <- function(data) feature_categorical_filter_predict(data, categorical_columns = categorical_columns, mappings = mappings, insufficient_occurance_marker = insufficient_occurance_marker)
-    train <- predict_function(train)
+    predict_pipe <- pipe(.function = feature_categorical_filter_predict, categorical_columns = categorical_columns,
+                         mappings = mappings, insufficient_occurance_marker = insufficient_occurance_marker)
+    train <- invoke(predict_pipe, train)
 
-    return(list(
-        train = train,
-        .predict = predict_function,
-        categorical_columns = categorical_columns,
-        mappings = mappings,
-        insufficient_occurance_marker = insufficient_occurance_marker
-    ))
+    return(list(train = train, pipe = predict_pipe))
 }
 
 #' Filters categorical variables for new datasets
