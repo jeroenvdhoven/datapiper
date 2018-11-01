@@ -121,7 +121,7 @@ describe("build_docker()", {
             curl::nslookup("www.r-project.org")
             connectivity <- T
         }, error = function(e) warning(e))
-return()
+
         if(connectivity){
             r <- generate_model_function()
             train <- r$train
