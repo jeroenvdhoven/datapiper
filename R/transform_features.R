@@ -107,6 +107,7 @@ feature_scaler <- function(train, response,
 
     stopifnot(
         is.data.frame(train),
+        nrow(train) > 0,
         response %in% colnames(train),
         is.character(columns),
         !any(!columns %in% colnames(train)),

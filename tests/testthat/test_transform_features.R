@@ -82,6 +82,11 @@ testthat::describe("feature_scaler()", {
         expect_equal(r_normal$train$y, dataset1$y)
         expect_equal(r_normal$train$y, dataset1$y)
     })
+
+    it("errors when a dataset is passed with 0 rows", {
+        expect_error(feature_scaler(train = dataset1[0, ], response = "x", type = "N(0,1)"),
+                     regexp = "nrow(train) > 0 is not TRUE", fixed = T)
+    })
 })
 
 # Skeleton
