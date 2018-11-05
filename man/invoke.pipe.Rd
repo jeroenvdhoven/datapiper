@@ -4,10 +4,10 @@
 \alias{invoke.pipe}
 \title{Applies a pipe to new data}
 \usage{
-\method{invoke}{pipe}(pipe, data)
+\method{invoke}{pipe}(x, data)
 }
 \arguments{
-\item{pipe}{The pipe to be applied}
+\item{x}{The pipe to be applied}
 
 \item{data}{A new dataframe}
 }

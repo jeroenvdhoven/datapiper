@@ -7,25 +7,28 @@
 train_pipeline(..., response)
 }
 \arguments{
-\item{...}{Pipe segments. Each pipe segment is a list containing at least a \code{\link{.segment}} argument, which holds the function. Other parts of the list will be treated as additional arguments to that function.
+\item{...}{Pipe segments. Each pipe segment is a list containing at least a \code{.segment} argument, which holds the function.
+Other parts of the list will be treated as additional arguments to that function.
+\code{\link{segment}} provides a simple wrapper for these pipe segments.
 
-These arguments are evaluated at time of calling (so once you call the pipeline function), however if you wish to create arguments based on the datasets just before starting the processing,
-remember you can always wrap a pipe with another function so you can do the calculations there.
+These arguments are evaluated at time of calling (so once you call the pipeline function), however if you wish to create arguments based
+on the datasets just before starting the processing, remember you can always wrap a pipe with another function so you can do the calculations there.
 
 The function should always accept at least a \code{train} argument for the train dataset.
-It should also return a list with (at a minimum) two named items: \code{train} and \code{pipe}, a trained pipe segment. You can create these using \code{\link{pipe}}.}
+Each function should also return a list with (at a minimum) two named items: \code{train} and \code{pipe}, a trained pipe segment.
+You can create these using \code{\link{pipe}}.}
 
 \item{response}{Since \code{response} is a parameter often used in this package, you can set it here to have it automatically set in pipeline where needed.}
 }
 \value{
 A function, taking as arguments \code{train}. This function will return a list of the transformed \code{train} dataset after running it through all pipeline functions,
-as well as a function that reproduces the process for new data and a list containing the parameters of each pipeline segment.
+as well as a \code{\link{pipeline}} that reproduces the process for new data.
 }
 \description{
 Create a train/test pipeline from individual functions
 }
 \details{
-Since this function returns a \code{pipe} function, it should be possible to use pipelines within pipelines.
+Since this function returns a \code{pipe} entry in its list, it should be possible to use the result of this function in a new pipeline.
 }
 \examples{
 library(dplyr)
@@ -35,15 +38,16 @@ train <- data_frame(a = 1:10, b = sample(c(1,2, NA), size = 10,
 test <- data_frame(a = 1:10, b = sample(c(1,2, NA), size = 10,
     replace = TRUE), c = sample(c(1,2), size = 10, replace = TRUE))
 
-pipeline = pipeline(
-    list(.segment = datapiper::feature_NA_indicators),
-    list(.segment = datapiper::impute_all, exclude_columns = "a"),
-    list(.segment = datapiper::cor_remove_high_correlation_features, exclude_columns = "a"),
-    list(.segment = datapiper::feature_create_all_generic_stats, stat_cols = "b",
+P <- train_pipeline(
+    segment(.segment = datapiper::feature_NA_indicators),
+    segment(.segment = datapiper::impute_all, exclude_columns = "a"),
+    segment(.segment = datapiper::cor_remove_high_correlation_features, exclude_columns = "a"),
+    segment(.segment = datapiper::feature_create_all_generic_stats, stat_cols = "b",
          response = "a", functions = list("mean" = mean, "sd" = sd),
          too_few_observations_cutoff = 0)
 )
-res <- pipeline(train)
-trained_pipeline <- res$pipe
+trained_pipeline <- P(train = train)$pipe
+
+train <- invoke(trained_pipeline, train)
 test <- invoke(trained_pipeline, test)
 }

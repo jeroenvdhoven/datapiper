@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pipe}
 \alias{pipe}
-\title{Creates a pipe object out of a predict_function and a list of arguments}
+\title{Creates a pipe object out of a function and a list of arguments}
 \usage{
 pipe(.function, ...)
 }
@@ -20,5 +20,5 @@ A pipe object with two entries:
 }
 }
 \description{
-Creates a pipe object out of a predict_function and a list of arguments
+Creates a pipe object out of a function and a list of arguments
 }

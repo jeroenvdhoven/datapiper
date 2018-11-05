@@ -24,7 +24,7 @@ Either "error", which causes an error, or "remove", which removes the extra colu
 Either "error", which causes an error, or "ignore", which ignores warnings but will still allow errors to propagate.}
 }
 \value{
-A list of the train dataset and a .predict function to be used on new data.
+A list of the train dataset and a pipe to be used on new data.
 }
 \description{
 Create a pipeline step that learns what the data looks like

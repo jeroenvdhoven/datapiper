@@ -1,18 +1,22 @@
 #' Create a train/test pipeline from individual functions
 #'
-#' @param ... Pipe segments. Each pipe segment is a list containing at least a \code{\link{.segment}} argument, which holds the function. Other parts of the list will be treated as additional arguments to that function.
+#' @param ... Pipe segments. Each pipe segment is a list containing at least a \code{.segment} argument, which holds the function.
+#' Other parts of the list will be treated as additional arguments to that function.
+#' \code{\link{segment}} provides a simple wrapper for these pipe segments.
 #'
-#' These arguments are evaluated at time of calling (so once you call the pipeline function), however if you wish to create arguments based on the datasets just before starting the processing,
-#' remember you can always wrap a pipe with another function so you can do the calculations there.
+#' These arguments are evaluated at time of calling (so once you call the pipeline function), however if you wish to create arguments based
+#' on the datasets just before starting the processing, remember you can always wrap a pipe with another function so you can do the calculations there.
 #'
 #' The function should always accept at least a \code{train} argument for the train dataset.
-#' It should also return a list with (at a minimum) two named items: \code{train} and \code{pipe}, a trained pipe segment. You can create these using \code{\link{pipe}}.
+#' Each function should also return a list with (at a minimum) two named items: \code{train} and \code{pipe}, a trained pipe segment.
+#' You can create these using \code{\link{pipe}}.
+#'
 #' @param response Since \code{response} is a parameter often used in this package, you can set it here to have it automatically set in pipeline where needed.
 #'
-#' @details Since this function returns a \code{pipe} function, it should be possible to use pipelines within pipelines.
+#' @details Since this function returns a \code{pipe} entry in its list, it should be possible to use the result of this function in a new pipeline.
 #'
 #' @return A function, taking as arguments \code{train}. This function will return a list of the transformed \code{train} dataset after running it through all pipeline functions,
-#' as well as a function that reproduces the process for new data and a list containing the parameters of each pipeline segment.
+#' as well as a \code{\link{pipeline}} that reproduces the process for new data.
 #' @export
 #'
 #' @examples
@@ -23,17 +27,19 @@
 #' test <- data_frame(a = 1:10, b = sample(c(1,2, NA), size = 10,
 #'     replace = TRUE), c = sample(c(1,2), size = 10, replace = TRUE))
 #'
-#' pipeline = pipeline(
-#'     list(.segment = datapiper::feature_NA_indicators),
-#'     list(.segment = datapiper::impute_all, exclude_columns = "a"),
-#'     list(.segment = datapiper::cor_remove_high_correlation_features, exclude_columns = "a"),
-#'     list(.segment = datapiper::feature_create_all_generic_stats, stat_cols = "b",
+#' P <- train_pipeline(
+#'     segment(.segment = datapiper::feature_NA_indicators),
+#'     segment(.segment = datapiper::impute_all, exclude_columns = "a"),
+#'     segment(.segment = datapiper::cor_remove_high_correlation_features, exclude_columns = "a"),
+#'     segment(.segment = datapiper::feature_create_all_generic_stats, stat_cols = "b",
 #'          response = "a", functions = list("mean" = mean, "sd" = sd),
 #'          too_few_observations_cutoff = 0)
 #' )
-#' res <- pipeline(train)
-#' trained_pipeline <- res$pipe
+#' trained_pipeline <- P(train = train)$pipe
+#'
+#' train <- invoke(trained_pipeline, train)
 #' test <- invoke(trained_pipeline, test)
+#' @importFrom methods formalArgs as
 train_pipeline <- function(..., response){
     pipes <- list(...)
     # TODO: add prediction pipeline?
@@ -175,10 +181,9 @@ pipeline_mutate <- pipeline_dplyr(mutate_, stop_on_missing_names = T)
 #' model <- lm(y ~ x, data)
 #'
 #' self_contained_function <- function(data) predict(model, data)
-#' pipe <- pipeline_function(data, self_contained_function)
+#' model_pipe <- pipeline_function(data, self_contained_function)
 #'
-#' predictions <- pipe$.predict(data)
-
+#' predictions <- invoke(model_pipe$pipe, data)
 pipeline_function <- function(train, f, ...) {
     stopifnot(
         is.function(f),
@@ -202,7 +207,7 @@ pipeline_function <- function(train, f, ...) {
 #' @param on_type_error What to do when a new dataset causes warnings or errors on casting columns to new types.
 #' Either "error", which causes an error, or "ignore", which ignores warnings but will still allow errors to propagate.
 #'
-#' @return A list of the train dataset and a .predict function to be used on new data.
+#' @return A list of the train dataset and a pipe to be used on new data.
 #' @importFrom purrr map2_df
 #' @export
 pipeline_check <- function(train,
@@ -272,7 +277,7 @@ pipeline_check_predict <- function(data, response, cols, col_types, on_missing_c
     return(data)
 }
 
-#' Creates a pipe object out of a predict_function and a list of arguments
+#' Creates a pipe object out of a function and a list of arguments
 #'
 #' @param .function A function to repeat transformations from a trained pipeline on new data. Will be checked for being a function and taking a \code{data} argument.
 #' @param ... Other arguments to \code{.function}. Non-named arguments are only accepted if \code{.function} takes a \code{...} argument. Named arguments will be checked to
@@ -322,32 +327,38 @@ pipeline <- function(...) {
     return(pipes)
 }
 
+#' Generic function to apply either a pipe or pipeline to new data
+#'
+#' @param x The pipe / pipeline to be applied
+#' @param data A new dataframe
+#'
+#' @return The transformed dataset
 #' @export
-invoke <- function(x, ...) UseMethod("invoke", x)
+invoke <- function(x, data) UseMethod("invoke", x)
 
 
 #' Applies a pipe to new data
 #'
-#' @param pipe The pipe to be applied
+#' @param x The pipe to be applied
 #' @param data A new dataframe
 #'
 #' @return The transformed dataset
 #' @export
-invoke.pipe <- function(pipe, data) {
-    arg_list <- pipe$args
+invoke.pipe <- function(x, data) {
+    arg_list <- x$args
     arg_list$data <- data
-    return(do.call(what = pipe$predict_function, args = arg_list))
+    return(do.call(what = x$predict_function, args = arg_list))
 }
 
 #' Applies a pipeline to new data
 #'
-#' @param pipeline The pipeline to be applied
+#' @param x The pipeline to be applied
 #' @param data A new dataframe
 #'
 #' @return The transformed dataset
 #' @export
-invoke.pipeline <- function(pipeline, data) {
-    for(pipe_ in pipeline){
+invoke.pipeline <- function(x, data) {
+    for(pipe_ in x){
         data <- invoke(pipe_, data)
     }
 

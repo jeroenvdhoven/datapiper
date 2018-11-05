@@ -42,7 +42,7 @@
 #' }
 #' @importFrom purrr map_lgl map map_int map_dfr map_dfc map_dbl
 #' @importFrom dplyr data_frame
-#'
+#' @importFrom stats median sd
 #' @export
 sanity_checking <- function(data,
                             missing_values = list(NA, "NA", "<NA>", "none", "", NULL, "NULL", "NaN", NaN, 0, -1),
@@ -81,12 +81,15 @@ sanity_checking <- function(data,
 }
 
 check_numerical <- function(numerical_data, n_sigma) {
-    num_uniques <- purrr::map(numerical_data, . %>% unique %>% .[!is.na(.)])
+    num_uniques <- purrr::map(numerical_data, function(x) {
+        x <- unique(x)
+        return(x[!is.na(x)])
+    })
     no_uniques <- purrr::map_int(num_uniques, length)
 
     outlier_ranges <- purrr::map_dfr(numerical_data, function(x){
-        m <- median(x = x, na.rm = T)
-        s <- sd(x = x, na.rm = T)
+        m <- stats::median(x = x, na.rm = T)
+        s <- stats::sd(x = x, na.rm = T)
         lower = max(m - s * n_sigma, min(x, na.rm = T), na.rm = T)
         upper = min(m + s * n_sigma, max(x, na.rm = T), na.rm = T)
         return(list(

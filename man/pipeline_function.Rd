@@ -30,7 +30,7 @@ data <- dplyr::data_frame(x = 1:10, y = (1:10) + rnorm(10))
 model <- lm(y ~ x, data)
 
 self_contained_function <- function(data) predict(model, data)
-pipe <- pipeline_function(data, self_contained_function)
+model_pipe <- pipeline_function(data, self_contained_function)
 
-predictions <- pipe$.predict(data)
+predictions <- invoke(model_pipe$pipe, data)
 }

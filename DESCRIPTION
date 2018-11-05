@@ -20,6 +20,8 @@ Imports:
   igraph,
   devtools,
   httr,
+  cluster,
+  methods,
   jsonlite
 Suggests: 
   testthat

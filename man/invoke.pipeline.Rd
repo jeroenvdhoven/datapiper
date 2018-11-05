@@ -4,10 +4,10 @@
 \alias{invoke.pipeline}
 \title{Applies a pipeline to new data}
 \usage{
-\method{invoke}{pipeline}(pipeline, data)
+\method{invoke}{pipeline}(x, data)
 }
 \arguments{
-\item{pipeline}{The pipeline to be applied}
+\item{x}{The pipeline to be applied}
 
 \item{data}{A new dataframe}
 }
