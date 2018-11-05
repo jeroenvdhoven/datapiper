@@ -8,13 +8,13 @@ describe("clustering()", {
                                  to_eval = clustering(train = dataset1, exclude_columns = na_columns))
     })
 
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         r <- clustering(train = dataset1, exclude_columns = na_columns)
 
         ctest_pipe_has_correct_fields(r)
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for clustering_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for clustering_predict()", {
         r <- clustering(train = dataset1, exclude_columns = na_columns)
         ctest_pipe_has_working_predict_function(pipe_res = r, data = dataset1)
     })

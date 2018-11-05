@@ -8,7 +8,7 @@ describe("range_classifier", {
     r <- suppressWarnings(ctest_for_no_errors(to_eval = datapiper::range_classifier(dataset1, response_col = "x", values = def_values, exclude_columns = c("m2", "m", "z", "z2", "y")),
                         error_message = "Can't run range_classifier"))
 
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -47,7 +47,7 @@ describe("range_classifier", {
         ctest_dataset_has_columns(r_all$train, expected_columns)
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for range_classifier_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for range_classifier_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 

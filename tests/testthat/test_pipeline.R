@@ -159,7 +159,7 @@ describe("pipeline_dplyr", {
 
 describe("pipeline_select", {
     r <- pipeline_select(dataset1, "-c")
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -170,14 +170,14 @@ describe("pipeline_select", {
         expect_equal(r_keep$train, dataset1[, 'c'])
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for pipeline_select_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for pipeline_select_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 })
 
 describe("pipeline_mutate", {
     r <- pipeline_mutate(dataset1, q = "c + 1")
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -186,7 +186,7 @@ describe("pipeline_mutate", {
         expect_equal(r$train$q, dataset1$c + 1)
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for pipeline_mutate_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for pipeline_mutate_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
@@ -200,7 +200,7 @@ describe("pipeline_mutate", {
 describe("pipeline_function", {
     applied_function <- function(data) return(data[, purrr::map_lgl(data, is.numeric)])
     r <- pipeline_function(dataset1, f = applied_function)
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -208,7 +208,7 @@ describe("pipeline_function", {
         expect_false(any(!purrr::map_lgl(r$train, is.numeric)))
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for pipeline_function_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for pipeline_function_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
@@ -225,7 +225,7 @@ describe("pipeline_check", {
         pipeline_check(dataset1, response = "x", on_missing_column = "add", on_extra_column = "remove", on_type_error = "ignore"),
         error_message = "pipeline_check does not work with defaults")
 
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -272,7 +272,7 @@ describe("pipeline_check", {
         expect_equal(purrr::map_chr(r$train, class), purrr::map_chr(empty_dataset, class))
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for pipeline_check_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for pipeline_check_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 })
@@ -291,7 +291,7 @@ describe("train_pipeline()", {
         expect_true(formalArgs(r) == "train")
     })
 
-    it("generates a train dataset and .predict function on calling", {
+    it("generates a train dataset and pipe function on calling", {
         ctest_pipe_has_correct_fields(pipe_result)
     })
 

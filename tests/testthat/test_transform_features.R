@@ -1,7 +1,7 @@
 library(testthat)
 testthat::describe("feature_transformer()", {
     r <- feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -11,7 +11,7 @@ testthat::describe("feature_transformer()", {
         expect_equal(r$train$x, dataset1$x, info = "The response remains untouched")
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for feature_transformer_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for feature_transformer_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
@@ -58,7 +58,7 @@ ctest_normal_range <- function(col) {
 testthat::describe("feature_scaler()", {
     r_01 <- feature_scaler(train = dataset1, exclude_columns = "x", type = "[0-1]")
     r_normal <- feature_scaler(train = dataset1, exclude_columns = "x", type = "N(0,1)")
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r_01)
         ctest_pipe_has_correct_fields(r_normal)
     })
@@ -71,7 +71,7 @@ testthat::describe("feature_scaler()", {
         ctest_normal_range(r_normal$train$b)
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for feature_scaler_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for feature_scaler_predict()", {
         ctest_pipe_has_working_predict_function(r_01, dataset1)
         ctest_pipe_has_working_predict_function(r_normal, dataset1)
     })
@@ -94,7 +94,7 @@ testthat::describe("feature_one_hot_encode()", {
     r_pca <- feature_one_hot_encode(train = dataset1, use_pca = T, columns = c("y", "s"))
     r_non <- feature_one_hot_encode(train = dataset1, use_pca = F)
 
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r_non)
         ctest_pipe_has_correct_fields(r_pca)
     })
@@ -173,7 +173,7 @@ testthat::describe("feature_one_hot_encode()", {
         ctest_pipe_has_working_predict_function(r_mean_pca, dataset1)
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for feature_one_hot_encode_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for feature_one_hot_encode_predict()", {
         ctest_pipe_has_working_predict_function(r_non, dataset1)
         ctest_pipe_has_working_predict_function(r_pca, dataset1)
     })
@@ -189,7 +189,7 @@ testthat::describe("feature_categorical_filter()", {
     r <- feature_categorical_filter(train = dataset1, response = "x",
                                     insufficient_occurance_marker = "marker", threshold_function = function(data) 5)
 
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -199,7 +199,7 @@ testthat::describe("feature_categorical_filter()", {
         expect_equal(r$train$y, rep("marker", N))
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for feature_categorical_filter_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for feature_categorical_filter_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 

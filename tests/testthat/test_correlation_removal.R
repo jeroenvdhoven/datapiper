@@ -5,7 +5,7 @@ describe("cor_remove_high_correlation_features", {
         error_message = "cor_remove_high_correlation_features() does not work with defaults"
     )
 
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -13,7 +13,7 @@ describe("cor_remove_high_correlation_features", {
         expect_equal(sum(c("a", "b", "x") %in% colnames(r$train)), 1)
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for preserve_columns_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for preserve_columns_predict()", {
         ctest_pipe_has_working_predict_function(pipe_res = r, data = dataset1)
     })
 

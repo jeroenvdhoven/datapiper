@@ -3,7 +3,7 @@ describe("impute_all", {
     r <- ctest_for_no_errors(to_eval = impute_all(train = dataset1, exclude_columns = c("z", "z2"), type = "mean"),
                              error_message = "Can't run impute with mean")
 
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -12,7 +12,7 @@ describe("impute_all", {
         expect_false(anyNA(r$train[, purrr::map_lgl(r$train, is.numeric)]))
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for impute_predict_all()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for impute_predict_all()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 

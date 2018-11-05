@@ -2,7 +2,7 @@ describe("feature_NA_indicators", {
     r <- ctest_for_no_errors(datapiper::feature_NA_indicators(train = dataset1),
                              "Can't apply feature_NA_indicators")
 
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -13,7 +13,7 @@ describe("feature_NA_indicators", {
         ctest_dataset_has_columns(r$train, indicator_columns)
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for feature_NA_indicators_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for feature_NA_indicators_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
@@ -32,7 +32,7 @@ describe("feature_create_all_generic_stats", {
             too_few_observations_cutoff = 5, functions = f_list),
         "Can't apply feature_create_all_generic_stats")
 
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -80,7 +80,7 @@ describe("feature_create_all_generic_stats", {
         expect_false(any(transformed_test$mean_y != mean(x = train$x)))
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for feature_create_all_generic_stats_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for feature_create_all_generic_stats_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
@@ -128,7 +128,7 @@ describe("remove_single_value_columns", {
     r <- ctest_for_no_errors(datapiper::remove_single_value_columns(dataset1, na_function = is.na),
                              error_message = "Error: remove_single_value_columns failed on basic run")
 
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -137,7 +137,7 @@ describe("remove_single_value_columns", {
         ctest_dataset_does_not_have_columns(r$train, c("z", "z2"))
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for remove_single_value_columns_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for remove_single_value_columns_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
@@ -153,7 +153,7 @@ describe("feature_interactions", {
     r <- ctest_for_no_errors(datapiper::feature_interactions(dataset1, response = "x", columns = c("a", "b", "c"), max_interactions = 3),
                              error_message = "feature_interactions does not run with defaults")
 
-    it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
 
@@ -164,7 +164,7 @@ describe("feature_interactions", {
         expect_equal(r$train$interaction_b_c, with(dataset1, (b - mean(b)) * (c - mean(c))))
     })
 
-    it("can apply its results to a new dataset using .predict, a wrapper for feature_interactions_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for feature_interactions_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 

@@ -21,9 +21,9 @@ dataset1 <- dplyr::data_frame(
 
 # Skeleton
 # describe("<function_name>", {
-#     it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {})
+#     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {})
 #     it("does the thing it is supposed to do", {})
-#     it("can apply its results to a new dataset using .predict, a wrapper for <function_name>_predict()", {})
+#     it("can apply its results to a new dataset using pipe, a wrapper for <function_name>_predict()", {})
 #     it("ignores non-numeric input", {})
 #     it("runs without errors on basic settings", {})
 #
