@@ -4,16 +4,13 @@
 \alias{feature_scaler}
 \title{Rescales data to standardised ranges}
 \usage{
-feature_scaler(train, response,
-  columns = colnames(train)[purrr::map_lgl(train, is.numeric)],
+feature_scaler(train, exclude_columns = character(length = 0),
   type = "[0-1]")
 }
 \arguments{
 \item{train}{Data frame containing the train data.}
 
-\item{response}{String denoting the name of the column that should be used as the response variable. Mandatory}
-
-\item{columns}{The columns that need to be rescaled.}
+\item{exclude_columns}{Names of columns that should be excluded from rescaling}
 
 \item{type}{Type of rescales to perform:
 \itemize{

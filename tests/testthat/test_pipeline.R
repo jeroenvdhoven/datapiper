@@ -326,14 +326,14 @@ describe("train_pipeline()", {
 
     it("can automatically add `response` to functions that need it but don't have it assigned yet", {
         p_missing <- ctest_for_no_errors(train_pipeline(
-            segment(.segment = datapiper::feature_scaler),
+            segment(.segment = datapiper::feature_one_hot_encode),
             response = "x"
         ), error_message = "pipeline errored when adding `response` variable")
         r_missing <- ctest_for_no_errors(p_missing(dataset1), error_message = "executing pipeline with `response` variable resulted in an error")
         ctest_pipe_has_correct_fields(r_missing)
 
         p_no_missing <- ctest_for_no_errors(train_pipeline(
-            segment(.segment = datapiper::feature_scaler, response = "x")
+            segment(.segment = datapiper::feature_one_hot_encode, response = "x")
         ), error_message = "pipeline errored when not adding `response` variable")
         r_no_missing <- ctest_for_no_errors(p_no_missing(dataset1), error_message = "executing pipeline without `response` variable resulted in an error")
         ctest_pipe_has_correct_fields(r_no_missing)

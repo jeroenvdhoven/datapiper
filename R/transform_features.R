@@ -91,8 +91,7 @@ feature_transformer_predict <- function(data, transform_columns, transform_funct
 #' Rescales data to standardised ranges
 #'
 #' @param train Data frame containing the train data.
-#' @param response String denoting the name of the column that should be used as the response variable. Mandatory
-#' @param columns The columns that need to be rescaled.
+#' @param exclude_columns Names of columns that should be excluded from rescaling
 #' @param type Type of rescales to perform:
 #' \itemize{
 #' \item \code{"[0-1]"}: rescales the columns to the [0-1] range
@@ -101,18 +100,18 @@ feature_transformer_predict <- function(data, transform_columns, transform_funct
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
-feature_scaler <- function(train, response,
-                           columns = colnames(train)[purrr::map_lgl(train, is.numeric)], type = "[0-1]"){
-    columns %<>% .[. != response]
-
+feature_scaler <- function(train, exclude_columns = character(length = 0), type = "[0-1]"){
     stopifnot(
         is.data.frame(train),
         nrow(train) > 0,
-        response %in% colnames(train),
-        is.character(columns),
-        !any(!columns %in% colnames(train)),
+        is.character(exclude_columns),
+        !any(!exclude_columns %in% colnames(train)),
         type %in% c("[0-1]", "N(0,1)")
     )
+
+    # Ensure non-numeric columns are never standardised
+    exclude_columns <- unique(c(exclude_columns, colnames(train)[!purrr::map_lgl(train, is.numeric)]))
+    columns <- colnames(train)[!colnames(train) %in% exclude_columns]
 
     if(type == "N(0,1)") {
         center_func <- function(x) mean(x, na.rm = T)
@@ -129,6 +128,11 @@ feature_scaler <- function(train, response,
     train[, columns] %<>% scale(center = centers, scale = scales)
 
     predict_function <- function(data, centers, scales, columns) {
+        stopifnot(
+            is.data.frame(data),
+            !any(!columns %in% colnames(data))
+        )
+
         data[, columns] %<>% scale(center = centers, scale = scales)
         return(data)
     }

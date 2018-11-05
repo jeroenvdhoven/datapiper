@@ -6,7 +6,7 @@ p_1 <- datapiper::train_pipeline(
 )
 p_2 <- datapiper::train_pipeline(
     segment(.segment = p_1),
-    segment(.segment = datapiper::feature_scaler, response = "x")
+    segment(.segment = datapiper::feature_scaler, exclude_columns = "x")
 )
 m_1 <- util_RMSE
 m_2 <- util_RMSLE

@@ -56,8 +56,8 @@ ctest_normal_range <- function(col) {
 }
 
 testthat::describe("feature_scaler()", {
-    r_01 <- feature_scaler(train = dataset1, response = "x", type = "[0-1]")
-    r_normal <- feature_scaler(train = dataset1, response = "x", type = "N(0,1)")
+    r_01 <- feature_scaler(train = dataset1, exclude_columns = "x", type = "[0-1]")
+    r_normal <- feature_scaler(train = dataset1, exclude_columns = "x", type = "N(0,1)")
     it("returns a list with at least train and .predict names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r_01)
         ctest_pipe_has_correct_fields(r_normal)
@@ -84,7 +84,7 @@ testthat::describe("feature_scaler()", {
     })
 
     it("errors when a dataset is passed with 0 rows", {
-        expect_error(feature_scaler(train = dataset1[0, ], response = "x", type = "N(0,1)"),
+        expect_error(feature_scaler(train = dataset1[0, ], exclude_columns = "x", type = "N(0,1)"),
                      regexp = "nrow(train) > 0 is not TRUE", fixed = T)
     })
 })
