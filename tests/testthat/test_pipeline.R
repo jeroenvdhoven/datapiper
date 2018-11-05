@@ -338,4 +338,36 @@ describe("train_pipeline()", {
         r_no_missing <- ctest_for_no_errors(p_no_missing(dataset1), error_message = "executing pipeline without `response` variable resulted in an error")
         ctest_pipe_has_correct_fields(r_no_missing)
     })
+
+    it("can set names for pipeline segments", {
+        r <- train_pipeline(
+            "mutate_a" = segment(.segment = pipeline_mutate, a = "5"),
+            "unselect_b" = segment(.segment = pipeline_select, "-b")
+        )
+
+        pipe_result <- r(dataset1)
+        expect_named(object = pipe_result$pipe, c("mutate_a", "unselect_b"))
+    })
+
+    it("will set pipe names to pipe_<i> if no names are provided", {
+        r <- train_pipeline(
+            segment(.segment = pipeline_mutate, a = "5"),
+            segment(.segment = pipeline_select, "-b")
+        )
+
+        pipe_result <- r(dataset1)
+        expect_named(object = pipe_result$pipe, c("pipe_1", "pipe_2"))
+    })
+
+    it("will set pipe names to pipe_<i> if there are missing names", {
+        r <- train_pipeline(
+            "mutate_a" = segment(.segment = pipeline_mutate, a = "5"),
+            segment(.segment = pipeline_mutate, x = "x + 1"),
+            "unselect_b" = segment(.segment = pipeline_select, "-b"),
+            segment(.segment = pipeline_mutate, x = "x - 1")
+        )
+
+        pipe_result <- r(dataset1)
+        expect_named(object = pipe_result$pipe, c("mutate_a", "pipe_1", "unselect_b", "pipe_2"))
+    })
 })

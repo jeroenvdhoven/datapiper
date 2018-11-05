@@ -1,7 +1,8 @@
 #' Create a train/test pipeline from individual functions
 #'
 #' @param ... Pipe segments. Each pipe segment is a list containing at least a \code{.segment} argument, which holds the function.
-#' Other parts of the list will be treated as additional arguments to that function.
+#' Other parts of the list will be treated as additional arguments to that function. Segments can be named, but don't have to be.
+#' The default name for segment i is \code{pipe_<i>}.
 #' \code{\link{segment}} provides a simple wrapper for these pipe segments.
 #'
 #' These arguments are evaluated at time of calling (so once you call the pipeline function), however if you wish to create arguments based
@@ -16,7 +17,8 @@
 #' @details Since this function returns a \code{pipe} entry in its list, it should be possible to use the result of this function in a new pipeline.
 #'
 #' @return A function, taking as arguments \code{train}. This function will return a list of the transformed \code{train} dataset after running it through all pipeline functions,
-#' as well as a \code{\link{pipeline}} that reproduces the process for new data.
+#' as well as a \code{\link{pipeline}} that reproduces the process for new data. Pipelines will be named based on either the names given in the call
+#' or default names will be generated (see param section).
 #' @export
 #'
 #' @examples
@@ -62,6 +64,13 @@ train_pipeline <- function(..., response){
         return("train" %in% argument_names)
     }))) stop("Error: one of your functions doesn't take a 'train' argument")
 
+    if(!is.null(names(pipes))) {
+        pipe_names <- names(pipes)
+        missing_pipe_name <- pipe_names == ""
+        if(any(missing_pipe_name))
+            pipe_names[missing_pipe_name] <- paste0("pipe_", seq_len(length.out = sum(missing_pipe_name)))
+    } else pipe_names <- paste0("pipe_", seq_along(pipes))
+
     res <- function(train) {
         trained_pipelines <- as.list(seq_along(pipes))
         mandatory_variables <- c("train", "pipe")
@@ -94,6 +103,7 @@ train_pipeline <- function(..., response){
         }
 
         trained_pipeline <- do.call(what = pipeline, args = trained_pipelines)
+        names(trained_pipeline) <- pipe_names
 
         return(list("train" = train, "pipe" = trained_pipeline))
     }

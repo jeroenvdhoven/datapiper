@@ -8,7 +8,8 @@ train_pipeline(..., response)
 }
 \arguments{
 \item{...}{Pipe segments. Each pipe segment is a list containing at least a \code{.segment} argument, which holds the function.
-Other parts of the list will be treated as additional arguments to that function.
+Other parts of the list will be treated as additional arguments to that function. Segments can be named, but don't have to be.
+The default name for segment i is \code{pipe_<i>}.
 \code{\link{segment}} provides a simple wrapper for these pipe segments.
 
 These arguments are evaluated at time of calling (so once you call the pipeline function), however if you wish to create arguments based
@@ -22,7 +23,8 @@ You can create these using \code{\link{pipe}}.}
 }
 \value{
 A function, taking as arguments \code{train}. This function will return a list of the transformed \code{train} dataset after running it through all pipeline functions,
-as well as a \code{\link{pipeline}} that reproduces the process for new data.
+as well as a \code{\link{pipeline}} that reproduces the process for new data. Pipelines will be named based on either the names given in the call
+or default names will be generated (see param section).
 }
 \description{
 Create a train/test pipeline from individual functions
