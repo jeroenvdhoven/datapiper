@@ -21,6 +21,7 @@
 #' @param on_extra_column See \code{\link{pipeline_check}} for details.
 #' @param on_type_error See \code{\link{pipeline_check}} for details.
 #' @param verbose Should intermediate updates be printed.
+#' @param save_model Flag indicating if the generated models should be saved. Defaults to False.
 #'
 #' @return A dataframe containing the training function, a list of parameters used to train the function, and one column for each metric / dataset combination.
 #' @export
@@ -32,6 +33,7 @@ find_model <- function(train, test, response,
                        on_extra_column = c("remove", "error")[1],
                        on_type_error = c("ignore", "error")[1],
                        verbose = T,
+                       save_model = F,
                        preprocess_pipes = list(function(train, test) return(list(train = train, test = train, .predict = function(data) return(data))))
 ) {
     stopifnot(
@@ -39,6 +41,7 @@ find_model <- function(train, test, response,
         !missing(test) , is.data.frame(test),
         is.character(response), length(response) == 1,
         is.logical(prepend_data_checker),
+        is.logical(save_model),
         is.list(models),
         parameter_sample_rate <= 1, parameter_sample_rate > 0,
         is.list(metrics), !any(!purrr::map_lgl(metrics, is.function)),
@@ -67,6 +70,7 @@ find_model <- function(train, test, response,
         res[paste0("train_", metric_name)] <- numeric(0)
         res[paste0("test_", metric_name)] <- numeric(0)
     }
+    if(save_model) res[".model"] <- list()
 
     # Try each preprocessing pipe
     for(preprocess_index in seq_along(preprocess_pipes)){
@@ -133,6 +137,7 @@ find_model <- function(train, test, response,
                 tmp <- list(".train" = list(f_train), ".predict" = list(f_predict), ".id" = paste0(pipe_name, "_", model_name), "params" = list(parameter_grid[r,]), ".preprocess_pipe" = list(trained_pipeline))
                 tmp[paste0("train_", metric_names)] <- train_metrics_calculated
                 tmp[paste0("test_", metric_names)] <- test_metrics_calculated
+                if(save_model) tmp$.model <- list(model)
                 res <- bind_rows(res, tmp)
             }
         }
@@ -169,12 +174,17 @@ find_best_models <- function(train, find_model_result, metric, higher_is_better,
     find_model_result %<>% filter(row_number() <= top_n) %>%
         mutate(model_name = paste0(.id, "_", row_number()))
 
-    models <- apply(X = find_model_result, MARGIN = 1, function(r){
-        d <- invoke(r$.preprocess_pipe, train)
-        m <- do.call(what = r$.train, args = list(data = d) %>% c(unlist(r$params)))
-        return(m)
-    }) %>% as.list
-    names(models) <- find_model_result$model_name
+    if(".model" %in% colnames(find_model_result)) {
+        models <- find_model_result$.model
+        names(models) <- find_model_result$model_name
+    } else {
+        models <- apply(X = find_model_result, MARGIN = 1, function(r){
+            d <- invoke(r$.preprocess_pipe, train)
+            m <- do.call(what = r$.train, args = list(data = d) %>% c(unlist(r$params)))
+            return(m)
+        }) %>% as.list
+        names(models) <- find_model_result$model_name
+    }
 
     model_pipe <- pipe(.function = model_prediction, models = models, pipes = find_model_result$.preprocess_pipe,
                        model_predict_functions = find_model_result$.predict)

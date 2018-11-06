@@ -11,7 +11,8 @@ p_2 <- datapiper::train_pipeline(
 m_1 <- util_RMSE
 m_2 <- util_RMSLE
 
-model_lm <- datapiper::find_template_formula_and_data(response = "x", training_function = lm)
+nrounds <- 10
+model_xgb <- find_xgb(response = "x", nrounds = nrounds)
 model_forest <- datapiper::find_template_formula_and_data(response = "x", training_function = randomForest::randomForest)
 
 ctest_has_correct_content <- function(column, outer_class, inner_class) {
@@ -41,14 +42,14 @@ describe("find_model()", {
             error_message = "find_model does not run without errors on basic settings",
             to_eval = datapiper::find_model(train = train, test = test, response = "x", verbose = F,
                                             preprocess_pipes = list("one" = p_1),
-                                            models = list("lm" = model_lm), metrics = list("rmse" = m_1),
+                                            models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
                                             parameter_sample_rate = 1, seed = 1, prepend_data_checker = F))
     })
 
     it("return a dataframe containing the results", {
         r <- datapiper::find_model(train = train, test = test, response = "x", verbose = F,
                                    preprocess_pipes = list("one" = p_1),
-                                   models = list("lm" = model_lm), metrics = list("rmse" = m_1),
+                                   models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
                                    parameter_sample_rate = 1, seed = 1, prepend_data_checker = F)
         expect_true(is.data.frame(r))
         expect_equivalent(nrow(r), 1)
@@ -67,31 +68,31 @@ describe("find_model()", {
         expect_equal(formalArgs(r$.train[[1]]), c("data", "..."))
         expect_equal(length(formalArgs(r$.predict[[1]])), 2)
 
-        expect_equal(r$.id, "one_lm")
+        expect_equal(r$.id, "one_xgb")
     })
 
     it("trains models as expected", {
         r <- datapiper::find_model(train = train, test = test, response = "x", verbose = F,
                                    preprocess_pipes = list("one" = p_1),
-                                   models = list("lm" = model_lm), metrics = list("rmse" = m_1),
+                                   models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
                                    parameter_sample_rate = 1, seed = 1, prepend_data_checker = F)
 
         pipe <- p_1(train)
-        model <- model_lm$.train(pipe$train)
-        train_rmse <- m_1(model_lm$.predict(model, pipe$train), train$x)
+        model <- model_xgb$.train(pipe$train, nrounds = nrounds)
+        train_rmse <- m_1(model_xgb$.predict(model, pipe$train), train$x)
         expect_equivalent(train_rmse, r$train_rmse)
 
-        test_rmse <- m_1(model_lm$.predict(model, invoke(pipe$pipe, test)), test$x)
+        test_rmse <- m_1(model_xgb$.predict(model, invoke(pipe$pipe, test)), test$x)
         expect_equivalent(test_rmse, r$test_rmse)
     })
 
     it("can use multiple pipelines", {
         r <- datapiper::find_model(train = train, test = test, response = "x", verbose = F,
                                    preprocess_pipes = list("one" = p_1, "two" = p_2),
-                                   models = list("lm" = model_lm), metrics = list("rmse" = m_1),
+                                   models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
                                    parameter_sample_rate = 1, seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 2)
-        expect_equal(r$.id, c("one_lm", "two_lm"))
+        expect_equal(r$.id, c("one_xgb", "two_xgb"))
         expect_equal(r$.preprocess_pipe[[1]], p_1(train)$pipe)
         expect_equal(r$.preprocess_pipe[[2]], p_2(train)$pipe)
     })
@@ -99,21 +100,21 @@ describe("find_model()", {
     it("can use multiple models", {
         r <- datapiper::find_model(train = train, test = test, response = "x", verbose = F,
                                    preprocess_pipes = list("one" = p_1),
-                                   models = list("lm" = model_lm, "forest" = model_forest), metrics = list("rmse" = m_1),
+                                   models = list("xgb" = model_xgb, "forest" = model_forest), metrics = list("rmse" = m_1),
                                    parameter_sample_rate = 1, seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 2)
-        expect_equal(r$.id, c("one_lm", "one_forest"))
-        expect_equal(r$.train[[1]], model_lm$.train)
+        expect_equal(r$.id, c("one_xgb", "one_forest"))
+        expect_equal(r$.train[[1]], model_xgb$.train)
         expect_equal(r$.train[[2]], model_forest$.train)
 
-        expect_equal(r$.predict[[1]], model_lm$.predict)
+        expect_equal(r$.predict[[1]], model_xgb$.predict)
         expect_equal(r$.predict[[2]], model_forest$.predict)
     })
 
     it("can use multiple metrics", {
         r <- datapiper::find_model(train = train, test = test, response = "x", verbose = F,
                                    preprocess_pipes = list("one" = p_1),
-                                   models = list("lm" = model_lm), metrics = list("rmse" = m_1, "rmsle" = m_2),
+                                   models = list("xgb" = model_xgb), metrics = list("rmse" = m_1, "rmsle" = m_2),
                                    parameter_sample_rate = 1, seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 1)
         expect_false(any(!c("train_rmsle", "test_rmsle") %in% colnames(r)))
@@ -154,10 +155,10 @@ describe("find_model()", {
         set.seed(1)
         model <- do.call(what = model_forest_w_params$.train, args = used_params)
         expect_equal(model$ntree, ntree)
-        train_rmse <- m_1(model_lm$.predict(model, pipe$train), train$x)
+        train_rmse <- m_1(model_xgb$.predict(model, pipe$train), train$x)
         expect_equivalent(train_rmse, r$train_rmse[1])
 
-        test_rmse <- m_1(model_lm$.predict(model, invoke(pipe$pipe, test)), test$x)
+        test_rmse <- m_1(model_xgb$.predict(model, invoke(pipe$pipe, test)), test$x)
         expect_equivalent(test_rmse, r$test_rmse[1])
     })
 
@@ -184,7 +185,7 @@ describe("find_model()", {
     it("can prepend pipeline_check to all pipelines", {
         r <- datapiper::find_model(train = train, test = test, response = "x", verbose = F,
                                    preprocess_pipes = list("one" = p_1),
-                                   models = list("forest" = model_lm), metrics = list("rmse" = m_1),
+                                   models = list("forest" = model_xgb), metrics = list("rmse" = m_1),
                                    parameter_sample_rate = .3333, seed = 1, prepend_data_checker = T)
 
         pipe <- r$.preprocess_pipe[[1]]
@@ -206,9 +207,26 @@ describe("find_model()", {
         r <- ctest_for_no_errors(
             error_message = "find_model does not check for response after piping",
             to_eval = find_model(train = dataset1, test = test, response = "target", verbose = F,
-                                            preprocess_pipes = list("one" = p_3),
-                                            models = list("lm" = model_lm), metrics = list("rmse" = m_1),
-                                            parameter_sample_rate = 1, seed = 1, prepend_data_checker = F))
+                                 preprocess_pipes = list("one" = p_3),
+                                 models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
+                                 parameter_sample_rate = 1, seed = 1, prepend_data_checker = F))
+    })
+
+    it("can save generated models if asked", {
+        r_without <- find_model(train = dataset1, test = test, response = "x", verbose = F,
+                        preprocess_pipes = list("one" = p_1),
+                        models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
+                        parameter_sample_rate = 1, seed = 1, prepend_data_checker = F, save_model = F)
+        expect_false(".model" %in% colnames(r_without))
+
+        r_with <- find_model(train = dataset1, test = test, response = "x", verbose = F,
+                        preprocess_pipes = list("one" = p_1),
+                        models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
+                        parameter_sample_rate = 1, seed = 1, prepend_data_checker = F, save_model = T)
+        expect_true(".model" %in% colnames(r_with))
+
+        model <- r_with$.model[[1]]
+        expect_true("xgb.Booster" %in% class(model))
     })
 })
 
@@ -226,13 +244,13 @@ describe("find_best_models()", {
         response = "x", training_function = randomForest::randomForest, ntree = ntree, nodesize = nodesize)
 
     find_model_result <- datapiper::find_model(train = train, test = test, response = "x", verbose = F,
-                               preprocess_pipes = list("one" = p_1),
-                               models = list("forest" = model_forest_w_params, "lm" = model_lm), metrics = list("rmse" = m_1, "rmsle" = m_2),
-                               parameter_sample_rate = 1, seed = 1, prepend_data_checker = F)
+                                               preprocess_pipes = list("one" = p_1),
+                                               models = list("forest" = model_forest_w_params, "xgb" = model_xgb), metrics = list("rmse" = m_1, "rmsle" = m_2),
+                                               parameter_sample_rate = 1, seed = 1, prepend_data_checker = F)
 
     it("runs without errors on basic settings", {
         r <- ctest_for_no_errors(to_eval = find_best_models(train = train, find_model_result = find_model_result,
-                                                       metric = "test_rmse", higher_is_better = F),
+                                                            metric = "test_rmse", higher_is_better = F),
                                  error_message = "find_best_models did not run on basic settings")
     })
 
@@ -242,7 +260,7 @@ describe("find_best_models()", {
         models <- r[[1]]$args$models
         expect_true(is.pipeline(r))
         expect_named(models, paste0(find_model_result$.id[which.min(find_model_result$test_rmse)], "_1"))
-        ctest_has_correct_content(column = models, "list", "lm")
+        ctest_has_correct_content(column = models, "list", "xgb.Booster")
     })
 
     it("returns a function that runs the full pipeline and the models", {
@@ -261,9 +279,9 @@ describe("find_best_models()", {
     })
 
     it("can set if the metric should be high or low", {
-        r_lm <- find_best_models(train = train, find_model_result = find_model_result,
-                              metric = "test_rmse", higher_is_better = F, top_n = 1)
-        ctest_has_correct_content(column = r_lm[[1]]$args$models, "list", "lm")
+        r_xgb <- find_best_models(train = train, find_model_result = find_model_result,
+                                 metric = "test_rmse", higher_is_better = F, top_n = 1)
+        ctest_has_correct_content(column = r_xgb[[1]]$args$models, "list", "xgb.Booster")
 
         r_rf <- find_best_models(train = train, find_model_result = find_model_result,
                                  metric = "test_rmse", higher_is_better = T, top_n = 1)
@@ -272,7 +290,7 @@ describe("find_best_models()", {
 
     it("can select multiple models for training", {
         r <- find_best_models(train = train, find_model_result = find_model_result,
-                         metric = "test_rmse", higher_is_better = F, top_n = 3)
+                              metric = "test_rmse", higher_is_better = F, top_n = 3)
 
         expect_equal(length(r[[1]]$args$models), 3)
         predictions <- invoke(r, test)
@@ -288,8 +306,8 @@ describe("find_best_models()", {
         predictions <- invoke(r, test)
         ctest_best_model_result(test = test, res = predictions, n_models = 4)
 
-        expect_named(predictions, c("one_lm_1", "one_forest_1", "one_forest_2", "one_forest_3"), ignore.order = T)
-        correct_models <- purrr::map2_lgl(.x = r$models, .y = c("lm", "randomForest", "randomForest", "randomForest"), .f = function(x,y){
+        expect_named(predictions, c("one_xgb_1", "one_forest_1", "one_forest_2", "one_forest_3"), ignore.order = T)
+        correct_models <- purrr::map2_lgl(.x = r$models, .y = c("xgb.Booster", "randomForest", "randomForest", "randomForest"), .f = function(x,y){
             return(any(class(x) == y))
         })
         expect_false(any(!correct_models), info = "All models have the correct type")
@@ -298,11 +316,11 @@ describe("find_best_models()", {
     it("can generate individual predictions or aggregate them", {
         set.seed(1)
         r_mean <- find_best_models(train = train, find_model_result = find_model_result, per_model = F,
-                              metric = "test_rmse", higher_is_better = F, top_n = 3, aggregate_func = mean)
+                                   metric = "test_rmse", higher_is_better = F, top_n = 3, aggregate_func = mean)
 
         set.seed(1)
         r_plain <- find_best_models(train = train, find_model_result = find_model_result, per_model = F,
-                                   metric = "test_rmse", higher_is_better = F, top_n = 3, aggregate_func = NA)
+                                    metric = "test_rmse", higher_is_better = F, top_n = 3, aggregate_func = NA)
 
         pred_mean <- invoke(r_mean, test)
         pred_plain <- invoke(r_plain, test)
@@ -311,5 +329,33 @@ describe("find_best_models()", {
         meaned <- data_frame(value = apply(pred_plain, 1 , mean))
 
         expect_equivalent(meaned, pred_mean)
+    })
+
+    it("can use the .model column if present", {
+        set.seed(1)
+        find_model_result <- datapiper::find_model(train = train, test = test, response = "x", verbose = F,
+                                                   preprocess_pipes = list("one" = p_1),
+                                                   models = list("forest" = model_forest_w_params, "xgb" = model_xgb),
+                                                   metrics = list("rmse" = m_1, "rmsle" = m_2),
+                                                   parameter_sample_rate = 1, seed = 1, prepend_data_checker = F, save_model = T)
+        find_model_result <- arrange(find_model_result, test_rmse)
+        N <- 3
+        r_plain <- find_best_models(train = train, find_model_result = find_model_result, per_model = F,
+                                   metric = "test_rmse", higher_is_better = F, top_n = N, aggregate_func = NA)
+        r_plain <- r_plain[[1]]
+        pred_plain <- invoke(r_plain, test)
+
+        original_models <- find_model_result$.model[seq_len(N)]
+        original_pipes <- find_model_result$.preprocess_pipe[seq_len(N)]
+        original_predict <- find_model_result$.predict[seq_len(N)]
+
+        ctest_best_model_result(test = test, res = pred_plain, n_models = N)
+
+        invoke_model <- function(model, pred_func, trained_pipeline) pred_func(model, invoke(trained_pipeline, test))
+        for(i in seq_len(N)) {
+            find_model_pred <- invoke_model(model = original_models[[i]], pred_func = original_predict[[i]], trained_pipeline = original_pipes[[i]])
+            expect_equivalent(object = unlist(pred_plain[, i]), expected = find_model_pred,
+                              info = paste("Model", i, "produces different results through find_model and find_best_models"))
+        }
     })
 })

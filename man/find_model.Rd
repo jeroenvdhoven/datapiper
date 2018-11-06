@@ -7,7 +7,7 @@
 find_model(train, test, response, models, metrics, parameter_sample_rate = 1,
   seed = 1, prepend_data_checker = T, on_missing_column = c("error",
   "add")[1], on_extra_column = c("remove", "error")[1],
-  on_type_error = c("ignore", "error")[1], verbose = T,
+  on_type_error = c("ignore", "error")[1], verbose = T, save_model = F,
   preprocess_pipes = list(function(train, test) return(list(train = train,
   test = train, .predict = function(data) return(data)))))
 }
@@ -43,6 +43,8 @@ You can use \code{\link{model_trainer}} as a wrapper for this list. It will also
 \item{on_type_error}{See \code{\link{pipeline_check}} for details.}
 
 \item{verbose}{Should intermediate updates be printed.}
+
+\item{save_model}{Flag indicating if the generated models should be saved. Defaults to False.}
 
 \item{preprocess_pipes}{List of preprocessing pipelines generated using \code{\link{pipeline}}.}
 }
