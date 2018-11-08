@@ -358,4 +358,15 @@ describe("find_best_models()", {
                               info = paste("Model", i, "produces different results through find_model and find_best_models"))
         }
     })
+
+    it("names its pipeline elements by default", {
+        r_no_aggregation <- find_best_models(train = train, find_model_result = find_model_result,
+                              metric = "test_rmse", higher_is_better = F)
+        expect_named(r_no_aggregation, "model")
+
+        r_aggregation <- find_best_models(train = train, find_model_result = find_model_result,
+                                             metric = "test_rmse", higher_is_better = F, top_n = 3, aggregate_func = mean)
+        expect_named(r_aggregation, c("model", "aggregate"))
+
+    })
 })

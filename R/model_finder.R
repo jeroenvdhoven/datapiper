@@ -194,10 +194,10 @@ find_best_models <- function(train, find_model_result, metric, higher_is_better,
             dplyr::as_data_frame(apply(X = data, MARGIN = 1, FUN = func))
 
         full_pipe <- pipeline(
-            model_pipe,
-            pipe(.function = aggreation_pipe_function, func = aggregate_func)
+            "model" = model_pipe,
+            "aggregate" = pipe(.function = aggreation_pipe_function, func = aggregate_func)
         )
-    } else full_pipe <- pipeline(model_pipe)
+    } else full_pipe <- pipeline("model" = model_pipe)
     return(full_pipe)
 }
 
