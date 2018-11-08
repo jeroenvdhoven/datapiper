@@ -102,8 +102,8 @@ train_pipeline <- function(..., response){
             trained_pipelines[[i]] <- pipe_res$pipe
         }
 
+        names(trained_pipelines) <- pipe_names
         trained_pipeline <- do.call(what = pipeline, args = trained_pipelines)
-        names(trained_pipeline) <- pipe_names
 
         return(list("train" = train, "pipe" = trained_pipeline))
     }
