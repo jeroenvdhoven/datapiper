@@ -113,6 +113,21 @@ describe("pipeline", {
     it("generates errors when the input is incorrect", {
         expect_error(info = "Expect crash on not giving a function", object = pipeline("A"))
     })
+
+    it("sets default names for pipes", {
+        r <- pipeline(p1, p2)
+        expect_named(r, expected = paste0("pipe_", seq_len(2)))
+    })
+
+    it("allows you to set custom names for pipeline segments", {
+        r <- pipeline("my_pipe" = p1, "second_pipe" = p2)
+        expect_named(r, expected = c("my_pipe", "second_pipe"))
+    })
+
+    it("fills in blanks when you dont name all pipe segments", {
+        r <- pipeline("my_pipe" = p1, p2)
+        expect_named(r, expected = c("my_pipe", "pipe_1"))
+    })
 })
 
 describe("is.pipeline", {
