@@ -136,8 +136,27 @@ build_docker(model_library_file = tar_file_name, package_name = package_name, li
 test_docker(data = test, image_name = image_name, process_name = "docker.test", package_name = package_name, batch_size = 100)
 ```
 
-## Licence
+## License
+
+See LICENSE file
 
 ## Backlog
+
+#### Pipelines and segments
+- Automatically add in transformations that need to occur at the end of the pipeline, such as rescaling response variables.
+- Allow custom models in impute / range_classifier
+- Support sparklyr
+
+#### Finding models
+- Bayesian hyperparameter optimisation in find_model
+- Cross-validation in find_model
+
+#### Deployment
+- Allow custom packages to be installed into the docker image more easily. With this we mean local packages or packages from private repositories
+- Optimise building process
+
+#### Other
+- Visualise tool for sanity_check
+- Expand toolkit for sanity_check
 
 ## Contact
