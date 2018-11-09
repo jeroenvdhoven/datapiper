@@ -289,6 +289,7 @@ preserve_columns_predict <- function(data, preserved_columns) {
 #' @return A list containing the transformed train dataset and a trained pipe.
 #'
 #' @export
+#' @importFrom utils combn
 feature_interactions <- function(train, response, columns = 10L, max_interactions = 2){
     if(is.numeric(columns) && columns >= 2) {
         columns <- purrr::map_lgl(train, function(x){

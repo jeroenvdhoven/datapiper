@@ -8,6 +8,7 @@
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
+#' @importFrom stats lm cor
 feature_transformer <- function(train, response, transform_columns, missing_func = is.na,
                                 transform_functions = list(sqrt, log, function(x)x^2)){
     stopifnot(
@@ -153,6 +154,8 @@ feature_scaler <- function(train, exclude_columns = character(length = 0), type 
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
+#' @importFrom data.table .SD :=
+#' @importFrom stats prcomp
 feature_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(train, function(x) return(!(is.numeric(x) || is.logical(x))))],
                                    stat_functions, response,
                                    use_pca = FALSE, pca_tol = .1){

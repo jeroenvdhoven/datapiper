@@ -50,7 +50,7 @@ impute_model <- function(data, column, NA_value = is.na, exclude_columns, train_
         xgbm <- xgboost::xgb.DMatrix(data = as.matrix(reduced_data), label = unlist(data[column]))
         model <- xgboost::xgb.train(params = controls, nrounds = controls$nrounds, verbose = F, data = xgbm)
     }
-    else error("Invalid type argument for imputation")
+    else stop("Invalid type argument for imputation")
 
     if(train_fraction < 1){
         if(type == "xgboost") f = as.matrix

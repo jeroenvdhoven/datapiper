@@ -24,6 +24,7 @@
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @importFrom xgboost xgb.train xgb.DMatrix
+#' @importFrom stats glm predict as.formula quantile glm.control
 #' @export
 range_classifier <- function(train, response_col, exclude_columns = response_col,
                              tolerable_performance_reduction = .2,
