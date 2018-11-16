@@ -1,0 +1,314 @@
+#' Find fitting models and test them using given metrics on the test dataset
+#'
+#' @param train The training dataset
+#' @param test The testing dataset
+#' @param response The response column as a string
+#' @param models A list of models. Each model should be a list, containing at least a training function \code{.train} and a \code{.predict} function, plus named
+#' vectors of parameters to explore.
+#'
+#' The \code{.train} function has to take a \code{data} argument that stores the training data and a \code{...} argument for the parameters.
+#' The \code{.predict} function needs to take two arguments, where the first is the model and the second the new dataset.
+#'
+#' If a parameter only takes a single value, you can use a vector to store options. Otherwise use a list.
+#'
+#' You can use \code{\link{model_trainer}} as a wrapper for this list. It will also test your inputs.
+#' @param metrics A list of metrics (functions) that need to be calculated on the train and test response and predictions. Must be named.
+#' @param seed Random seed to set each time before a model is trained
+#' @param preprocess_pipes List of preprocessing pipelines generated using \code{\link{pipeline}}.
+#' @param prepend_data_checker Flag indicating if \code{\link{pipeline_check}} should be prepended before all pipelines.
+#' @param on_missing_column See \code{\link{pipeline_check}} for details.
+#' @param on_extra_column See \code{\link{pipeline_check}} for details.
+#' @param on_type_error See \code{\link{pipeline_check}} for details.
+#' @param verbose Should intermediate updates be printed.
+#' @param save_model Flag indicating if the generated models should be saved. Defaults to False.
+#'
+#' @return A dataframe containing the training function, a list of parameters used to train the function, and one column for each metric / dataset combination.
+#' @export
+#' @importFrom purrr map_dbl map_lgl pmap_df
+find_model_through_bayes <- function(
+    train, test, response,
+    target_metric,
+    N_init = 20, N_experiment = 100,
+    models, metrics, seed = 1,
+    prepend_data_checker = T,
+    higher_is_better = F,
+    on_missing_column = c("error", "add")[1],
+    on_extra_column = c("remove", "error")[1],
+    on_type_error = c("ignore", "error")[1],
+    verbose = T,
+    save_model = F,
+    preprocess_pipes = list(function(train, test) return(list(train = train, test = train, .predict = function(data) return(data))))
+) {
+    stopifnot(
+        !missing(train), is.data.frame(train),
+        !missing(test) , is.data.frame(test),
+        is.character(response), length(response) == 1,
+        is.logical(prepend_data_checker),
+        is.logical(save_model),
+        is.list(models),
+        is.list(metrics), !any(!purrr::map_lgl(metrics, is.function)), !is.null(names(metrics)),
+        is.list(preprocess_pipes), !any(!purrr::map_lgl(preprocess_pipes, is.function)),
+
+        is.numeric(N_init), N_init > 0,
+        is.numeric(N_experiment), N_experiment > 0,
+        is.character(target_metric), target_metric %in% names(metrics)
+    )
+
+    models_have_valid_elements <- purrr::map_lgl(models, function(m) {
+        if(any(!c(".train", ".predict") %in% names(m))) return(F)
+
+        are_functions <- purrr::map_lgl(m[c(".train", ".predict")], is.function)
+        return(!any(!are_functions))
+    })
+
+    if(is.null(names(models))) model_names <- seq_along(models)
+    else model_names <- names(models)
+
+    if(is.null(names(preprocess_pipes))) pipe_names <- seq_along(preprocess_pipes)
+    else pipe_names <- names(preprocess_pipes)
+
+    if(any(!models_have_valid_elements)) stop("Error: all models must contain .train and .predict elements that are functions")
+    metric_names <- names(metrics)
+    target_metric <- paste0("test_", target_metric)
+
+    res <- data_frame(.train = list(), .predict = list(), .id = "", params = list(), .preprocess_pipe = list())[0,]
+    for(metric_name in metric_names) {
+        res[paste0("train_", metric_name)] <- numeric(0)
+        res[paste0("test_", metric_name)] <- numeric(0)
+    }
+    if(save_model) res[".model"] <- list()
+
+    # Try each preprocessing pipe
+    for(preprocess_index in seq_along(preprocess_pipes)){
+        preprocess_pipe <- preprocess_pipes[[preprocess_index]]
+        if(prepend_data_checker){
+            preprocess_pipe <- train_pipeline(
+                segment(.segment = pipeline_check, response = response,
+                        on_missing_column = on_missing_column, on_extra_column = on_extra_column, on_type_error = on_type_error),
+                segment(.segment = preprocess_pipe))
+        }
+        piped <- preprocess_pipe(train)
+        piped_train <- piped$train
+        trained_pipeline <- piped$pipe
+        piped_test <- invoke(trained_pipeline, test)
+        pipe_name <- pipe_names[preprocess_index]
+
+        # Make sure response is in the final training / testing dataset
+        stopifnot(
+            response %in% colnames(piped_train),
+            response %in% colnames(piped_test)
+        )
+
+        # Try each model
+        for(model_index in seq_along(models)) {
+            model <- models[[model_index]]
+            model_name <- model_names[model_index]
+            f_train <- model[[".train"]]
+            f_predict <- model[[".predict"]]
+
+            parameter_grid <- expand.grid(stringsAsFactors = F, model[!names(model) %in% c(".train", ".predict")])
+            parameter_grid_size <- nrow(parameter_grid)
+
+            if(parameter_grid_size < 1) parameter_grid <- data_frame(1)[,0]
+            if(N_init > parameter_grid_size) N_init <- parameter_grid_size
+            if(N_experiment > parameter_grid_size - N_init) N_experiment <- parameter_grid_size - N_init
+
+            parameter_grid <- as_data_frame(parameter_grid)
+
+            #---------------
+            performance <- numeric(N_init + N_experiment)
+            test_indices <- sample.int(n = parameter_grid_size, size = N_init)
+
+            for(i in seq_len(N_init)) {
+                update_message <- paste("\rComputing preprocess pipeline", preprocess_index, "/", length(preprocess_pipes), "model", model_index, "/", length(models), "iteration", i, "/", N_init + N_experiment)
+                if(verbose) cat("\r", update_message, sep = "")
+
+                parameters_to_test <- parameter_grid[test_indices[i], ]
+
+                model_results <- test_model_configuration(train = piped_train, test = piped_test, trained_pipeline = trained_pipeline,
+                                                          f_train = f_train, f_predict = f_predict, parameters = parameters_to_test,
+                                                          metric_names = metric_names, metrics = metrics, response = response,
+                                                          model_name = model_name, pipe_name = pipe_name, seed = seed, preprocess_index = preprocess_index,
+                                                          model_index = model_index)
+                # Test model and record performance
+                performance[i] <- unlist(model_results[target_metric])
+                res[i, ] <- model_results
+            }
+
+            kernel_function <- gaussian_kernel
+
+            tested_indices <- numeric(length = N_experiment + N_init)
+            tested_indices[seq_len(N_init)] <- test_indices
+            parameter_grid_matrix <- as.matrix(parameter_grid)
+            for(i in seq_len(N_experiment)) {
+                update_message <- paste("\rComputing preprocess pipeline", preprocess_index, "/", length(preprocess_pipes), "model", model_index, "/", length(models), "iteration", i + N_init, "/", N_init + N_experiment)
+                if(verbose) cat("\r", update_message, sep = "")
+
+                # Select the next point to test.
+                occupied_points <- seq_len(N_init + i - 1)
+                tested_configurations <- parameter_grid_matrix[tested_indices[occupied_points], , drop = F]
+                distributions <- distribution_at_x(x = parameter_grid_matrix, previous_X = tested_configurations,
+                                                   kernel = kernel_function, y = performance[occupied_points], sigma_noise = 0)
+
+                y_max <- ifelse(higher_is_better, max(performance[occupied_points]), min(performance[occupied_points]))
+
+                EI <- expected_improvement(mu = distributions$mu, sigma = distributions$sigma,
+                                           y_max = y_max)
+
+                if(higher_is_better) next_index <- which.max(EI)
+                else next_index <- which.min(EI)
+
+                if(next_index %in% test_indices) break
+                tested_indices[i + N_init] <- next_index
+                parameters_to_test <- parameter_grid[next_index, ]
+                # Test model and record performance
+                model_results <- test_model_configuration(train = piped_train, test = piped_test, trained_pipeline = trained_pipeline,
+                                                          f_train = f_train, f_predict = f_predict, parameters = parameters_to_test,
+                                                          metric_names = metric_names, metrics = metrics, response = response,
+                                                          model_name = model_name, pipe_name = pipe_name, seed = seed, preprocess_index = preprocess_index,
+                                                          model_index = model_index)
+                # Test model and record performance
+                performance[i + N_init] <- unlist(model_results[target_metric])
+                res[N_init + i, ] <- model_results
+            }
+
+            #----------------------
+            # Try each combination of parameters
+            # for(r in seq_len(nrow(parameter_grid))) {
+
+            # }
+        }
+    }
+
+    return(res)
+}
+
+test_model_configuration <- function(train, test, trained_pipeline, f_train, f_predict, metrics, response = response,
+                                     parameters, model_name, pipe_name, metric_names, seed, preprocess_index, model_index, save_model = F) {
+    set.seed(seed)
+
+    args <- list(data = train)
+    args <- c(args, unlist(parameters))
+
+    requested_arguments <- formalArgs(f_train)
+    if(any(!names(args) %in% requested_arguments) && !"..." %in% requested_arguments) {
+        faulty_args <- names(args)[!names(args) %in% requested_arguments]
+        text_args <- paste0(collapse = ", ", faulty_args)
+        stop(paste0("Warning in preprocess pipeline ", preprocess_index, ", model ", model_index , ": arguments `", text_args, "` were not arguments of the provided .train function"))
+    }
+
+    model <- do.call(what = f_train, args = args)
+
+    # Do train and test predictions and calculate metrics
+    train_preds <- f_predict(model, train)
+    train_metrics_calculated <- purrr::map_dbl(.x = metrics, function(f) f(unlist(train[response]), train_preds))
+    test_preds <- f_predict(model, test)
+    test_metrics_calculated <- purrr::map_dbl(.x = metrics, function(f) f(unlist(test[response]), test_preds))
+
+    tmp <- list(".train" = list(f_train), ".predict" = list(f_predict), ".id" = paste0(pipe_name, "_", model_name),
+                "params" = list(parameters), ".preprocess_pipe" = list(trained_pipeline))
+    tmp[paste0("train_", metric_names)] <- train_metrics_calculated
+    tmp[paste0("test_", metric_names)] <- test_metrics_calculated
+    if(save_model) tmp$.model <- list(model)
+    return(tmp)
+}
+
+kernel_matrix <- function(X, kernel) {
+    stopifnot(is.matrix(X), nrow(X) > 0)
+    size_of_x <- nrow(X)
+
+    res <- matrix(nrow = size_of_x, ncol = size_of_x)
+    for(i in seq_len(size_of_x - 1)) for(j in seq_len(size_of_x - i) + i) {
+        res[i,j] <- res[j,i] <- kernel(X[i, ], X[j, ])
+    }
+    for(i in seq_len(size_of_x)) res[i,i] <- kernel(X[i, ], X[i, ])
+    return(res)
+}
+
+kernel_matrix_2_vec <- function(x_1, x_2, kernel) {
+    size_of_x_1 <- nrow(x_1)
+    size_of_x_2 <- nrow(x_2)
+
+    res <- matrix(nrow = size_of_x_1, ncol = size_of_x_2)
+    for(i in seq_len(size_of_x_1)) for(j in seq_len(size_of_x_2)) {
+        res[i,j] <- kernel(x_1[i, ], x_2[j, ])
+    }
+    return(res)
+}
+
+kernel_matrix_pairwise <- function(x, kernel) {
+    size_of_x <- nrow(x)
+
+    res <- numeric(size_of_x)
+    for(i in seq_len(size_of_x)) {
+        res[i] <- kernel(x[i, ], x[i, ])
+    }
+    return(res)
+}
+
+# N <- 100
+# n_samples <- 20
+# ncols <- 10
+#
+# previous_X = rnorm(n = N*ncols) %>% matrix(ncol = ncols)
+# x = rnorm(n = n_samples*ncols) %>% matrix(ncol = ncols)
+# y = rnorm(n = N) #%>% as.matrix(nrow = N)
+# size_of_previous_x <- nrow(previous_X)
+
+distribution_at_x <- function(x, previous_X, y, kernel, sigma_noise) {
+    stopifnot(
+        is.matrix(x),
+        is.matrix(previous_X),
+        is.numeric(y),
+        length(y) == nrow(previous_X)
+    )
+
+    km <- kernel_matrix(X = previous_X, kernel = kernel) + diag(nrow(previous_X)) * sigma_noise
+    km_inv <- solve(km)
+
+    k_target <- kernel_matrix_2_vec(x, previous_X, kernel = kernel)
+    k_target_km_inv <- k_target %*% km_inv
+
+    mu <- as.numeric(k_target_km_inv %*% y)
+    sigma <- numeric(length = nrow(x))
+
+    for(i in seq_along(sigma)) sigma[i] <- k_target_km_inv[i, ] %*% k_target[i, ]
+    self_kernel <- kernel_matrix_pairwise(x, kernel = kernel)
+
+    sigma <- sigma * self_kernel
+    return(data_frame("mu" = mu, "sigma" = sigma))
+}
+
+expected_improvement <- function(mu, sigma, y_max, tolerance = 1e-10) {
+    stopifnot(
+        is.numeric(mu),
+        is.numeric(sigma),
+        is.numeric(y_max),
+        length(mu) == length(sigma),
+        length(y_max) == 1
+    )
+
+    sigma_is_0 <- sigma < tolerance
+
+    mu_diff <- mu - y_max
+    res <- numeric(length = length(mu))
+    res[sigma_is_0] <- ifelse(mu_diff[sigma_is_0] > 0, mu_diff[sigma_is_0], 0)
+
+    Z <- mu_diff[!sigma_is_0] / sigma[!sigma_is_0]
+    normal_pdf <- dnorm(x = Z)
+    normal_cummulative <- pnorm(q = Z)
+
+    res[!sigma_is_0] <- mu_diff[!sigma_is_0] * normal_cummulative + sigma[!sigma_is_0] * normal_pdf
+    return(res)
+}
+
+gaussian_kernel <- function(x, y, sigma = 1) {
+    stopifnot(
+        is.numeric(x),
+        is.numeric(y),
+        length(x) == length(y)
+    )
+
+    distance <- sum((x-y)^2)
+    return(exp(-distance / 2 * sigma^2))
+}
