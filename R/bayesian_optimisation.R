@@ -3,6 +3,7 @@
 #' @param train The training dataset
 #' @param test The testing dataset
 #' @param response The response column as a string
+#' @param preprocess_pipes List of preprocessing pipelines generated using \code{\link{pipeline}}.
 #' @param models A list of models. Each model should be a list, containing at least a training function \code{.train} and a \code{.predict} function, plus named
 #' vectors of parameters to explore.
 #'
@@ -13,12 +14,24 @@
 #'
 #' You can use \code{\link{model_trainer}} as a wrapper for this list. It will also test your inputs.
 #' @param metrics A list of metrics (functions) that need to be calculated on the train and test response and predictions. Must be named.
-#' @param seed Random seed to set each time before a model is trained
-#' @param preprocess_pipes List of preprocessing pipelines generated using \code{\link{pipeline}}.
+#'
+#' @param target_metric The name of the metric to optimise. Optimisation will be done on the testset performance of this metric.
+#' @param higher_is_better A flag indicating if a high value of \code{target_metric} indicates a good result.
+#' @param N_init Number of iterations to initialise the bayesian optimisation with.
+#' @param N_experiment Number of experimentations done with the bayesian optimisation.
+#' @param kernel A kernel function, taking two arguments. The first one should be a numeric vector, the second either:
+#' \itemize{
+#' \item A numeric vector with as many entries as \code{x}.
+#' \item A numeric matrix with as many columns as entries in \code{x}.
+#' }
+#' @param sigma_noise An estimate of the inherent noise in sampling from
+#'
 #' @param prepend_data_checker Flag indicating if \code{\link{pipeline_check}} should be prepended before all pipelines.
 #' @param on_missing_column See \code{\link{pipeline_check}} for details.
 #' @param on_extra_column See \code{\link{pipeline_check}} for details.
 #' @param on_type_error See \code{\link{pipeline_check}} for details.
+#'
+#' @param seed Random seed to set each time before a model is trained. Set this to 0 to ignore setting seeds.
 #' @param verbose Should intermediate updates be printed.
 #' @param save_model Flag indicating if the generated models should be saved. Defaults to False.
 #'
@@ -27,17 +40,19 @@
 #' @importFrom purrr map_dbl map_lgl pmap_df
 find_model_through_bayes <- function(
     train, test, response,
-    target_metric,
-    N_init = 20, N_experiment = 100,
-    models, metrics, seed = 1,
+    preprocess_pipes = list(function(train, test) return(list(train = train, test = train, .predict = function(data) return(data)))),
+    models, metrics,
+    target_metric, higher_is_better,
+    N_init = 20, N_experiment = 40,
+    kernel = gaussian_kernel,
+    sigma_noise = 1e-8,
     prepend_data_checker = T,
-    higher_is_better = F,
     on_missing_column = c("error", "add")[1],
     on_extra_column = c("remove", "error")[1],
     on_type_error = c("ignore", "error")[1],
+    seed = 1,
     verbose = T,
-    save_model = F,
-    preprocess_pipes = list(function(train, test) return(list(train = train, test = train, .predict = function(data) return(data))))
+    save_model = F
 ) {
     stopifnot(
         !missing(train), is.data.frame(train),
@@ -51,6 +66,8 @@ find_model_through_bayes <- function(
 
         is.numeric(N_init), N_init > 0,
         is.numeric(N_experiment), N_experiment > 0,
+        is.numeric(sigma_noise), sigma_noise >= 0,
+        is.function(kernel),
         is.character(target_metric), target_metric %in% names(metrics)
     )
 
@@ -106,27 +123,23 @@ find_model_through_bayes <- function(
             f_train <- model[[".train"]]
             f_predict <- model[[".predict"]]
 
-            parameter_grid <- expand.grid(stringsAsFactors = F, model[!names(model) %in% c(".train", ".predict")])
-            parameter_grid_size <- nrow(parameter_grid)
+            parameter_grid <- compute_parameter_grid_bayes(model = model, N_init = N_init, N_experiment = N_experiment)
 
-            if(parameter_grid_size < 1) parameter_grid <- data_frame(1)[,0]
+            parameter_grid_size <- nrow(parameter_grid)
             if(N_init > parameter_grid_size) N_init <- parameter_grid_size
             if(N_experiment > parameter_grid_size - N_init) N_experiment <- parameter_grid_size - N_init
 
-            parameter_grid <- as_data_frame(parameter_grid)
-
-            #---------------
             performance <- numeric(N_init + N_experiment)
             test_indices <- sample.int(n = parameter_grid_size, size = N_init)
 
             for(i in seq_len(N_init)) {
-                update_message <- paste("\rComputing preprocess pipeline", preprocess_index, "/", length(preprocess_pipes), "model", model_index, "/", length(models), "iteration", i, "/", N_init + N_experiment)
+                update_message <- status_update_message(preprocess_index, length(preprocess_pipes),
+                                                        model_index, length(models),
+                                                        i, N_init + N_experiment, nrow(parameter_grid))
                 if(verbose) cat("\r", update_message, sep = "")
 
-                parameters_to_test <- parameter_grid[test_indices[i], ]
-
                 model_results <- test_model_configuration(train = piped_train, test = piped_test, trained_pipeline = trained_pipeline,
-                                                          f_train = f_train, f_predict = f_predict, parameters = parameters_to_test,
+                                                          f_train = f_train, f_predict = f_predict, parameters = parameter_grid[test_indices[i], ],
                                                           metric_names = metric_names, metrics = metrics, response = response,
                                                           model_name = model_name, pipe_name = pipe_name, seed = seed, preprocess_index = preprocess_index,
                                                           model_index = model_index)
@@ -139,16 +152,18 @@ find_model_through_bayes <- function(
 
             tested_indices <- numeric(length = N_experiment + N_init)
             tested_indices[seq_len(N_init)] <- test_indices
-            parameter_grid_matrix <- as.matrix(parameter_grid)
+            parameter_grid_matrix <<- as.matrix(parameter_grid)
             for(i in seq_len(N_experiment)) {
-                update_message <- paste("\rComputing preprocess pipeline", preprocess_index, "/", length(preprocess_pipes), "model", model_index, "/", length(models), "iteration", i + N_init, "/", N_init + N_experiment)
+                update_message <- status_update_message(preprocess_index, length(preprocess_pipes),
+                                                        model_index, length(models),
+                                                        i + N_init, N_init + N_experiment, nrow(parameter_grid))
                 if(verbose) cat("\r", update_message, sep = "")
 
                 # Select the next point to test.
                 occupied_points <- seq_len(N_init + i - 1)
                 tested_configurations <- parameter_grid_matrix[tested_indices[occupied_points], , drop = F]
                 distributions <- distribution_at_x(x = parameter_grid_matrix, previous_X = tested_configurations,
-                                                   kernel = kernel_function, y = performance[occupied_points], sigma_noise = 0)
+                                                   kernel = kernel_function, y = performance[occupied_points], sigma_noise = sigma_noise)
 
                 y_max <- ifelse(higher_is_better, max(performance[occupied_points]), min(performance[occupied_points]))
 
@@ -171,21 +186,33 @@ find_model_through_bayes <- function(
                 performance[i + N_init] <- unlist(model_results[target_metric])
                 res[N_init + i, ] <- model_results
             }
-
-            #----------------------
-            # Try each combination of parameters
-            # for(r in seq_len(nrow(parameter_grid))) {
-
-            # }
         }
     }
 
     return(res)
 }
 
+compute_parameter_grid_bayes <- function(model, N_init, N_experiment) {
+    parameter_grid <- expand.grid(stringsAsFactors = F, model[!names(model) %in% c(".train", ".predict")])
+    parameter_grid_size <- nrow(parameter_grid)
+
+    if(parameter_grid_size < 1) parameter_grid <- data_frame(1)[,0]
+
+    parameter_grid <- as_data_frame(parameter_grid)
+    return(parameter_grid)
+}
+
+status_update_message <- function(preprocess_index, preprocess_total,
+                                  model_index, model_total,
+                                  iteration_index, iteration_total, max_iterations) {
+    paste("\rComputing preprocess pipeline", preprocess_index, "/", preprocess_total,
+          "model", model_index, "/", model_total,
+          "iteration", iteration_index, "/", iteration_total, "out of a maximum of", max_iterations, "iterations")
+}
+
 test_model_configuration <- function(train, test, trained_pipeline, f_train, f_predict, metrics, response = response,
                                      parameters, model_name, pipe_name, metric_names, seed, preprocess_index, model_index, save_model = F) {
-    set.seed(seed)
+    if(seed != 0) set.seed(seed)
 
     args <- list(data = train)
     args <- c(args, unlist(parameters))
@@ -218,20 +245,23 @@ kernel_matrix <- function(X, kernel) {
     size_of_x <- nrow(X)
 
     res <- matrix(nrow = size_of_x, ncol = size_of_x)
-    for(i in seq_len(size_of_x - 1)) for(j in seq_len(size_of_x - i) + i) {
-        res[i,j] <- res[j,i] <- kernel(X[i, ], X[j, ])
+
+    for(i in seq_len(size_of_x - 1)) {
+        remaining_indices <- seq_len(size_of_x - i + 1) + i - 1
+        res[i, remaining_indices] <- res[remaining_indices, i] <- kernel(X[i, ], X[remaining_indices, ])
     }
-    for(i in seq_len(size_of_x)) res[i,i] <- kernel(X[i, ], X[i, ])
+
+    res[size_of_x, size_of_x] <- kernel(X[size_of_x, ], X[size_of_x, ])
     return(res)
 }
 
-kernel_matrix_2_vec <- function(x_1, x_2, kernel) {
+kernel_matrix_2_vec <- function(x_1, x_2, kernel, old = T) {
     size_of_x_1 <- nrow(x_1)
     size_of_x_2 <- nrow(x_2)
 
     res <- matrix(nrow = size_of_x_1, ncol = size_of_x_2)
-    for(i in seq_len(size_of_x_1)) for(j in seq_len(size_of_x_2)) {
-        res[i,j] <- kernel(x_1[i, ], x_2[j, ])
+    for(i in seq_len(size_of_x_2)) {
+        res[, i] <- kernel(x_2[i, ], x_1)
     }
     return(res)
 }
@@ -245,15 +275,6 @@ kernel_matrix_pairwise <- function(x, kernel) {
     }
     return(res)
 }
-
-# N <- 100
-# n_samples <- 20
-# ncols <- 10
-#
-# previous_X = rnorm(n = N*ncols) %>% matrix(ncol = ncols)
-# x = rnorm(n = n_samples*ncols) %>% matrix(ncol = ncols)
-# y = rnorm(n = N) #%>% as.matrix(nrow = N)
-# size_of_previous_x <- nrow(previous_X)
 
 distribution_at_x <- function(x, previous_X, y, kernel, sigma_noise) {
     stopifnot(
@@ -306,9 +327,36 @@ gaussian_kernel <- function(x, y, sigma = 1) {
     stopifnot(
         is.numeric(x),
         is.numeric(y),
-        length(x) == length(y)
+        (is.vector(y) && length(x) == length(y)) ||
+            (is.matrix(y) && length(x) == ncol(y))
     )
 
-    distance <- sum((x-y)^2)
+    if(is.matrix(y)) {
+        diffs <- sweep(x = y, MARGIN = 2, STATS = x) ^ 2
+        distance <- apply(diffs, 1, sum)
+    } else {
+        distance <- sum((x-y)^2)
+    }
     return(exp(-distance / 2 * sigma^2))
+}
+
+
+mattern_52_kernel <- function(x, y, rho = 1) {
+    stopifnot(
+        is.numeric(x),
+        is.numeric(y),
+        (is.vector(y) && length(x) == length(y)) ||
+            (is.matrix(y) && length(x) == ncol(y))
+    )
+
+    if(is.matrix(y)) {
+        diffs <- sweep(x = y, MARGIN = 2, STATS = x) ^ 2
+        distance <- apply(diffs, 1, sum) / rho ^ 2
+    } else {
+        diffs <- (x-y)^2
+        distance <- sum((diffs)^2) / rho ^ 2
+    }
+    sqrt_five <- sqrt(5 * distance)
+    res <- (1 + sqrt_five + 5 / 3 * distance ^ 2) * exp(-sqrt_five)
+    return(res)
 }
