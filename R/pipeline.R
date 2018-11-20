@@ -399,3 +399,39 @@ is.pipe <- function(x) {
 is.pipeline <- function(x) {
     inherits(x, "pipeline")
 }
+
+#' Flattens a pipeline so it does not contain any more sub-pipelines, only pipe elements.
+#'
+#' @param p A pipeline
+#'
+#' @return The pipeline \code{p}, but without sub-pipelines
+#' @export
+flatten_pipeline <- function(p, init = T) {
+    stopifnot(is.pipeline(p))
+
+    res <- list()
+    i <- 1
+    for(element_index in seq_along(p)) {
+        current_element <- p[[element_index]]
+        if(is.pipeline(current_element)) {
+            current_element <- flatten_pipeline(current_element, init = F)
+            end <- i + length(current_element) - 1
+            res[i:end] <- current_element
+            names(res)[i:end] <- names(current_element)
+            i <- end + 1
+        } else {
+            res[[i]] <- current_element
+            names(res)[i] <- names(p)[element_index]
+            i <- i + 1
+        }
+    }
+
+    if(init) {
+        result <- do.call(what = pipeline, args = res)
+        if(length(unique(names(result))) != length(result)) {
+            warning("Result has duplicate names")
+        }
+        return(result)
+    }
+    else return(res)
+}

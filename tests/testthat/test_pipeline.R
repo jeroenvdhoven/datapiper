@@ -386,3 +386,64 @@ describe("train_pipeline()", {
         expect_named(object = pipe_result$pipe, c("mutate_a", "pipe_1", "unselect_b", "pipe_2"))
     })
 })
+
+describe("flatten_pipeline()", {
+    p_1 <- datapiper::train_pipeline(
+        segment(.segment = datapiper::feature_categorical_filter, threshold_function = function(x) 2, response = "x"),
+        segment(.segment = datapiper::remove_single_value_columns, na_function = is.na),
+        segment(.segment = datapiper::feature_one_hot_encode),
+        segment(.segment = datapiper::impute_all, exclude_columns = "x", type = "mean")
+    )
+    r_1 <- p_1(dataset1)$pipe
+
+    it("takes only a pipeline as argument", {
+        expect_error(object = flatten_pipeline(1), regexp = "is.pipeline(p) is not TRUE", fixed = T)
+        dummy_ <- ctest_for_no_errors(to_eval = flatten_pipeline(r_1), error_message = "Error: flatten_pipeline did not run on a pipeline")
+    })
+
+    it("can take a flat pipeline as return the same pipeline", {
+        flat_1 <- flatten_pipeline(r_1)
+        expect_equal(flat_1, r_1)
+    })
+
+    it("will not change the transformations done by the pipeline", {
+        flat_1 <- flatten_pipeline(r_1)
+
+        piped_original <- invoke(r_1, dataset1)
+        piped_flatten <- invoke(flat_1, dataset1)
+
+        expect_equal(piped_original, piped_flatten)
+    })
+
+    # Non-flat in this context means there's a pipeline within the pipeline
+    it("can take a non-flat pipeline and return a flattened pipeline", {
+        p_2 <- datapiper::train_pipeline(
+            segment(.segment = p_1),
+            last_segment = segment(.segment = datapiper::feature_scaler, exclude_columns = "x")
+        )
+        r_2 <- p_2(dataset1)$pipe
+        flat_2 <- flatten_pipeline(r_2)
+
+        expect_true(length(flat_2) == length(r_1) + 1)
+        piped_original <- invoke(r_2, dataset1)
+        piped_flatten <- invoke(flat_2, dataset1)
+
+        expect_equal(piped_original, piped_flatten)
+    })
+
+    it("will warn the user when duplicate names are used", {
+        p_3 <- datapiper::train_pipeline(
+            segment(.segment = p_1),
+            segment(.segment = datapiper::feature_scaler, exclude_columns = "x")
+        )
+        r_3 <- p_3(dataset1)$pipe
+        flat_3 <- expect_warning(flatten_pipeline(r_3), "Result has duplicate names")
+        flat_3 <- suppressWarnings(flatten_pipeline(r_3))
+
+        expect_true(length(flat_3) == length(r_1) + 1)
+        piped_original <- invoke(r_3, dataset1)
+        piped_flatten <- invoke(flat_3, dataset1)
+
+        expect_equal(piped_original, piped_flatten)
+    })
+})
