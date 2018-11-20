@@ -190,7 +190,6 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
     daemon_name = "opencpu/base"
     build_dir <- tempdir()
     file.copy(model_library_file, build_dir)
-    file.copy("../datapiper_0.1.2.999.tar.gz", build_dir)
 
     # Determine where we need to pull each library from
     is_cran_lib <- grepl(pattern = "^[a-zA-Z0-9\\.]+$", x = libraries)
