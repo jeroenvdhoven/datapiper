@@ -54,6 +54,7 @@ find_model_through_bayes <- function(
     verbose = T,
     save_model = F
 ) {
+    # Check if incomming arguments are somewhat correct
     stopifnot(
         !missing(train), is.data.frame(train),
         !missing(test) , is.data.frame(test),
@@ -71,6 +72,7 @@ find_model_through_bayes <- function(
         is.character(target_metric), target_metric %in% names(metrics)
     )
 
+    # Check more detailed elements of input parameters
     models_have_valid_elements <- purrr::map_lgl(models, function(m) {
         if(any(!c(".train", ".predict") %in% names(m))) return(F)
 
@@ -85,9 +87,10 @@ find_model_through_bayes <- function(
     else pipe_names <- names(preprocess_pipes)
 
     if(any(!models_have_valid_elements)) stop("Error: all models must contain .train and .predict elements that are functions")
+
+    # Do setup for experimentation
     metric_names <- names(metrics)
     target_metric <- paste0("test_", target_metric)
-
     res <- data_frame(.train = list(), .predict = list(), .id = "", params = list(), .preprocess_pipe = list())[0,]
     for(metric_name in metric_names) {
         res[paste0("train_", metric_name)] <- numeric(0)
