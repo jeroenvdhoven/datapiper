@@ -19,7 +19,6 @@
 #' @param higher_is_better A flag indicating if a high value of \code{target_metric} indicates a good result.
 #' @param N_init Number of iterations to initialise the bayesian optimisation with.
 #' @param N_experiment Number of experimentations done with the bayesian optimisation.
-#' @param kernel A kernel function, taking two arguments. The first one should be a numeric vector, the second either:
 #' \itemize{
 #' \item A numeric vector with as many entries as \code{x}.
 #' \item A numeric matrix with as many columns as entries in \code{x}.
@@ -44,7 +43,6 @@ find_model_through_bayes <- function(
     models, metrics,
     target_metric, higher_is_better,
     N_init = 20, N_experiment = 40,
-    kernel = gaussian_kernel,
     sigma_noise = 1e-8,
     prepend_data_checker = T,
     on_missing_column = c("error", "add")[1],
@@ -68,7 +66,6 @@ find_model_through_bayes <- function(
         is.numeric(N_init), N_init > 0,
         is.numeric(N_experiment), N_experiment > 0,
         is.numeric(sigma_noise), sigma_noise >= 0,
-        is.function(kernel),
         is.character(target_metric), target_metric %in% names(metrics)
     )
 
@@ -87,6 +84,7 @@ find_model_through_bayes <- function(
     else pipe_names <- names(preprocess_pipes)
 
     if(any(!models_have_valid_elements)) stop("Error: all models must contain .train and .predict elements that are functions")
+    # if(seed != 0) sigma_noise <- 1e-24 # Since seeds are set at every model run, the standard deviation on a parameter set is by definition 0
 
     # Do setup for experimentation
     metric_names <- names(metrics)
@@ -100,6 +98,8 @@ find_model_through_bayes <- function(
 
     # Try each preprocessing pipe
     for(preprocess_index in seq_along(preprocess_pipes)){
+        if(verbose) cat(paste("Computing preprocess pipeline", preprocess_index, "/", length(preprocess_pipes), "\n"))
+
         preprocess_pipe <- preprocess_pipes[[preprocess_index]]
         if(prepend_data_checker){
             preprocess_pipe <- train_pipeline(
@@ -111,7 +111,6 @@ find_model_through_bayes <- function(
         piped_train <- piped$train
         trained_pipeline <- piped$pipe
         piped_test <- invoke(trained_pipeline, test)
-        pipe_name <- pipe_names[preprocess_index]
 
         # Make sure response is in the final training / testing dataset
         stopifnot(
@@ -121,77 +120,95 @@ find_model_through_bayes <- function(
 
         # Try each model
         for(model_index in seq_along(models)) {
+            if(verbose) cat(paste("\rComputing model", model_index, "/", length(models), "\n"))
             model <- models[[model_index]]
-            model_name <- model_names[model_index]
-            f_train <- model[[".train"]]
-            f_predict <- model[[".predict"]]
 
-            parameter_grid <- compute_parameter_grid_bayes(model = model, N_init = N_init, N_experiment = N_experiment)
-
-            parameter_grid_size <- nrow(parameter_grid)
-            if(N_init > parameter_grid_size) N_init <- parameter_grid_size
-            if(N_experiment > parameter_grid_size - N_init) N_experiment <- parameter_grid_size - N_init
-
-            performance <- numeric(N_init + N_experiment)
-            test_indices <- sample.int(n = parameter_grid_size, size = N_init)
-
-            for(i in seq_len(N_init)) {
-                update_message <- status_update_message(preprocess_index, length(preprocess_pipes),
-                                                        model_index, length(models),
-                                                        i, N_init + N_experiment, nrow(parameter_grid))
-                if(verbose) cat("\r", update_message, sep = "")
-
-                model_results <- test_model_configuration(train = piped_train, test = piped_test, trained_pipeline = trained_pipeline,
-                                                          f_train = f_train, f_predict = f_predict, parameters = parameter_grid[test_indices[i], ],
-                                                          metric_names = metric_names, metrics = metrics, response = response,
-                                                          model_name = model_name, pipe_name = pipe_name, seed = seed, preprocess_index = preprocess_index,
-                                                          model_index = model_index)
-                # Test model and record performance
-                performance[i] <- unlist(model_results[target_metric])
-                res[i, ] <- model_results
-            }
-
-            kernel_function <- gaussian_kernel
-
-            tested_indices <- numeric(length = N_experiment + N_init)
-            tested_indices[seq_len(N_init)] <- test_indices
-            parameter_grid_matrix <<- as.matrix(parameter_grid)
-            for(i in seq_len(N_experiment)) {
-                update_message <- status_update_message(preprocess_index, length(preprocess_pipes),
-                                                        model_index, length(models),
-                                                        i + N_init, N_init + N_experiment, nrow(parameter_grid))
-                if(verbose) cat("\r", update_message, sep = "")
-
-                # Select the next point to test.
-                occupied_points <- seq_len(N_init + i - 1)
-                tested_configurations <- parameter_grid_matrix[tested_indices[occupied_points], , drop = F]
-                distributions <- distribution_at_x(x = parameter_grid_matrix, previous_X = tested_configurations,
-                                                   kernel = kernel_function, y = performance[occupied_points], sigma_noise = sigma_noise)
-
-                y_max <- ifelse(higher_is_better, max(performance[occupied_points]), min(performance[occupied_points]))
-
-                EI <- expected_improvement(mu = distributions$mu, sigma = distributions$sigma,
-                                           y_max = y_max)
-
-                if(higher_is_better) next_index <- which.max(EI)
-                else next_index <- which.min(EI)
-
-                if(next_index %in% test_indices) break
-                tested_indices[i + N_init] <- next_index
-                parameters_to_test <- parameter_grid[next_index, ]
-                # Test model and record performance
-                model_results <- test_model_configuration(train = piped_train, test = piped_test, trained_pipeline = trained_pipeline,
-                                                          f_train = f_train, f_predict = f_predict, parameters = parameters_to_test,
-                                                          metric_names = metric_names, metrics = metrics, response = response,
-                                                          model_name = model_name, pipe_name = pipe_name, seed = seed, preprocess_index = preprocess_index,
-                                                          model_index = model_index)
-                # Test model and record performance
-                performance[i + N_init] <- unlist(model_results[target_metric])
-                res[N_init + i, ] <- model_results
-            }
+            current_results <- run_experiments(train = piped_train, test = piped_test, model = model, model_name = model_names[model_index],
+                                   metrics = metrics, metric_names = metric_names, target_metric = target_metric, sigma_noise = sigma_noise,
+                                   response = response, verbose = verbose, seed = seed, higher_is_better = higher_is_better,
+                                   N_init = N_init, N_experiment = N_experiment)
+            current_results[, ".id"] = paste0(pipe_names[preprocess_index], "_", model_names[model_index])
         }
+        current_results[, ".preprocess_pipe"] = list(trained_pipeline)
+        res <- rbind(res, current_results)
     }
 
+    return(res)
+}
+
+run_experiments <- function(train, test, model, model_name, response,
+                            metrics, metric_names, target_metric,
+                            N_init, N_experiment, sigma_noise,
+                            higher_is_better = higher_is_better,
+                            verbose = T, seed = 1) {
+    f_train <- model[[".train"]]
+    f_predict <- model[[".predict"]]
+
+    parameter_grid <- compute_parameter_grid_bayes(model = model, N_init = N_init, N_experiment = N_experiment)
+
+    parameter_grid_size <- nrow(parameter_grid)
+    if(N_init > parameter_grid_size) N_init <- parameter_grid_size
+    if(N_experiment > parameter_grid_size - N_init) N_experiment <- parameter_grid_size - N_init
+
+    performance <- numeric(N_init + N_experiment)
+    test_indices <- sample.int(n = parameter_grid_size, size = N_init)
+
+    res <- data_frame()
+    for(i in seq_len(N_init)) {
+        if(verbose) cat(paste("\rComputing iteration", i, "/", N_init + N_experiment, "out of a maximum of", parameter_grid_size, "iterations"))
+
+        model_results <- test_model_configuration(train = train, test = test,
+                                                  f_train = f_train, f_predict = f_predict,
+                                                  parameters = parameter_grid[test_indices[i], ],
+                                                  metric_names = metric_names, metrics = metrics, response = response,
+                                                  seed = seed)
+        # Test model and record performance
+        performance[i] <- unlist(model_results[target_metric])
+        if(nrow(res) == 0) res <- model_results
+        else res[i, ] <- model_results
+    }
+
+    tested_indices <- numeric(length = N_experiment + N_init)
+    tested_indices[seq_len(N_init)] <- test_indices
+    parameter_grid_matrix <- as.matrix(parameter_grid)
+    for(i in seq_len(N_experiment)) {
+        if(verbose) cat(paste("\rComputing iteration", i + N_init, "/", N_init + N_experiment, "out of a maximum of", parameter_grid_size, "iterations"))
+
+        # Select the next point to test.
+        occupied_points <- seq_len(N_init + i - 1)
+        tested_configurations <- parameter_grid_matrix[tested_indices[occupied_points], , drop = F]
+        distributions <- distribution_at_x(x = parameter_grid_matrix, previous_X = tested_configurations,
+                                           y = performance[occupied_points], sigma_noise = sigma_noise)
+
+        y_max <- ifelse(higher_is_better, max(performance[occupied_points]), min(performance[occupied_points]))
+
+        EI <- expected_improvement(mu = distributions$mu, sigma = distributions$sigma, y_max = y_max)
+        EI_res[[length(EI_res) + 1]] <<- EI
+
+        if(higher_is_better) search_function <- which.max
+        else search_function <- which.min
+
+        next_index <- -1
+        while(next_index < 0) {
+            possible_index <- search_function(EI)
+            if(possible_index %in% tested_indices && !is.infinite(EI[next_index])) {
+                EI[possible_index] <- ifelse(higher_is_better, -Inf, Inf)
+            } else next_index <- possible_index
+        }
+
+        # if(next_index %in% test_indices) break
+        tested_indices[i + N_init] <- next_index
+        parameters_to_test <- parameter_grid[next_index, ]
+        # Test model and record performance
+        model_results <- test_model_configuration(train = train, test = test,
+                                                  f_train = f_train, f_predict = f_predict, parameters = parameters_to_test,
+                                                  metric_names = metric_names, metrics = metrics, response = response,
+                                                  seed = seed)
+        # Test model and record performance
+        performance[i + N_init] <- unlist(model_results[target_metric])
+        res[N_init + i, ] <- model_results
+    }
+    cat("\n")
     return(res)
 }
 
@@ -205,16 +222,9 @@ compute_parameter_grid_bayes <- function(model, N_init, N_experiment) {
     return(parameter_grid)
 }
 
-status_update_message <- function(preprocess_index, preprocess_total,
-                                  model_index, model_total,
-                                  iteration_index, iteration_total, max_iterations) {
-    paste("\rComputing preprocess pipeline", preprocess_index, "/", preprocess_total,
-          "model", model_index, "/", model_total,
-          "iteration", iteration_index, "/", iteration_total, "out of a maximum of", max_iterations, "iterations")
-}
-
-test_model_configuration <- function(train, test, trained_pipeline, f_train, f_predict, metrics, response = response,
-                                     parameters, model_name, pipe_name, metric_names, seed, preprocess_index, model_index, save_model = F) {
+test_model_configuration <- function(train, test, f_train, f_predict, metrics, response = response,
+                                     parameters, metric_names, seed,
+                                     save_model = F) {
     if(seed != 0) set.seed(seed)
 
     args <- list(data = train)
@@ -224,7 +234,7 @@ test_model_configuration <- function(train, test, trained_pipeline, f_train, f_p
     if(any(!names(args) %in% requested_arguments) && !"..." %in% requested_arguments) {
         faulty_args <- names(args)[!names(args) %in% requested_arguments]
         text_args <- paste0(collapse = ", ", faulty_args)
-        stop(paste0("Warning in preprocess pipeline ", preprocess_index, ", model ", model_index , ": arguments `", text_args, "` were not arguments of the provided .train function"))
+        stop(paste0("Warning: arguments `", text_args, "` were not arguments of the provided .train function"))
     }
 
     model <- do.call(what = f_train, args = args)
@@ -235,11 +245,13 @@ test_model_configuration <- function(train, test, trained_pipeline, f_train, f_p
     test_preds <- f_predict(model, test)
     test_metrics_calculated <- purrr::map_dbl(.x = metrics, function(f) f(unlist(test[response]), test_preds))
 
-    tmp <- list(".train" = list(f_train), ".predict" = list(f_predict), ".id" = paste0(pipe_name, "_", model_name),
-                "params" = list(parameters), ".preprocess_pipe" = list(trained_pipeline))
+    tmp <- list(".train" = list(f_train), ".predict" = list(f_predict),
+                "params" = list(parameters))
     tmp[paste0("train_", metric_names)] <- train_metrics_calculated
     tmp[paste0("test_", metric_names)] <- test_metrics_calculated
     if(save_model) tmp$.model <- list(model)
+
+    tmp <- as_data_frame(tmp)
     return(tmp)
 }
 
@@ -279,13 +291,17 @@ kernel_matrix_pairwise <- function(x, kernel) {
     return(res)
 }
 
-distribution_at_x <- function(x, previous_X, y, kernel, sigma_noise) {
+distribution_at_x <- function(x, previous_X, y, sigma_noise) {
     stopifnot(
         is.matrix(x),
         is.matrix(previous_X),
         is.numeric(y),
         length(y) == nrow(previous_X)
     )
+    scales <- apply(x, 2, function(x) max(x) - min(x))
+    scales[scales < 1e-6] <- 1
+    # scales <- 1
+    kernel = function(x,y) mattern_52_kernel(x,y, scales = scales)
 
     km <- kernel_matrix(X = previous_X, kernel = kernel) + diag(nrow(previous_X)) * sigma_noise
     km_inv <- solve(km)
@@ -344,20 +360,25 @@ gaussian_kernel <- function(x, y, sigma = 1) {
 }
 
 
-mattern_52_kernel <- function(x, y, rho = 1) {
+mattern_52_kernel <- function(x, y, scales = 1) {
     stopifnot(
         is.numeric(x),
         is.numeric(y),
         (is.vector(y) && length(x) == length(y)) ||
-            (is.matrix(y) && length(x) == ncol(y))
+            (is.matrix(y) && length(x) == ncol(y)),
+        is.numeric(scales),
+        length(scales) == length(x) || length(scales) == 1
     )
+    if(length(scales) == 1) scales <- rep(scales, length(x))
+    if(any(scales == 0)) scales[scales == 0] <- 1
 
     if(is.matrix(y)) {
         diffs <- sweep(x = y, MARGIN = 2, STATS = x) ^ 2
-        distance <- apply(diffs, 1, sum) / rho ^ 2
+        diffs <- sweep(x = diffs, MARGIN = 2, STATS = scales ^ 2, FUN = "/")
+        distance <- apply(diffs, 1, sum)
     } else {
-        diffs <- (x-y)^2
-        distance <- sum((diffs)^2) / rho ^ 2
+        diffs <- ((x-y) / scales) ^ 2
+        distance <- sum((diffs)^2)
     }
     sqrt_five <- sqrt(5 * distance)
     res <- (1 + sqrt_five + 5 / 3 * distance ^ 2) * exp(-sqrt_five)
