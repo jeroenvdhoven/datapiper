@@ -23,7 +23,8 @@
 #' \item A numeric vector with as many entries as \code{x}.
 #' \item A numeric matrix with as many columns as entries in \code{x}.
 #' }
-#' @param sigma_noise An estimate of the inherent noise in sampling from
+#' @param sigma_noise An estimate of the inherent noise in sampling from. If this is set below 1e-8, we will not reconsider previously
+#' tried configurations.
 #'
 #' @param prepend_data_checker Flag indicating if \code{\link{pipeline_check}} should be prepended before all pipelines.
 #' @param on_missing_column See \code{\link{pipeline_check}} for details.
@@ -185,18 +186,17 @@ run_experiments <- function(train, test, model, model_name, response,
         EI <- expected_improvement(mu = distributions$mu, sigma = distributions$sigma, y_max = y_max)
         EI_res[[length(EI_res) + 1]] <<- EI
 
-        if(higher_is_better) search_function <- which.max
-        else search_function <- which.min
-
-        next_index <- -1
-        while(next_index < 0) {
-            possible_index <- search_function(EI)
-            if(possible_index %in% tested_indices && !is.infinite(EI[next_index])) {
-                EI[possible_index] <- ifelse(higher_is_better, -Inf, Inf)
-            } else next_index <- possible_index
+        if(higher_is_better) {
+            search_function <- which.max
+            replacement_for_selected_values <- -Inf
+        } else {
+            search_function <- which.min
+            replacement_for_selected_values <- Inf
         }
 
-        # if(next_index %in% test_indices) break
+        if(sigma_noise <= 1e-8) EI[tested_indices] <- replacement_for_selected_values
+        next_index <- search_function(EI)
+
         tested_indices[i + N_init] <- next_index
         parameters_to_test <- parameter_grid[next_index, ]
         # Test model and record performance
