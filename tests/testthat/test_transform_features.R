@@ -1,6 +1,6 @@
 library(testthat)
-testthat::describe("feature_transformer()", {
-    r <- feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
+testthat::describe("pipe_feature_transformer()", {
+    r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
@@ -11,7 +11,7 @@ testthat::describe("feature_transformer()", {
         expect_equal(r$train$x, dataset1$x, info = "The response remains untouched")
     })
 
-    it("can apply its results to a new dataset using pipe, a wrapper for feature_transformer_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for pipe_feature_transformer_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
@@ -22,25 +22,25 @@ testthat::describe("feature_transformer()", {
 
     it("should crash when the response is not in the dataset or non-numeric", {
         d <- select(dataset1, -x)
-        expect_error(feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp)))
+        expect_error(pipe_feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp)))
 
         d <- mutate(dataset1, x = as.character(x))
-        expect_error(feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp)))
+        expect_error(pipe_feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp)))
     })
 
     it("transforms numeric input where there is a better correlation with the response", {
-        r <- feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
+        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
     })
 
     it("does not transform input when it creates invalid values", {
         d <- mutate(dataset1, c = c(exp(seq_len(N-1)), -1))
-        r <- feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
+        r <- pipe_feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
         expect_equal(r$train$c, d$c)
     })
 
     it("can transform features that had NA's before", {
         d <- mutate(dataset1, c = c(exp(seq_len(N-1)), NA))
-        r <- feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
+        r <- pipe_feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
         expect_equal(r$train$c, c(seq_len(N-1), NA))
     })
 })
@@ -55,9 +55,9 @@ ctest_normal_range <- function(col) {
     expect_equal(sd(col), 1)
 }
 
-testthat::describe("feature_scaler()", {
-    r_01 <- feature_scaler(train = dataset1, exclude_columns = "x", type = "[0-1]")
-    r_normal <- feature_scaler(train = dataset1, exclude_columns = "x", type = "N(0,1)")
+testthat::describe("pipe_scaler()", {
+    r_01 <- pipe_scaler(train = dataset1, exclude_columns = "x", type = "[0-1]")
+    r_normal <- pipe_scaler(train = dataset1, exclude_columns = "x", type = "N(0,1)")
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r_01)
         ctest_pipe_has_correct_fields(r_normal)
@@ -71,7 +71,7 @@ testthat::describe("feature_scaler()", {
         ctest_normal_range(r_normal$train$b)
     })
 
-    it("can apply its results to a new dataset using pipe, a wrapper for feature_scaler_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for pipe_scaler_predict()", {
         ctest_pipe_has_working_predict_function(r_01, dataset1)
         ctest_pipe_has_working_predict_function(r_normal, dataset1)
     })
@@ -84,15 +84,15 @@ testthat::describe("feature_scaler()", {
     })
 
     it("errors when a dataset is passed with 0 rows", {
-        expect_error(feature_scaler(train = dataset1[0, ], exclude_columns = "x", type = "N(0,1)"),
+        expect_error(pipe_scaler(train = dataset1[0, ], exclude_columns = "x", type = "N(0,1)"),
                      regexp = "nrow(train) > 0 is not TRUE", fixed = T)
     })
 })
 
 # Skeleton
-testthat::describe("feature_one_hot_encode()", {
-    r_pca <- feature_one_hot_encode(train = dataset1, use_pca = T, columns = c("y", "s"))
-    r_non <- feature_one_hot_encode(train = dataset1, use_pca = F)
+testthat::describe("pipe_one_hot_encode()", {
+    r_pca <- pipe_one_hot_encode(train = dataset1, use_pca = T, columns = c("y", "s"))
+    r_non <- pipe_one_hot_encode(train = dataset1, use_pca = F)
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r_non)
@@ -117,7 +117,7 @@ testthat::describe("feature_one_hot_encode()", {
     it("can use mean-encoding", {
         stats_functions <- list("mean" = mean, "quantile" = function(x) quantile(x = x, .25))
         cols <- c("y", "s")
-        r_mean <- feature_one_hot_encode(train = dataset1, use_pca = F, columns = cols,
+        r_mean <- pipe_one_hot_encode(train = dataset1, use_pca = F, columns = cols,
                                          stat_functions = stats_functions, response = "x")
 
         generated_cols <- expand.grid(cols, names(stats_functions))
@@ -145,7 +145,7 @@ testthat::describe("feature_one_hot_encode()", {
     it("can use mean-encoding on new datasets", {
         stats_functions <- list("mean" = mean, "quantile" = function(x) quantile(x = x, .25))
         cols <- c("y", "s")
-        r_mean <- feature_one_hot_encode(train = dataset1, use_pca = F, columns = cols,
+        r_mean <- pipe_one_hot_encode(train = dataset1, use_pca = F, columns = cols,
                                          stat_functions = stats_functions, response = "x")
         ctest_pipe_has_working_predict_function(r_mean, dataset1)
     })
@@ -153,7 +153,7 @@ testthat::describe("feature_one_hot_encode()", {
     it("can use mean-encoding with PCA", {
         stats_functions <- list("mean" = mean, "quantile" = function(x) quantile(x = x, .25))
         cols <- c("y", "s")
-        r_mean_pca <- feature_one_hot_encode(train = dataset1, use_pca = T, columns = cols,
+        r_mean_pca <- pipe_one_hot_encode(train = dataset1, use_pca = T, columns = cols,
                                          stat_functions = stats_functions, response = "x")
 
         generated_cols <- expand.grid(cols, names(stats_functions))
@@ -168,12 +168,12 @@ testthat::describe("feature_one_hot_encode()", {
     it("can use mean-encoding on new datasets", {
         stats_functions <- list("mean" = mean, "quantile" = function(x) quantile(x = x, .25))
         cols <- c("y", "s")
-        r_mean_pca <- feature_one_hot_encode(train = dataset1, use_pca = T, columns = cols,
+        r_mean_pca <- pipe_one_hot_encode(train = dataset1, use_pca = T, columns = cols,
                                              stat_functions = stats_functions, response = "x")
         ctest_pipe_has_working_predict_function(r_mean_pca, dataset1)
     })
 
-    it("can apply its results to a new dataset using pipe, a wrapper for feature_one_hot_encode_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for pipe_one_hot_encode_predict()", {
         ctest_pipe_has_working_predict_function(r_non, dataset1)
         ctest_pipe_has_working_predict_function(r_pca, dataset1)
     })
@@ -185,8 +185,8 @@ testthat::describe("feature_one_hot_encode()", {
 })
 
 # Skeleton
-testthat::describe("feature_categorical_filter()", {
-    r <- feature_categorical_filter(train = dataset1, response = "x",
+testthat::describe("pipe_categorical_filter()", {
+    r <- pipe_categorical_filter(train = dataset1, response = "x",
                                     insufficient_occurance_marker = "marker", threshold_function = function(data) 5)
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {

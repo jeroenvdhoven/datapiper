@@ -26,10 +26,10 @@
 #' @param sigma_noise An estimate of the inherent noise in sampling from. If this is set below 1e-8, we will not reconsider previously
 #' tried configurations.
 #'
-#' @param prepend_data_checker Flag indicating if \code{\link{pipeline_check}} should be prepended before all pipelines.
-#' @param on_missing_column See \code{\link{pipeline_check}} for details.
-#' @param on_extra_column See \code{\link{pipeline_check}} for details.
-#' @param on_type_error See \code{\link{pipeline_check}} for details.
+#' @param prepend_data_checker Flag indicating if \code{\link{pipe_check}} should be prepended before all pipelines.
+#' @param on_missing_column See \code{\link{pipe_check}} for details.
+#' @param on_extra_column See \code{\link{pipe_check}} for details.
+#' @param on_type_error See \code{\link{pipe_check}} for details.
 #'
 #' @param seed Random seed to set each time before a model is trained. Set this to 0 to ignore setting seeds.
 #' @param verbose Should intermediate updates be printed.
@@ -38,6 +38,7 @@
 #' @return A dataframe containing the training function, a list of parameters used to train the function, and one column for each metric / dataset combination.
 #' @export
 #' @importFrom purrr map_dbl map_lgl pmap_df
+#' @importFrom stats dnorm pnorm
 find_model_through_bayes <- function(
     train, test, response,
     preprocess_pipes = list(function(train, test) return(list(train = train, test = train, .predict = function(data) return(data)))),
@@ -104,7 +105,7 @@ find_model_through_bayes <- function(
         preprocess_pipe <- preprocess_pipes[[preprocess_index]]
         if(prepend_data_checker){
             preprocess_pipe <- train_pipeline(
-                segment(.segment = pipeline_check, response = response,
+                segment(.segment = pipe_check, response = response,
                         on_missing_column = on_missing_column, on_extra_column = on_extra_column, on_type_error = on_type_error),
                 segment(.segment = preprocess_pipe))
         }

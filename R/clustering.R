@@ -11,7 +11,7 @@
 #' @export
 #'
 #' @importFrom cluster clara
-clustering <- function(train, cluster_column = "cluster", exclude_columns = character(0), k = 4,
+pipe_clustering <- function(train, cluster_column = "cluster", exclude_columns = character(0), k = 4,
                            metric = "euclidean") {
     stopifnot(
         is.data.frame(train),

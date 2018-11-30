@@ -106,7 +106,6 @@ impute_predict <- function(data, column, NA_value, model, exclude_columns){
 #' @param verbose whether xgboost should print anything
 #'
 #' @return The same dataset as the imputed, but with NA values in the selected columns replaced by their estimated values.
-#' @export
 impute_predict_all <- function(data, columns, na_function, models, exclude_columns, verbose = F){
     stopifnot(
         is.character(columns),
@@ -140,7 +139,7 @@ impute_predict_all <- function(data, columns, na_function, models, exclude_colum
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
-impute_all <- function(train, columns,
+pipe_impute <- function(train, columns,
                        na_function = is.na, exclude_columns, type = "lm",
                        controls = NA, verbose = F){
     stopifnot(
@@ -155,7 +154,7 @@ impute_all <- function(train, columns,
         if(type == "mean") exclude_columns = character(0)
         else if(type == "lm") {
             # Ensure single value columns are not used
-            keep_columns <- datapiper::remove_single_value_columns(train, na_function)$pipe$args$preserved_columns
+            keep_columns <- datapiper::pipe_remove_single_value_columns(train, na_function)$pipe$args$preserved_columns
             exclude_columns <- colnames(train)[!colnames(train) %in% keep_columns]
         } else if (type == "xgboost") {
             # Ensure no non-numeric columns are used

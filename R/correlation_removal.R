@@ -7,10 +7,10 @@
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 #' @importFrom igraph graph.data.frame V
-cor_remove_high_correlation_features <- function(train, exclude_columns = character(0), threshold = .8) {
+pipe_remove_high_correlation_features <- function(train, exclude_columns = character(0), threshold = .8) {
     numeric_df <- train[, !purrr::map_lgl(train, is.character)]
 
-    node_df <- cor_high_correlation_features(numeric_df, exclude_columns, threshold) %>% igraph::graph.data.frame(directed = F)
+    node_df <- high_correlation_features(numeric_df, exclude_columns, threshold) %>% igraph::graph.data.frame(directed = F)
 
     highly_correlated_features <- igraph::V(node_df)$name
     indep_cols <- greedy_max_independent_set(node_df)
@@ -31,7 +31,7 @@ cor_remove_high_correlation_features <- function(train, exclude_columns = charac
 #'
 #' @return A dataframe with two columns, representing pairs of columns that are highly correlated
 #' @export
-cor_high_correlation_features <- function(data, exclude_columns = character(0), threshold = .8){
+high_correlation_features <- function(data, exclude_columns = character(0), threshold = .8){
     #ADD OPTION FOR STATISTICAL SIGNIFICANCE REMOVAL?
     stopifnot(!any(!exclude_columns %in% colnames(data)))
 
@@ -62,12 +62,12 @@ cor_high_correlation_features <- function(data, exclude_columns = character(0), 
 
 #' Plots highly correlated features as a graph
 #'
-#' @param high_cors Result of \code{\link[datapiper]{cor_high_correlation_features}}. Can also provide your own graph generated using \code{\link[igraph]{graph.data.frame}}.
+#' @param high_cors Result of \code{\link[datapiper]{high_correlation_features}}. Can also provide your own graph generated using \code{\link[igraph]{graph.data.frame}}.
 #' This is especially useful when combined with \code{\link[igraph]{decompose.graph}} to view subsections of the correlation graph.
 #' @param ... arguments to be passed to plot.igraph. \code{vertex.size} and \code{vertex.label.cex} (for label size) are probably good parameters to pass.
 #' @export
 #' @importFrom igraph plot.igraph
-cor_plot_high_correlations <- function(high_cors, ...){
+plot_high_correlations <- function(high_cors, ...){
     if(is.data.frame(high_cors)) high_cors %<>% igraph::graph.data.frame(directed = F)
     if(missing(...)) igraph::plot.igraph(high_cors, vertex.size = 3, vertex.label.cex = 0.7)
     else igraph::plot.igraph(high_cors, ...)

@@ -41,10 +41,10 @@ test <- data_frame(a = 1:10, b = sample(c(1,2, NA), size = 10,
     replace = TRUE), c = sample(c(1,2), size = 10, replace = TRUE))
 
 P <- train_pipeline(
-    segment(.segment = datapiper::feature_NA_indicators),
-    segment(.segment = datapiper::impute_all, exclude_columns = "a"),
-    segment(.segment = datapiper::cor_remove_high_correlation_features, exclude_columns = "a"),
-    segment(.segment = datapiper::feature_create_all_generic_stats, stat_cols = "b",
+    segment(.segment = datapiper::pipe_NA_indicators),
+    segment(.segment = datapiper::pipe_impute, exclude_columns = "a"),
+    segment(.segment = datapiper::pipe_remove_high_correlation_features, exclude_columns = "a"),
+    segment(.segment = datapiper::pipe_create_stats, stat_cols = "b",
          response = "a", functions = list("mean" = mean, "sd" = sd),
          too_few_observations_cutoff = 0)
 )

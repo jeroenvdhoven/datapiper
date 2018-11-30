@@ -10,13 +10,13 @@ feature_one_hot_encode_predict(data, one_hot_parameters, use_pca, pca,
 \arguments{
 \item{data}{A new dataframe}
 
-\item{one_hot_parameters}{The \code{one_hot_parameters} element from the result of \code{\link{feature_one_hot_encode}}}
+\item{one_hot_parameters}{The \code{one_hot_parameters} element from the result of \code{\link{pipe_one_hot_encode}}}
 
 \item{use_pca}{Whether PCA transformation is required.}
 
-\item{pca}{The PCA result from \code{\link{feature_one_hot_encode}}. Required iff \code{use_pca} is \code{TRUE}}
+\item{pca}{The PCA result from \code{\link{pipe_one_hot_encode}}. Required iff \code{use_pca} is \code{TRUE}}
 
-\item{stat_transformer}{Stat transformer function from \code{\link{feature_one_hot_encode}}, or NA (for normal one-hot encoding)}
+\item{stat_transformer}{Stat transformer function from \code{\link{pipe_one_hot_encode}}, or NA (for normal one-hot encoding)}
 }
 \value{
 The test dataframe with the required columns one-hot encoded

@@ -49,13 +49,13 @@ You can use \code{\link{model_trainer}} as a wrapper for this list. It will also
 \item{sigma_noise}{An estimate of the inherent noise in sampling from. If this is set below 1e-8, we will not reconsider previously
 tried configurations.}
 
-\item{prepend_data_checker}{Flag indicating if \code{\link{pipeline_check}} should be prepended before all pipelines.}
+\item{prepend_data_checker}{Flag indicating if \code{\link{pipe_check}} should be prepended before all pipelines.}
 
-\item{on_missing_column}{See \code{\link{pipeline_check}} for details.}
+\item{on_missing_column}{See \code{\link{pipe_check}} for details.}
 
-\item{on_extra_column}{See \code{\link{pipeline_check}} for details.}
+\item{on_extra_column}{See \code{\link{pipe_check}} for details.}
 
-\item{on_type_error}{See \code{\link{pipeline_check}} for details.}
+\item{on_type_error}{See \code{\link{pipe_check}} for details.}
 
 \item{seed}{Random seed to set each time before a model is trained. Set this to 0 to ignore setting seeds.}
 

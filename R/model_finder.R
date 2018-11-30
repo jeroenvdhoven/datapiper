@@ -16,10 +16,10 @@
 #' @param parameter_sample_rate Optional parameter. If set in the range \code{(0,1])}, it will be used to sample the possible combinations of parameters
 #' @param seed Random seed to set each time before a model is trained
 #' @param preprocess_pipes List of preprocessing pipelines generated using \code{\link{pipeline}}.
-#' @param prepend_data_checker Flag indicating if \code{\link{pipeline_check}} should be prepended before all pipelines.
-#' @param on_missing_column See \code{\link{pipeline_check}} for details.
-#' @param on_extra_column See \code{\link{pipeline_check}} for details.
-#' @param on_type_error See \code{\link{pipeline_check}} for details.
+#' @param prepend_data_checker Flag indicating if \code{\link{pipe_check}} should be prepended before all pipelines.
+#' @param on_missing_column See \code{\link{pipe_check}} for details.
+#' @param on_extra_column See \code{\link{pipe_check}} for details.
+#' @param on_type_error See \code{\link{pipe_check}} for details.
 #' @param verbose Should intermediate updates be printed.
 #' @param save_model Flag indicating if the generated models should be saved. Defaults to False.
 #'
@@ -77,7 +77,7 @@ find_model <- function(train, test, response,
         preprocess_pipe <- preprocess_pipes[[preprocess_index]]
         if(prepend_data_checker){
             preprocess_pipe <- train_pipeline(
-                segment(.segment = pipeline_check, response = response,
+                segment(.segment = pipe_check, response = response,
                      on_missing_column = on_missing_column, on_extra_column = on_extra_column, on_type_error = on_type_error),
                 segment(.segment = preprocess_pipe))
         }

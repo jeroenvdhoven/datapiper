@@ -1,12 +1,12 @@
 p_1 <- datapiper::train_pipeline(
-    segment(.segment = datapiper::feature_categorical_filter, threshold_function = function(x) 2, response = "x"),
-    segment(.segment = datapiper::remove_single_value_columns, na_function = is.na),
-    segment(.segment = datapiper::feature_one_hot_encode),
-    segment(.segment = datapiper::impute_all, exclude_columns = "x", columns = c("m", "m2"), type = "mean")
+    segment(.segment = datapiper::pipe_categorical_filter, threshold_function = function(x) 2, response = "x"),
+    segment(.segment = datapiper::pipe_remove_single_value_columns, na_function = is.na),
+    segment(.segment = datapiper::pipe_one_hot_encode),
+    segment(.segment = datapiper::pipe_impute, exclude_columns = "x", columns = c("m", "m2"), type = "mean")
 )
 p_2 <- datapiper::train_pipeline(
     segment(.segment = p_1),
-    segment(.segment = datapiper::feature_scaler, exclude_columns = "x")
+    segment(.segment = datapiper::pipe_scaler, exclude_columns = "x")
 )
 m_1 <- util_RMSE
 m_2 <- util_RMSLE
@@ -202,8 +202,8 @@ describe("find_model_through_bayes()", {
     it("only checks if the response is present after piping", {
         p_3 <- datapiper::train_pipeline(
             segment(.segment = p_1),
-            segment(.segment = pipeline_mutate, Target = "x"),
-            segment(.segment = pipeline_function, f = standard_column_names)
+            segment(.segment = pipe_mutate, Target = "x"),
+            segment(.segment = pipe_function, f = standard_column_names)
         )
 
         r <- ctest_for_no_errors(

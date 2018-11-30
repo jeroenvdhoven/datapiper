@@ -2,7 +2,7 @@
 % Please edit documentation in R/transform_features.R
 \name{feature_transformer_predict}
 \alias{feature_transformer_predict}
-\title{Uses the results of \code{\link{feature_transformer}} on new datasets}
+\title{Uses the results of \code{\link{pipe_feature_transformer}} on new datasets}
 \usage{
 feature_transformer_predict(data, transform_columns, transform_functions)
 }
@@ -11,11 +11,11 @@ feature_transformer_predict(data, transform_columns, transform_functions)
 
 \item{transform_columns}{The same columns used to obtain these selected transform_functions}
 
-\item{transform_functions}{Result of \code{\link{feature_transformer}}}
+\item{transform_functions}{Result of \code{\link{pipe_feature_transformer}}}
 }
 \value{
 Returns
 }
 \description{
-Uses the results of \code{\link{feature_transformer}} on new datasets
+Uses the results of \code{\link{pipe_feature_transformer}} on new datasets
 }

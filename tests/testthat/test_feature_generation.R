@@ -1,6 +1,6 @@
-describe("feature_NA_indicators", {
-    r <- ctest_for_no_errors(datapiper::feature_NA_indicators(train = dataset1),
-                             "Can't apply feature_NA_indicators")
+describe("pipe_NA_indicators", {
+    r <- ctest_for_no_errors(datapiper::pipe_NA_indicators(train = dataset1),
+                             "Can't apply pipe_NA_indicators")
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
@@ -13,24 +13,24 @@ describe("feature_NA_indicators", {
         ctest_dataset_has_columns(r$train, indicator_columns)
     })
 
-    it("can apply its results to a new dataset using pipe, a wrapper for feature_NA_indicators_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for pipe_NA_indicators_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
     it("can handle multiple NA functions", {
-        r_multi <- datapiper::feature_NA_indicators(train = dataset1, conditions = list(is.na, function(x) x == 1))
+        r_multi <- datapiper::pipe_NA_indicators(train = dataset1, conditions = list(is.na, function(x) x == 1))
         ctest_dataset_has_columns(dataset = r_multi$train, c("x_NA_indicator", "a_NA_indicator", "c_NA_indicator"))
     })
 })
 
 
-describe("feature_create_all_generic_stats", {
+describe("pipe_create_stats", {
     f_list <- list("mean" = mean, "sd" = sd)
     r <- ctest_for_no_errors(
-        datapiper::feature_create_all_generic_stats(
+        datapiper::pipe_create_stats(
             train = dataset1, response = "x", interaction_level = 1,
             too_few_observations_cutoff = 5, functions = f_list),
-        "Can't apply feature_create_all_generic_stats")
+        "Can't apply pipe_create_stats")
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
@@ -66,7 +66,7 @@ describe("feature_create_all_generic_stats", {
         train <- dataset1[train_indices,]
         test <- dataset1[-train_indices,]
 
-        r_sub <- feature_create_all_generic_stats(
+        r_sub <- pipe_create_stats(
                 train = train, response = "x", interaction_level = 1,
                 too_few_observations_cutoff = 5, functions = f_list)
 
@@ -80,12 +80,12 @@ describe("feature_create_all_generic_stats", {
         expect_false(any(transformed_test$mean_y != mean(x = train$x)))
     })
 
-    it("can apply its results to a new dataset using pipe, a wrapper for feature_create_all_generic_stats_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for pipe_create_stats_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
     it("handles missing values", {
-        r_missing <- datapiper::feature_create_all_generic_stats(
+        r_missing <- datapiper::pipe_create_stats(
             train = dataset1, response = "x", interaction_level = 1, stat_cols = "m",
             too_few_observations_cutoff = 1, functions = f_list)
 
@@ -109,7 +109,7 @@ describe("feature_create_all_generic_stats", {
     it("can go up to interaction level 2", {
         affected_columns <- c("y", "s", "z")
 
-        r_multi <- datapiper::feature_create_all_generic_stats(
+        r_multi <- datapiper::pipe_create_stats(
             train = dataset1, response = "x", interaction_level = 2,
             too_few_observations_cutoff = 1, functions = f_list)
 
@@ -124,9 +124,9 @@ describe("feature_create_all_generic_stats", {
     })
 })
 
-describe("remove_single_value_columns", {
-    r <- ctest_for_no_errors(datapiper::remove_single_value_columns(dataset1, na_function = is.na),
-                             error_message = "Error: remove_single_value_columns failed on basic run")
+describe("pipe_remove_single_value_columns", {
+    r <- ctest_for_no_errors(datapiper::pipe_remove_single_value_columns(dataset1, na_function = is.na),
+                             error_message = "Error: pipe_remove_single_value_columns failed on basic run")
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
@@ -137,21 +137,21 @@ describe("remove_single_value_columns", {
         ctest_dataset_does_not_have_columns(r$train, c("z", "z2"))
     })
 
-    it("can apply its results to a new dataset using pipe, a wrapper for remove_single_value_columns_predict()", {
+    it("can apply its results to a new dataset using pipe, a wrapper for pipe_remove_single_value_columns_predict()", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
     it("can ignore missing values", {
-        r <- datapiper::remove_single_value_columns(dataset1)
+        r <- datapiper::pipe_remove_single_value_columns(dataset1)
         ctest_dataset_has_columns(dataset1, c("z"))
         ctest_dataset_does_not_have_columns(r$train, c("z"))
         ctest_dataset_has_columns(r$train, c("z2"))
     })
 })
 
-describe("feature_interactions", {
-    r <- ctest_for_no_errors(datapiper::feature_interactions(dataset1, response = "x", columns = c("a", "b", "c"), max_interactions = 3),
-                             error_message = "feature_interactions does not run with defaults")
+describe("pipe_feature_interactions", {
+    r <- ctest_for_no_errors(datapiper::pipe_feature_interactions(dataset1, response = "x", columns = c("a", "b", "c"), max_interactions = 3),
+                             error_message = "pipe_feature_interactions does not run with defaults")
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
@@ -169,12 +169,12 @@ describe("feature_interactions", {
     })
 
     it("ignores non-numeric input", {
-        r_no_numerics <- datapiper::feature_interactions(dataset1, response = "x", max_interactions = 2, columns = 2)
+        r_no_numerics <- datapiper::pipe_feature_interactions(dataset1, response = "x", max_interactions = 2, columns = 2)
         expect_false(any(!purrr::map_lgl(dataset1[, r_no_numerics$pipe$args$columns], is.numeric)), info = "All used columns should be numeric")
     })
 
     it("handles missing values", {
-        ctest_for_no_errors(datapiper::feature_interactions(dataset1, response = "x", max_interactions = 2, columns = 2),
-                            error_message = "feature_interactions can handle missing values")
+        ctest_for_no_errors(datapiper::pipe_feature_interactions(dataset1, response = "x", max_interactions = 2, columns = 2),
+                            error_message = "pipe_feature_interactions can handle missing values")
     })
 })

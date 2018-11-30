@@ -10,11 +10,11 @@ get_library_predictions <- function(library_name, test){
 generate_model_function <- function(extra_pipe){
     if(missing(extra_pipe)){
         trained_pipe <- datapiper::train_pipeline(
-            segment(.segment = pipeline_select, "x", "a", "b", "c", "s")
+            segment(.segment = pipe_select, "x", "a", "b", "c", "s")
         )
     } else {
         trained_pipe <- datapiper::train_pipeline(
-            segment(.segment = pipeline_select, "x", "a", "b", "c", "s"),
+            segment(.segment = pipe_select, "x", "a", "b", "c", "s"),
             extra_pipe
         )
     }

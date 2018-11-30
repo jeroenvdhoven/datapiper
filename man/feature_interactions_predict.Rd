@@ -9,12 +9,12 @@ feature_interactions_predict(data, columns, column_means, max_interactions)
 \arguments{
 \item{data}{Data frame with the new data}
 
-\item{columns}{Column names from the \code{\link{feature_interactions}}'s results}
+\item{columns}{Column names from the \code{\link{pipe_feature_interactions}}'s results}
 
-\item{column_means}{Column means from the \code{\link{feature_interactions}}'s results}
+\item{column_means}{Column means from the \code{\link{pipe_feature_interactions}}'s results}
 
 \item{max_interactions}{The maximum number of columns that will be considered for interaction effects per variable. Should be the same as the one used for
-the results of \code{\link{feature_interactions}}.}
+the results of \code{\link{pipe_feature_interactions}}.}
 }
 \value{
 The data frame in \code{data} with the interaction effects

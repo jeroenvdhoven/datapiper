@@ -1,6 +1,6 @@
 # Skeleton
-describe("impute_all", {
-    r <- ctest_for_no_errors(to_eval = impute_all(train = dataset1, exclude_columns = c("z", "z2"), type = "mean"),
+describe("pipe_impute", {
+    r <- ctest_for_no_errors(to_eval = pipe_impute(train = dataset1, exclude_columns = c("z", "z2"), type = "mean"),
                              error_message = "Can't run impute with mean")
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
@@ -17,33 +17,33 @@ describe("impute_all", {
     })
 
     it("does not error when not setting exclude_columns and choosing mean imputation", {
-        r <- ctest_for_no_errors(to_eval = impute_all(train = dataset1, type = "mean"),
+        r <- ctest_for_no_errors(to_eval = pipe_impute(train = dataset1, type = "mean"),
                                  error_message = "Can't run impute with mean without setting exclude_columns")
     })
 
     it("can set columns to ignore while imputing", {
         excluded <- c("z", "y", "x", "z2")
-        r_exclude <- impute_all(train = dataset1, exclude_columns = excluded, type = "lm")
+        r_exclude <- pipe_impute(train = dataset1, exclude_columns = excluded, type = "lm")
         used_columns <- names(r_exclude$trees[[1]]$coefficients)
         expect_false(any(excluded %in% used_columns))
     })
 
     it("can set its own detection function for missing values", {
         excluded <- c("z", "y", "x", "z2")
-        r_na <- impute_all(train = dataset1, exclude_columns = excluded, type = "lm", na_function = is.na)
+        r_na <- pipe_impute(train = dataset1, exclude_columns = excluded, type = "lm", na_function = is.na)
         expect_false(anyNA(r_na$train[, purrr::map_lgl(r_na$train, is.numeric)]))
 
-        r_zero <- impute_all(train = dataset1, exclude_columns = excluded, type = "lm", na_function = function(x) x == 0)
+        r_zero <- pipe_impute(train = dataset1, exclude_columns = excluded, type = "lm", na_function = function(x) x == 0)
         expect_true(anyNA(r_zero$train[, purrr::map_lgl(r_zero$train, is.numeric)]))
     })
 
     it("ignores non-numeric input for xgboost by default", {
-        ctest_for_no_errors(datapiper::impute_all(train = dataset1, type = "xgboost"),
+        ctest_for_no_errors(datapiper::pipe_impute(train = dataset1, type = "xgboost"),
                             error_message = "Error ignoring non-numeric input for xgboost by default")
     })
 
     it("ignores constant input for lm by default", {
-        ctest_for_no_errors(impute_all(train = select(dataset1, -y), type = "lm"),
+        ctest_for_no_errors(pipe_impute(train = select(dataset1, -y), type = "lm"),
                             error_message = "ignores constant input for lm by default")
     })
 })

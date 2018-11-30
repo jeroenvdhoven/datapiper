@@ -30,10 +30,10 @@
 #'     replace = TRUE), c = sample(c(1,2), size = 10, replace = TRUE))
 #'
 #' P <- train_pipeline(
-#'     segment(.segment = datapiper::feature_NA_indicators),
-#'     segment(.segment = datapiper::impute_all, exclude_columns = "a"),
-#'     segment(.segment = datapiper::cor_remove_high_correlation_features, exclude_columns = "a"),
-#'     segment(.segment = datapiper::feature_create_all_generic_stats, stat_cols = "b",
+#'     segment(.segment = datapiper::pipe_NA_indicators),
+#'     segment(.segment = datapiper::pipe_impute, exclude_columns = "a"),
+#'     segment(.segment = datapiper::pipe_remove_high_correlation_features, exclude_columns = "a"),
+#'     segment(.segment = datapiper::pipe_create_stats, stat_cols = "b",
 #'          response = "a", functions = list("mean" = mean, "sd" = sd),
 #'          too_few_observations_cutoff = 0)
 #' )
@@ -119,8 +119,8 @@ train_pipeline <- function(..., response){
 #' @export
 #'
 #' @examples
-#' p <- segment(pipeline_mutate, a = "1")
-#' p2 <- segment(pipeline_mutate, "-a")
+#' p <- segment(pipe_mutate, a = "1")
+#' p2 <- segment(pipe_mutate, "-a")
 segment <- function(.segment, ...) {
     res <- list(...)
     stopifnot(
@@ -138,7 +138,7 @@ segment <- function(.segment, ...) {
 #'
 #' @return A wrapper function for the specified dplyr_function
 #' @export
-pipeline_dplyr <- function(dplyr_function, stop_on_missing_names = F) {
+pipe_dplyr <- function(dplyr_function, stop_on_missing_names = F) {
     return(function(train, ...) {
         if(stop_on_missing_names){
             arg_names <- names(list(...))
@@ -160,7 +160,7 @@ pipeline_dplyr <- function(dplyr_function, stop_on_missing_names = F) {
 #'
 #' @return A list of the transformed train dataset and a .predict function to be used on new data.
 #' @export
-pipeline_select <- pipeline_dplyr(select_, stop_on_missing_names = F)
+pipe_select <- pipe_dplyr(select_, stop_on_missing_names = F)
 
 #' Applies mutate in a pipeline
 #'
@@ -169,7 +169,7 @@ pipeline_select <- pipeline_dplyr(select_, stop_on_missing_names = F)
 #'
 #' @return A list of the transformed train dataset and a .predict function to be used on new data.
 #' @export
-pipeline_mutate <- pipeline_dplyr(mutate_, stop_on_missing_names = T)
+pipe_mutate <- pipe_dplyr(mutate_, stop_on_missing_names = T)
 
 #' Wrapper for putting a single function into a pipeline
 #'
@@ -184,17 +184,17 @@ pipeline_mutate <- pipeline_dplyr(mutate_, stop_on_missing_names = T)
 #' @examples
 #' data <- dplyr::data_frame(var = 0, Var = 0, camelCase = 0, good_name = 0,
 #'                           `0none.` = 0, `bad  ` = 0, `j&d` = 0, `spac ed` = 0)
-#' pipeline_function(data, standard_column_names)
+#' pipe_function(data, standard_column_names)
 #'
 #' # You can also use this to append a custom model to the pipeline
 #' data <- dplyr::data_frame(x = 1:10, y = (1:10) + rnorm(10))
 #' model <- lm(y ~ x, data)
 #'
 #' self_contained_function <- function(data) predict(model, data)
-#' model_pipe <- pipeline_function(data, self_contained_function)
+#' model_pipe <- pipe_function(data, self_contained_function)
 #'
 #' predictions <- invoke(model_pipe$pipe, data)
-pipeline_function <- function(train, f, ...) {
+pipe_function <- function(train, f, ...) {
     stopifnot(
         is.function(f),
         "data" %in% formalArgs(f)
@@ -220,7 +220,7 @@ pipeline_function <- function(train, f, ...) {
 #' @return A list of the train dataset and a pipe to be used on new data.
 #' @importFrom purrr map2_df
 #' @export
-pipeline_check <- function(train,
+pipe_check <- function(train,
                            response,
                            on_missing_column = c("error", "add")[1],
                            on_extra_column = c("remove", "error")[1],
@@ -241,14 +241,14 @@ pipeline_check <- function(train,
     # Save column types
     col_types = purrr::map_chr(train, class)
 
-    predict_pipe <- pipe(.function = pipeline_check_predict, response = response, cols = cols, col_types = col_types,
+    predict_pipe <- pipe(.function = pipe_check_predict, response = response, cols = cols, col_types = col_types,
                          on_missing_column = on_missing_column, on_extra_column = on_extra_column,
                          on_type_error = on_type_error)
 
     return(list(train = train, pipe = predict_pipe))
 }
 
-pipeline_check_predict <- function(data, response, cols, col_types, on_missing_column, on_extra_column, on_type_error) {
+pipe_check_predict <- function(data, response, cols, col_types, on_missing_column, on_extra_column, on_type_error) {
     stopifnot(is.data.frame(data))
 
     if(!response %in% colnames(data)) data[, response] <- NA
@@ -406,7 +406,12 @@ is.pipeline <- function(x) {
 #'
 #' @return The pipeline \code{p}, but without sub-pipelines
 #' @export
-flatten_pipeline <- function(p, init = T) {
+#'
+flatten_pipeline <- function(p) {
+    flatten_pipeline_internal(p, init = T)
+}
+
+flatten_pipeline_internal <- function(p, init = T) {
     stopifnot(is.pipeline(p))
 
     res <- list()
@@ -414,7 +419,7 @@ flatten_pipeline <- function(p, init = T) {
     for(element_index in seq_along(p)) {
         current_element <- p[[element_index]]
         if(is.pipeline(current_element)) {
-            current_element <- flatten_pipeline(current_element, init = F)
+            current_element <- flatten_pipeline_internal(current_element, init = F)
             end <- i + length(current_element) - 1
             res[i:end] <- current_element
             names(res)[i:end] <- names(current_element)

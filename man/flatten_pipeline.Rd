@@ -4,7 +4,7 @@
 \alias{flatten_pipeline}
 \title{Flattens a pipeline so it does not contain any more sub-pipelines, only pipe elements.}
 \usage{
-flatten_pipeline(p, init = T)
+flatten_pipeline(p)
 }
 \arguments{
 \item{p}{A pipeline}

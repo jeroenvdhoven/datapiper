@@ -9,7 +9,7 @@
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 #' @importFrom stats lm cor
-feature_transformer <- function(train, response, transform_columns, missing_func = is.na,
+pipe_feature_transformer <- function(train, response, transform_columns, missing_func = is.na,
                                 transform_functions = list(sqrt, log, function(x)x^2)){
     stopifnot(
         response %in% colnames(train), is.numeric(unlist(train[response])),
@@ -66,11 +66,11 @@ feature_transform_col <- function(train, response, transform_functions, transfor
     return(res)
 }
 
-#' Uses the results of \code{\link{feature_transformer}} on new datasets
+#' Uses the results of \code{\link{pipe_feature_transformer}} on new datasets
 #'
 #' @param data A new dataset
 #' @param transform_columns The same columns used to obtain these selected transform_functions
-#' @param transform_functions Result of \code{\link{feature_transformer}}
+#' @param transform_functions Result of \code{\link{pipe_feature_transformer}}
 #'
 #' @return Returns
 feature_transformer_predict <- function(data, transform_columns, transform_functions){
@@ -101,7 +101,7 @@ feature_transformer_predict <- function(data, transform_columns, transform_funct
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
-feature_scaler <- function(train, exclude_columns = character(length = 0), type = "[0-1]"){
+pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "[0-1]"){
     stopifnot(
         is.data.frame(train),
         nrow(train) > 0,
@@ -156,7 +156,7 @@ feature_scaler <- function(train, exclude_columns = character(length = 0), type 
 #' @export
 #' @importFrom data.table .SD :=
 #' @importFrom stats prcomp
-feature_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(train, function(x) return(!(is.numeric(x) || is.logical(x))))],
+pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(train, function(x) return(!(is.numeric(x) || is.logical(x))))],
                                    stat_functions, response,
                                    use_pca = FALSE, pca_tol = .1){
     stopifnot(
@@ -193,7 +193,7 @@ feature_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_l
         stats_transformer <- NA
         stats_transformer_pipe <- NA
     } else {
-        stats_transformer <- feature_create_all_generic_stats(
+        stats_transformer <- pipe_create_stats(
             train = train, stat_cols = columns, response = response, functions = stat_functions,
             interaction_level = 1, too_few_observations_cutoff = 0)
 
@@ -220,13 +220,12 @@ feature_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_l
 #' Apply one-hot encoding
 #'
 #' @param data A new dataframe
-#' @param one_hot_parameters The \code{one_hot_parameters} element from the result of \code{\link{feature_one_hot_encode}}
+#' @param one_hot_parameters The \code{one_hot_parameters} element from the result of \code{\link{pipe_one_hot_encode}}
 #' @param use_pca Whether PCA transformation is required.
-#' @param pca The PCA result from \code{\link{feature_one_hot_encode}}. Required iff \code{use_pca} is \code{TRUE}
-#' @param stat_transformer Stat transformer function from \code{\link{feature_one_hot_encode}}, or NA (for normal one-hot encoding)
+#' @param pca The PCA result from \code{\link{pipe_one_hot_encode}}. Required iff \code{use_pca} is \code{TRUE}
+#' @param stat_transformer Stat transformer function from \code{\link{pipe_one_hot_encode}}, or NA (for normal one-hot encoding)
 #'
 #' @return The test dataframe with the required columns one-hot encoded
-#' @export
 feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pca, stat_transformer){
     stopifnot(
         is.data.frame(data),
@@ -283,7 +282,7 @@ stat_transformer_for_one_hot <- function(data, stats_transformer, orignal_column
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
-feature_categorical_filter <- function(
+pipe_categorical_filter <- function(
     train, response, insufficient_occurance_marker = "insignificant_category",
     categorical_columns = colnames(train)[purrr::map_lgl(train, is.character)],
     threshold_function = function(data) 30
@@ -326,7 +325,6 @@ feature_categorical_filter <- function(
 #' @param insufficient_occurance_marker The marker from \code{feature_categorical_filter}
 #'
 #' @return The transformed dataset
-#' @export
 feature_categorical_filter_predict <- function(data, categorical_columns, mappings, insufficient_occurance_marker) {
     stopifnot(
         is.data.frame(data),

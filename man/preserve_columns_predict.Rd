@@ -18,5 +18,5 @@ The same data frame, without single-value columns
 Only keep previously selected columns
 }
 \details{
-To be used by \code{\link{remove_single_value_columns}} and \code{\link{cor_remove_high_correlation_features}}
+To be used by \code{\link{pipe_remove_single_value_columns}} and \code{\link{pipe_remove_high_correlation_features}}
 }

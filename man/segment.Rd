@@ -18,6 +18,6 @@ A list with .segment and the argument in ..., ready for \code{\link{pipeline}}
 A simple wrapper for creating a pipe segment
 }
 \examples{
-p <- segment(pipeline_mutate, a = "1")
-p2 <- segment(pipeline_mutate, "-a")
+p <- segment(pipe_mutate, a = "1")
+p2 <- segment(pipe_mutate, "-a")
 }
