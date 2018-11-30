@@ -2,7 +2,7 @@
 % Please edit documentation in R/bayesian_optimisation.R
 \name{find_model_through_bayes}
 \alias{find_model_through_bayes}
-\title{Find fitting models and test them using given metrics on the test dataset}
+\title{Hyper parameter search using bayesian optimisation}
 \usage{
 find_model_through_bayes(train, test, response,
   preprocess_pipes = list(function(train, test) return(list(train = train,
@@ -67,5 +67,5 @@ tried configurations.}
 A dataframe containing the training function, a list of parameters used to train the function, and one column for each metric / dataset combination.
 }
 \description{
-Find fitting models and test them using given metrics on the test dataset
+Hyper parameter search using bayesian optimisation
 }

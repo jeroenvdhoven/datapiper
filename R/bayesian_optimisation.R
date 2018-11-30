@@ -1,4 +1,4 @@
-#' Find fitting models and test them using given metrics on the test dataset
+#' Hyper parameter search using bayesian optimisation
 #'
 #' @param train The training dataset
 #' @param test The testing dataset
@@ -125,13 +125,13 @@ find_model_through_bayes <- function(
             model <- models[[model_index]]
 
             current_results <- run_experiments(train = piped_train, test = piped_test, model = model, model_name = model_names[model_index],
-                                   metrics = metrics, metric_names = metric_names, target_metric = target_metric, sigma_noise = sigma_noise,
-                                   response = response, verbose = verbose, seed = seed, higher_is_better = higher_is_better,
-                                   N_init = N_init, N_experiment = N_experiment)
-            current_results[, ".id"] = paste0(pipe_names[preprocess_index], "_", model_names[model_index])
+                                               metrics = metrics, metric_names = metric_names, target_metric = target_metric, sigma_noise = sigma_noise,
+                                               response = response, verbose = verbose, seed = seed, higher_is_better = higher_is_better,
+                                               N_init = N_init, N_experiment = N_experiment, save_model = save_model)
+            current_results$.id = paste0(pipe_names[preprocess_index], "_", model_names[model_index])
+            current_results$.preprocess_pipe = list(trained_pipeline)
+            res <- bind_rows(res, current_results)
         }
-        current_results[, ".preprocess_pipe"] = list(trained_pipeline)
-        res <- rbind(res, current_results)
     }
 
     return(res)
@@ -141,7 +141,7 @@ run_experiments <- function(train, test, model, model_name, response,
                             metrics, metric_names, target_metric,
                             N_init, N_experiment, sigma_noise,
                             higher_is_better = higher_is_better,
-                            verbose = T, seed = 1) {
+                            verbose = T, seed = 1, save_model = F) {
     f_train <- model[[".train"]]
     f_predict <- model[[".predict"]]
 
@@ -162,7 +162,7 @@ run_experiments <- function(train, test, model, model_name, response,
                                                   f_train = f_train, f_predict = f_predict,
                                                   parameters = parameter_grid[test_indices[i], ],
                                                   metric_names = metric_names, metrics = metrics, response = response,
-                                                  seed = seed)
+                                                  seed = seed, save_model = save_model)
         # Test model and record performance
         performance[i] <- unlist(model_results[target_metric])
         if(nrow(res) == 0) res <- model_results
@@ -184,7 +184,6 @@ run_experiments <- function(train, test, model, model_name, response,
         y_max <- ifelse(higher_is_better, max(performance[occupied_points]), min(performance[occupied_points]))
 
         EI <- expected_improvement(mu = distributions$mu, sigma = distributions$sigma, y_max = y_max)
-        EI_res[[length(EI_res) + 1]] <<- EI
 
         if(higher_is_better) {
             search_function <- which.max
@@ -208,7 +207,6 @@ run_experiments <- function(train, test, model, model_name, response,
         performance[i + N_init] <- unlist(model_results[target_metric])
         res[N_init + i, ] <- model_results
     }
-    cat("\n")
     return(res)
 }
 
