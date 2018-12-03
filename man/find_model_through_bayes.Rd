@@ -69,3 +69,6 @@ A dataframe containing the training function, a list of parameters used to train
 \description{
 Hyper parameter search using bayesian optimisation
 }
+\details{
+This implementation is still in an early phase. Bugs may exist, but results so far have been promising (Dec 2018).
+}

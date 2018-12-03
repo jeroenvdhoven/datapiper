@@ -35,6 +35,8 @@
 #' @param verbose Should intermediate updates be printed.
 #' @param save_model Flag indicating if the generated models should be saved. Defaults to False.
 #'
+#' @details This implementation is still in an early phase. Bugs may exist, but results so far have been promising (Dec 2018).
+#'
 #' @return A dataframe containing the training function, a list of parameters used to train the function, and one column for each metric / dataset combination.
 #' @export
 #' @importFrom purrr map_dbl map_lgl pmap_df
