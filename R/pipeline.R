@@ -221,10 +221,10 @@ pipe_function <- function(train, f, ...) {
 #' @importFrom purrr map2_df
 #' @export
 pipe_check <- function(train,
-                           response,
-                           on_missing_column = c("error", "add")[1],
-                           on_extra_column = c("remove", "error")[1],
-                           on_type_error = c("ignore", "error")[1]) {
+                       response,
+                       on_missing_column = c("error", "add")[1],
+                       on_extra_column = c("remove", "error")[1],
+                       on_type_error = c("ignore", "error")[1]) {
     stopifnot(
         is.data.frame(train),
         !missing(response), is.character(response),
@@ -233,13 +233,16 @@ pipe_check <- function(train,
         on_type_error %in% c("ignore", "error")
     )
 
+    train_names <- colnames(train)
+
     # Save column names, excluding the response
-    cols = colnames(train)[colnames(train) != response]
-    if(response %in% colnames(train)) train <- train[, c(response, cols)]
+    cols = train_names[train_names != response]
+    if(response %in% train_names) train <- train[, c(response, cols)]
     else train <- train[, cols]
+    train_names <- colnames(train)
 
     # Save column types
-    col_types = purrr::map_chr(train, class)
+    col_types = purrr::map_chr(train[train_names != response], class)
 
     predict_pipe <- pipe(.function = pipe_check_predict, response = response, cols = cols, col_types = col_types,
                          on_missing_column = on_missing_column, on_extra_column = on_extra_column,
@@ -251,8 +254,12 @@ pipe_check <- function(train,
 pipe_check_predict <- function(data, response, cols, col_types, on_missing_column, on_extra_column, on_type_error) {
     stopifnot(is.data.frame(data))
 
-    if(!response %in% colnames(data)) data[, response] <- NA
-    cols <- c(response, cols)
+    if(response %in% colnames(data)) {
+        response_col <- data[response]
+        had_response <- T
+        data[response] <- NULL
+    } else had_response <- F
+    # cols <- c(response, cols)
 
     columns_present = cols %in% colnames(data)
 
@@ -266,12 +273,13 @@ pipe_check_predict <- function(data, response, cols, col_types, on_missing_colum
     # If we miss only the response column, continue.
     is_expected_column = colnames(data) %in% cols
 
-    if(any(!is_expected_column) && on_extra_column == "error"){
-        stop(paste("Error: column(s)", paste0(collapse = ", ", "'", colnames(data)[!is_expected_column], "'"), "present while expected to not be present"))
-    } else {
-        data <- data[, cols]
+    if(any(!is_expected_column)) {
+        if(on_extra_column == "error"){
+            stop(paste("Error: column(s)", paste0(collapse = ", ", "'", colnames(data)[!is_expected_column], "'"), "present while expected to not be present"))
+        } else {
+            data <- data[, cols]
+        }
     }
-
     # Stop if the ordering and presence of columns is not exactly the same
     stopifnot(length(cols) == ncol(data), !any(colnames(data) != cols))
 
@@ -279,10 +287,15 @@ pipe_check_predict <- function(data, response, cols, col_types, on_missing_colum
     if(on_type_error == "error") tryCatch({
         data <- purrr::map2_df(.x = data, .y = col_types, as)
     }, warning = function(e){
-         stop(paste("Error: some column tye conversions introduced conversion warnings:\n", e))
+        stop(paste("Error: some column type conversions introduced conversion warnings:\n", e))
     }, error = function(e){
-        stop(paste("Error: some column tye conversions introduced conversion warnings:\n", e))
+        stop(paste("Error: some column type conversions introduced conversion warnings:\n", e))
     }) else data <- purrr::map2_df(.x = data, .y = col_types, as)
+
+    if(had_response) {
+        data[response] <- response_col
+        data <- data[, c(response, cols)]
+    }
 
     return(data)
 }

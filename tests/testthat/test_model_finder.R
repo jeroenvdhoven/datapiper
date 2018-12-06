@@ -191,7 +191,7 @@ describe("find_model()", {
         pipe <- r$.preprocess_pipe[[1]]
 
         no_response <- select(dataset1, -x)
-        expect_equal(object = select(invoke(pipe, no_response), -x), expected = select(invoke(pipe, dataset1), -x))
+        expect_equal(object = invoke(pipe, no_response), expected = select(invoke(pipe, dataset1), -x))
 
         no_required_column <- select(dataset1, -y)
         expect_error(object = invoke(pipe, no_required_column), regexp = "not present while expected")

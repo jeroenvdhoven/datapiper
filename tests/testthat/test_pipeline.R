@@ -244,6 +244,10 @@ describe("pipe_check", {
         ctest_pipe_has_correct_fields(r)
     })
 
+    it("can apply its results to a new dataset using pipe, a wrapper for pipe_check_predict()", {
+        ctest_pipe_has_working_predict_function(r, dataset1)
+    })
+
     it("does not need to have response in its column names", {
         ctest_for_no_errors(
             pipe_check(dataset1, response = "another column", on_missing_column = "add", on_extra_column = "remove", on_type_error = "ignore"),
@@ -257,7 +261,7 @@ describe("pipe_check", {
         expect_equal(length(params$cols), ncol(dataset1) - 1) # For missing response
 
         expect_equal(purrr::map_chr(dataset1, class), purrr::map_chr(r$train, class))
-        expect_equal(purrr::map_chr(dataset1, class), params$col_types)
+        expect_equal(purrr::map_chr(select(dataset1, -x), class), params$col_types)
     })
 
     it("can always handle missing responses", {
@@ -282,13 +286,36 @@ describe("pipe_check", {
 
     it("generates an NA dataset when the most lenient settings are used with identical types", {
         empty_dataset <- invoke(r$pipe, data_frame(new_column = 1))
-        ctest_dataset_has_columns(empty_dataset, colnames(r$train))
+        ctest_dataset_has_columns(empty_dataset, colnames(r$train)[colnames(r$train) != "x"])
 
-        expect_equal(purrr::map_chr(r$train, class), purrr::map_chr(empty_dataset, class))
+        expect_equal(purrr::map_chr(select(r$train, -x), class), purrr::map_chr(empty_dataset, class))
     })
 
-    it("can apply its results to a new dataset using pipe, a wrapper for pipe_check_predict()", {
-        ctest_pipe_has_working_predict_function(r, dataset1)
+    it("can handle missing response values in new datasets", {
+        r <- pipe_check(dataset1, response = "x", on_missing_column = "add", on_extra_column = "remove", on_type_error = "ignore")
+        invoked_result <- invoke(r$pipe, select(dataset1, -x))
+
+        expect_named(object = invoked_result, expected = colnames(dataset1)[colnames(dataset1) != "x"])
+        expect_false("x" %in% colnames(invoked_result))
+    })
+
+    it("can handle missing response values in both datasets", {
+        no_x <- select(dataset1, -x)
+        r <- pipe_check(no_x, response = "x", on_missing_column = "add", on_extra_column = "remove", on_type_error = "ignore")
+        invoked_result <- invoke(r$pipe, no_x)
+
+        expect_named(object = invoked_result, expected = colnames(no_x))
+        expect_false("x" %in% colnames(invoked_result))
+    })
+
+    it("can handle missing response values in the train dataset", {
+        no_x <- select(dataset1, -x)
+        r <- pipe_check(no_x, response = "x", on_missing_column = "add", on_extra_column = "remove", on_type_error = "ignore")
+        invoked_result <- invoke(r$pipe, dataset1)
+
+        expect_named(object = invoked_result, expected = colnames(dataset1))
+        expect_true("x" %in% colnames(invoked_result))
+        expect_equal(invoked_result$x, dataset1$x)
     })
 })
 
