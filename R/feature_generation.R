@@ -299,14 +299,14 @@ pipe_feature_interactions <- function(train, response, columns = 10L, max_intera
     }
     stopifnot(
         is.data.frame(train),
-        is.character(columns), !any(!columns %in% colnames(train)),
+        is.character(columns), !any(!columns %in% colnames(train)), length(columns) > 0,
         !any(!purrr::map_lgl(train[, columns], is.numeric)),
         is.numeric(max_interactions) && max_interactions >= 2
     )
 
     col_means <- purrr::map_dbl(train[, columns], mean, na.rm = T)
 
-    modified_train <- train %>% select_(.dots = columns)
+    modified_train <- train[, columns]
     for(col in columns){
         modified_train[, col] <- modified_train[, col] - col_means[col]
     }
@@ -318,7 +318,7 @@ pipe_feature_interactions <- function(train, response, columns = 10L, max_intera
             column_set <- combinations[, column_set]
             col_name <- paste0("interaction_", paste0(collapse = "_", column_set))
 
-            train[, col_name] <- modified_train %>% select_(.dots = column_set) %>% apply(1, prod)
+            train[, col_name] <- apply(modified_train[, column_set], 1, prod)
         }
     }
 
@@ -344,7 +344,7 @@ feature_interactions_predict <- function(data, columns, column_means, max_intera
         is.numeric(max_interactions) && max_interactions >= 2
     )
 
-    modified_data <- data %>% dplyr::select_(.dots = columns)
+    modified_data <- data[, columns]
     for(col in columns){
         modified_data[, col] <- modified_data[, col] - column_means[col]
     }
@@ -354,7 +354,7 @@ feature_interactions_predict <- function(data, columns, column_means, max_intera
         for(column_set in seq_len(ncol(combinations))){
             column_set <- combinations[, column_set]
             col_name <- paste0("interaction_", paste0(collapse = "_", column_set))
-            data[, col_name] <- modified_data %>% select_(.dots = column_set) %>% apply(1, prod)
+            data[, col_name] <- apply(modified_data[, column_set], 1, prod)
         }
     }
     return(data)
