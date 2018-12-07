@@ -7,6 +7,7 @@ N <- 30
 set.seed(2)
 dataset1 <- dplyr::data_frame(
     x = seq_len(N),
+    # "1stweirdcolumn" = (N - x) ^ 1.2,
     a = x^2,
     b = log(x),
     c = sample.int(n = 10, size = N, replace = T),
