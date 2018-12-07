@@ -47,7 +47,7 @@ delete_image <- function(image_name) {
 #' @return A logical: TRUE for success and FALSE for failure
 #' @importFrom devtools document build create
 #' @export
-build_model_package <- function(trained_pipeline, package_name = "deploymodel", libraries = utils::sessionInfo()$otherPkgs, tar_file = "deploy.tar.gz",
+build_model_package <- function(trained_pipeline, package_name = "deploymodel", libraries = names(utils::sessionInfo()$otherPkgs), tar_file = "deploy.tar.gz",
                                 prediction_precision = 8, may_overwrite_tar_file = F) {
     stopifnot(!missing(trained_pipeline), is.character(libraries))
     is_valid_package_name <- grepl(pattern = "^[a-zA-Z0-9\\.]+$", libraries)
@@ -113,7 +113,7 @@ predict_model <- function(input){
     } else {
         input_df <- jsonlite::fromJSON(txt = input, flatten = T)
     }
-    predictions <- invoke(trained_pipeline, input_df)
+    predictions <- datapiper::invoke(trained_pipeline, input_df)
 
     # res <- jsonlite::toJSON(x = predictions, dataframe = "rows",
     #                         Date = "ISO8601", POSIXt = "ISO8601", factor = "string", complex = "list", raw = "base64",
@@ -167,7 +167,7 @@ predict_model <- function(input){
 #'
 #' @return A logical: TRUE for success and FALSE for failure
 #' @export
-build_docker <- function(model_library_file, package_name = "deploymodel", libraries = utils::sessionInfo()$otherPkgs, docker_image_name = "model_image",
+build_docker <- function(model_library_file, package_name = "deploymodel", libraries = names(utils::sessionInfo()$otherPkgs), docker_image_name = "model_image",
                          additional_build_commands = "", may_overwrite_docker_image = F){
 
     # TODO

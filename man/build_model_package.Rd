@@ -5,8 +5,9 @@
 \title{Builds a package from your pipeline}
 \usage{
 build_model_package(trained_pipeline, package_name = "deploymodel",
-  libraries = utils::sessionInfo()$otherPkgs, tar_file = "deploy.tar.gz",
-  prediction_precision = 8, may_overwrite_tar_file = F)
+  libraries = names(utils::sessionInfo()$otherPkgs),
+  tar_file = "deploy.tar.gz", prediction_precision = 8,
+  may_overwrite_tar_file = F)
 }
 \arguments{
 \item{trained_pipeline}{The model function from \code{find_best_models}}

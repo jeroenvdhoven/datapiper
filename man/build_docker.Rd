@@ -5,7 +5,7 @@
 \title{Build a docker image out of a model function}
 \usage{
 build_docker(model_library_file, package_name = "deploymodel",
-  libraries = utils::sessionInfo()$otherPkgs,
+  libraries = names(utils::sessionInfo()$otherPkgs),
   docker_image_name = "model_image", additional_build_commands = "",
   may_overwrite_docker_image = F)
 }
