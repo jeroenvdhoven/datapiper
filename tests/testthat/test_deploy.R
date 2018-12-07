@@ -139,7 +139,7 @@ describe("build_docker()", {
                                                              may_overwrite_tar_file = T)
             expect_true(object = package_result, info = "Build function returned a success")
 
-            ctest_for_no_errors({
+            tryCatch({
                 result <- build_docker(model_library_file = tar_file_name, package_name = library_name, libraries = c("datapiper"),
                                        docker_image_name = image_name, may_overwrite_docker_image = T)
                 expect_true(object = result, info = "Build function returned a success")
@@ -159,11 +159,18 @@ describe("build_docker()", {
 
                 delete_image(image_name = image_name)
                 remove.packages(pkgs = library_name)
-            }, error_message = "build_model_package failed for some reason. Is docker running?")
+            }, error = function(e) {
+                error_message <- as.character(e)
+                if(grepl(x = error_message, pattern = "is_docker_running() is not TRUE", fixed = T)) {
+                    warning(error_message)
+                } else {
+                    expect_true(F, info = "Error building docker image")
+                }
+            })
 
             expect_true(file.remove(tar_file_name))
         } else {
-            expect_error(c, info = "Error: no internet connectivity, can't test build_docker")
+            warning("Error: no internet connectivity, can't test build_docker")
         }
     })
 
