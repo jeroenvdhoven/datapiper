@@ -1,4 +1,4 @@
-#' Checks for a couple of standard things to ensure the data is okay.
+#' Checks for a couple of standard things to ensure the data is ready for use.
 #'
 #' @param data The dataset to test
 #' @param missing_values A list of missing values to test for. Strings will only be tested against character columns, NA, NaN, NULL and numerical values against all columns.

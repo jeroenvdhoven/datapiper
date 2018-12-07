@@ -2,7 +2,7 @@
 % Please edit documentation in R/sanity_checks.R
 \name{sanity_checking}
 \alias{sanity_checking}
-\title{Checks for a couple of standard things to ensure the data is okay.}
+\title{Checks for a couple of standard things to ensure the data is ready for use.}
 \usage{
 sanity_checking(data, missing_values = list(NA, "NA", "<NA>", "none", "",
   NULL, "NULL", "NaN", NaN, 0, -1),
@@ -29,7 +29,7 @@ A list with 3 dataframes:
 }
 }
 \description{
-Checks for a couple of standard things to ensure the data is okay.
+Checks for a couple of standard things to ensure the data is ready for use.
 }
 \details{
 Test the following items:
