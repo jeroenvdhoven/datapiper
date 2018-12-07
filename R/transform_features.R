@@ -10,7 +10,7 @@
 #' @export
 #' @importFrom stats lm cor
 pipe_feature_transformer <- function(train, response, transform_columns, missing_func = is.na,
-                                transform_functions = list(sqrt, log, function(x)x^2)){
+                                     transform_functions = list(sqrt, log, function(x)x^2)){
     stopifnot(
         response %in% colnames(train), is.numeric(unlist(train[response])),
         is.data.frame(train),
@@ -157,8 +157,8 @@ pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "
 #' @importFrom data.table .SD :=
 #' @importFrom stats prcomp
 pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(train, function(x) return(!(is.numeric(x) || is.logical(x))))],
-                                   stat_functions, response,
-                                   use_pca = FALSE, pca_tol = .1){
+                                stat_functions, response,
+                                use_pca = FALSE, pca_tol = .1){
     stopifnot(
         is.data.frame(train),
         is.character(columns),
@@ -254,9 +254,12 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
 
     if(use_pca) {
         test_dt_set <- data.table::as.data.table(test_dt_set)
-        test_dt_set <- test_dt_set[, rownames(pca$rotation) %>%
-                                       .[. %in% colnames(test_dt_set)], with = F][
-                                           , (rownames(pca$rotation) %>% .[!. %in% colnames(test_dt_set)]) := 0L]
+        row_names <- rownames(pca$rotation)
+        present_row_names <- row_names %in% colnames(test_dt_set)
+
+        test_dt_set <- test_dt_set[, row_names[present_row_names], with = F]
+        if(any(!present_row_names)) test_dt_set[, (row_names[!present_row_names]) := 0L]
+
         test_dt_set <- predict(pca, newdata = test_dt_set) %>% as_data_frame
     }
 
