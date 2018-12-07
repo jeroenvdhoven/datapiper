@@ -1,3 +1,4 @@
+context("Imputation")
 # Skeleton
 describe("pipe_impute", {
     r <- ctest_for_no_errors(to_eval = pipe_impute(train = dataset1, exclude_columns = c("z", "z2"), type = "mean"),

@@ -1,3 +1,4 @@
+context("Feature generation")
 describe("pipe_NA_indicators", {
     r <- ctest_for_no_errors(datapiper::pipe_NA_indicators(train = dataset1),
                              "Can't apply pipe_NA_indicators")

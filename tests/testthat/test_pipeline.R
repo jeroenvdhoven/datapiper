@@ -1,3 +1,4 @@
+context("Pipelines")
 describe("segment", {
     r <- segment(.segment = pipe_mutate, andere = "a + 1")
     it("generates a list with a .segment element", {

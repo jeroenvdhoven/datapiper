@@ -1,3 +1,4 @@
+context("Model finder")
 p_1 <- datapiper::train_pipeline(
     segment(.segment = datapiper::pipe_categorical_filter, threshold_function = function(x) 2, response = "x"),
     segment(.segment = datapiper::pipe_remove_single_value_columns, na_function = is.na),

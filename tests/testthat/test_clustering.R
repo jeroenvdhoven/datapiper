@@ -1,3 +1,4 @@
+context("Clustering")
 describe("pipe_clustering()", {
     na_columns <- colnames(dataset1)[purrr::map_lgl(dataset1, anyNA)]
 

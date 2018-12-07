@@ -1,3 +1,4 @@
+context("Utils")
 describe("standard_column_names", {
     it("standardised camelcase", {
         data <- dplyr::data_frame(camelCase = 0)

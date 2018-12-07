@@ -1,3 +1,4 @@
+context("Range classifier")
 describe("pipe_range_classifier", {
     def_values <- c(5, 10, 15)
     col <- "a"

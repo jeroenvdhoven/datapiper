@@ -1,3 +1,4 @@
+context("Feature transformer")
 library(testthat)
 testthat::describe("pipe_feature_transformer()", {
     r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))

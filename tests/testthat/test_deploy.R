@@ -1,3 +1,4 @@
+context("Deployment")
 get_library_predictions <- function(library_name, test){
     library(library_name, character.only = T)
     test_json <- jsonlite::toJSON(x = test, dataframe = "rows",

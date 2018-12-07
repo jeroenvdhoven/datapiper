@@ -1,3 +1,4 @@
+context("Sanity checker")
 test_column_value <- function(data, original_column, compare_column, value, test_inclusive = T) {
     if(test_inclusive) {
         filtered_data <- filter(data, column_name %in% original_column)

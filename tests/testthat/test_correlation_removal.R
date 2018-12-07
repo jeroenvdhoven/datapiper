@@ -1,3 +1,4 @@
+context("Correlation removal")
 describe("pipe_remove_high_correlation_features", {
 
     r <- ctest_for_no_errors(

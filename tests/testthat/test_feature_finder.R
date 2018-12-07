@@ -1,3 +1,4 @@
+context("Feature finder")
 describe("feature_finder()", {
     train_indices <- seq_len(nrow(dataset1) / 2)
     train <- dataset1[train_indices,]
