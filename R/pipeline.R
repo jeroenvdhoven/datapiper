@@ -351,6 +351,7 @@ pipeline <- function(...) {
     stopifnot(
         !any(!purrr::map_lgl(.x = pipes, ~ is.pipe(.) || is.pipeline(.)))
     )
+    force(pipes)
 
     name <- names(pipes)
     if(is.null(name)) name <- paste0("pipe_", seq_along(pipes))

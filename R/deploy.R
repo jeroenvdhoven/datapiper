@@ -62,6 +62,8 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
         is.numeric(prediction_precision), prediction_precision >= 0
     )
 
+    if(is.pipeline(trained_pipeline)) trained_pipeline <- flatten_pipeline(trained_pipeline)
+
     current_ws <- getwd()
     on.exit(setwd(current_ws))
     has_succeeded <- F
@@ -81,6 +83,10 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
         dir.create("data")
         save(trained_pipeline, file = "data/model.rda")
         save(libraries, file = "data/libraries.rda")
+
+        save(invoke, file = "data/invoke.rda")
+        save(invoke.pipe, file = "data/invoke.pipe.rda")
+        save(invoke.pipeline, file = "data/invoke.pipeline.rda")
 
         target_script_file <- file(description = "file://R/deploy_model.R", open = "w")
         script <- paste0(
@@ -102,7 +108,6 @@ utils::data(model, package = pkg, envir = parent.env(environment()))
 #\'
 #\' @return Predictions
 #\' @export
-
 predict_model <- function(input){
     for(lib in libraries) {
         library(lib, character.only = T)
@@ -113,7 +118,7 @@ predict_model <- function(input){
     } else {
         input_df <- jsonlite::fromJSON(txt = input, flatten = T)
     }
-    predictions <- datapiper::invoke(trained_pipeline, input_df)
+    predictions <- invoke(trained_pipeline, input_df)
 
     # res <- jsonlite::toJSON(x = predictions, dataframe = "rows",
     #                         Date = "ISO8601", POSIXt = "ISO8601", factor = "string", complex = "list", raw = "base64",
@@ -156,7 +161,10 @@ predict_model <- function(input){
 #' @param libraries A list of library names required by the package. Defaults to all loaded non-base packages.
 #' Has support for github (\code{\link[devtools]{install_github}}) and CRAN packages.
 #' Any library with a \code{/} in it will be assumed to be a github package, others will be assumed to be CRAN packages.
-#' The datapiper package will be automatically substituted by the github version.
+#' The datapiper package will be automatically substituted by the github version if presented, though you can omit this package. Do make sure you use the dependencies
+#' for the pipe functions you use.
+#'
+#' It is strongly recommended to use the same libraries here as used in \code{\link{build_model_package}}, since \code{\link{build_model_package}} will try loading those libraries.
 #' @param docker_image_name The name of the docker image
 #' @param additional_build_commands Additional build command that need to be executed. Will be executed after all other commands have run. Character vector.
 #' @param may_overwrite_docker_image Flag indicating if, when \code{model_library_file} exists, this function is allowed to override it.
@@ -172,8 +180,6 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
 
     # TODO
     # ALLOW FOR CHOOSING R VERSION
-    # REMOVE MANUAL INSTALLATION OF datapiper
-    # ENABLE AUTOMATIC CORRECTION OF datapiper LOCATION
     is_valid_library_name <- grepl(pattern = "^[a-zA-Z0-9\\./]+$", libraries)
     stopifnot(
         is_docker_running(),
@@ -184,7 +190,7 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
 
     # Datapiper will be installed separately at the beginning to improve the installation process.
     # if(!"jsonlite" %in% libraries) libraries <- c(libraries, "jsonlite")
-    libraries <- libraries[!libraries %in% c("datapiper", "jeroenvdhoven/datapiper")]
+    if(any(libraries == "datapiper")) libraries[libraries == "datapiper"] <- "jeroenvdhoven/datapiper"
 
     # Prep directory for building
     daemon_name = "opencpu/base"
@@ -221,8 +227,8 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
         dockerfile_content <- paste0("
 FROM ", daemon_name, "
 # Install base dependencies
-RUN R -e 'install.packages(\"devtools\")'
-RUN R -e 'devtools::install_github(\"jeroenvdhoven/datapiper\")'
+# RUN R -e 'install.packages(\"devtools\")'
+# RUN R -e 'devtools::install_github(\"jeroenvdhoven/datapiper\")'
 
 # Install other required R packages
 ", cran_command, "
@@ -315,7 +321,9 @@ test_docker <- function(data, image_name, process_name = image_name, package_nam
         }, error = function(e){
             kill_docker_process(process_name = process_name)
             stop(paste(
-                "Error executing batch", batch_start, "to", batch_end, ":\n",
+                "Error executing batch", batch_start, "to", batch_end, "\n",
+                "Response from image:", rawToChar(response$content), "\n",
+                "Error: \n",
                 e
             ))
         })

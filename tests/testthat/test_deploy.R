@@ -1,21 +1,19 @@
 context("Deployment")
 get_library_predictions <- function(library_name, test){
     library(library_name, character.only = T)
-    test_json <- jsonlite::toJSON(x = test, dataframe = "rows",
-                                  Date = "ISO8601", POSIXt = "ISO8601", factor = "string", complex = "list", raw = "base64",
-                                  null = "null", na = "null", digits = 8, pretty = F)
-
-    return(predict_model(test_json))
+    result <- predict_model(test)
+    # unloadNamespace(library_name)
+    return(result)
 }
 
 generate_model_function <- function(extra_pipe){
     if(missing(extra_pipe)){
         trained_pipe <- datapiper::train_pipeline(
-            segment(.segment = pipe_select, "x", "a", "b", "c", "s")
+            datapiper::segment(.segment = datapiper::pipe_select, "x", "a", "b", "c", "s")
         )
     } else {
         trained_pipe <- datapiper::train_pipeline(
-            segment(.segment = pipe_select, "x", "a", "b", "c", "s"),
+            datapiper::segment(.segment = datapiper::pipe_select, "x", "a", "b", "c", "s"),
             extra_pipe
         )
     }
@@ -25,12 +23,12 @@ generate_model_function <- function(extra_pipe){
     train <- dataset1[train_indices,]
     test <- dataset1[-train_indices,]
 
-    find_model_result <- find_model(train = train, test = test, response = "x", verbose = F,
+    find_model_result <- datapiper::find_model(train = train, test = test, response = "x", verbose = F,
                                                preprocess_pipes = list("one" = trained_pipe),
                                                models = list("lm" = m), metrics = list("rmse" = util_RMSE),
                                                parameter_sample_rate = 1, seed = 1, prepend_data_checker = F)
 
-    full_pipe <- find_best_models(train = train, find_model_result = find_model_result,
+    full_pipe <- datapiper::find_best_models(train = train, find_model_result = find_model_result,
                                   metric = "test_rmse", higher_is_better = F)
 
     return(list(
@@ -48,10 +46,11 @@ describe("build_model_package()", {
         full_pipe <- r$full_pipe
         tar_file_name <- "tmp_test_package.tar.gz"
         library_name <- "test.package"
+        libs <- c("dplyr", "magrittr", "data.table")
 
         result <- datapiper::build_model_package(trained_pipeline = full_pipe,
                                                  package_name = library_name,
-                                                 libraries = c("datapiper"),
+                                                 libraries = libs,
                                                  tar_file = tar_file_name,
                                                  may_overwrite_tar_file = T)
         expect_true(object = result, info = "Build function returned a success")
@@ -91,10 +90,11 @@ describe("build_model_package()", {
 
         tar_file_name <- "tmp_test_package.tar.gz"
         library_name <- "test.package"
+        libs <- c("dplyr", "magrittr", "data.table")
 
         result <- datapiper::build_model_package(trained_pipeline = full_pipe,
                                                  package_name = library_name,
-                                                 libraries = c("datapiper"),
+                                                 libraries = libs,
                                                  tar_file = tar_file_name,
                                                  may_overwrite_tar_file = T)
         expect_true(object = result, info = "Build function returned a success")
@@ -132,16 +132,17 @@ describe("build_docker()", {
             library_name <- "test.package"
             image_name <- "model.image"
             process_name <- "datapiper.test"
+            libs <- c("dplyr", "magrittr", "data.table")
 
             package_result <- datapiper::build_model_package(trained_pipeline = full_pipe,
                                                              package_name = library_name,
-                                                             libraries = c("datapiper"),
+                                                             libraries = libs,
                                                              tar_file = tar_file_name, prediction_precision = 12,
                                                              may_overwrite_tar_file = T)
             expect_true(object = package_result, info = "Build function returned a success")
 
             tryCatch({
-                result <- build_docker(model_library_file = tar_file_name, package_name = library_name, libraries = c("datapiper"),
+                result <- build_docker(model_library_file = tar_file_name, package_name = library_name, libraries = libs,
                                        docker_image_name = image_name, may_overwrite_docker_image = T)
                 expect_true(object = result, info = "Build function returned a success")
 
