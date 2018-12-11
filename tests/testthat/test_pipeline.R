@@ -45,6 +45,17 @@ describe("pipe", {
         expect_equal(without_removing_result, with_removing_result)
     })
 
+    it("saves a function's arguments for reuse later, even when removing the original arguments from memory", {
+        f <- function(data, i) data[i,]
+        saved_f <- pipe(.function = f, i = nrow(dataset1))
+
+        without_removing_result <- invoke(saved_f, dataset1)
+        rm(f)
+        with_removing_result <- invoke(saved_f, dataset1)
+
+        expect_equal(without_removing_result, with_removing_result)
+    })
+
     it("can forward parameters to .predict_function", {
         f <- function(data, rows) data[rows,]
         saved_f <- pipe(.function = f, rows = 1:10)

@@ -312,6 +312,10 @@ pipe_check_predict <- function(data, response, cols, col_types, on_missing_colum
 #' \item \code{args}: Arguments for \code{predict_function}
 #' }
 #'
+#' @details Both .function and all ... arguments are force evaluated upon calling this function. This should guarantee that when calling this function in a clean
+#' environment, it will still be able to use the function and arguments. Any functions that function depends on will most likely not be included, so library dependencies
+#' aren't taken into account here.
+#'
 #' @export
 pipe <- function(.function, ...) {
     args <- list(...)
@@ -319,6 +323,8 @@ pipe <- function(.function, ...) {
         is.function(.function),
         "data" %in% formalArgs(.function)
     )
+    force(.function)
+    force(args)
 
     if(length(args) > 0) {
         stopifnot(

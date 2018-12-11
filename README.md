@@ -148,8 +148,7 @@ See LICENSE file
 - Support sparklyr
 
 #### Finding models
-- Bayesian hyperparameter optimisation in find_model
-- Cross-validation in find_model
+- Bayesian hyperparameter optimisation in find_model: investigate and optimise code.
 
 #### Deployment
 - Allow custom packages to be installed into the docker image more easily. With this we mean local packages or packages from private repositories

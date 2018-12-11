@@ -22,3 +22,8 @@ A pipe object with two entries:
 \description{
 Creates a pipe object out of a function and a list of arguments
 }
+\details{
+Both .function and all ... arguments are force evaluated upon calling this function. This should guarantee that when calling this function in a clean
+environment, it will still be able to use the function and arguments. Any functions that function depends on will most likely not be included, so library dependencies
+aren't taken into account here.
+}
