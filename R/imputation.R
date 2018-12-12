@@ -71,30 +71,6 @@ impute_model <- function(data, column, NA_value = is.na, exclude_columns, train_
 
 #----------------------------------------------------------------#
 
-impute_predict <- function(data, column, NA_value, model, exclude_columns){
-    if(is.function(NA_value)) missing_values <- NA_value(unlist(data[column]))
-    else stop('NA_value must be a function')
-
-    if(length(missing_values) == 0){
-        warning(paste("Column", column, "has no missing values?\n"))
-        return(data[column])
-    }
-
-    target <- data[column]
-    if(length(exclude_columns) > 0 && any(exclude_columns %in% colnames(data)))
-        data <- select_(data, .dots = paste0("-", exclude_columns[exclude_columns %in% colnames(data)]))
-
-    if(is.vector(model) && length(model) == 1){
-        target[missing_values, column] <- model
-    } else {
-        if(class(model) == "xgb.Booster") data %<>% as.matrix
-        target[missing_values, column] <- data[missing_values, , drop = F] %>% predict(object = model, newdata = .)
-        if(class(model) == "xgb.Booster") data %<>% as.data.frame
-    }
-    data
-    return(target)
-}
-
 #' Use the models from \code{impute_all} to impute the selected columns in data.
 #'
 #'
@@ -107,6 +83,30 @@ impute_predict <- function(data, column, NA_value, model, exclude_columns){
 #'
 #' @return The same dataset as the imputed, but with NA values in the selected columns replaced by their estimated values.
 impute_predict_all <- function(data, columns, na_function, models, exclude_columns, verbose = F){
+    impute_predict <- function(data, column, NA_value, model, exclude_columns){
+        if(is.function(NA_value)) missing_values <- NA_value(unlist(data[column]))
+        else stop('NA_value must be a function')
+
+        if(length(missing_values) == 0){
+            warning(paste("Column", column, "has no missing values?\n"))
+            return(data[column])
+        }
+
+        target <- data[column]
+        if(length(exclude_columns) > 0 && any(exclude_columns %in% colnames(data)))
+            data <- select_(data, .dots = paste0("-", exclude_columns[exclude_columns %in% colnames(data)]))
+
+        if(is.vector(model) && length(model) == 1){
+            target[missing_values, column] <- model
+        } else {
+            if(class(model) == "xgb.Booster") data %<>% as.matrix
+            target[missing_values, column] <- data[missing_values, , drop = F] %>% predict(object = model, newdata = .)
+            if(class(model) == "xgb.Booster") data %<>% as.data.frame
+        }
+        data
+        return(target)
+    }
+
     stopifnot(
         is.character(columns),
         !any(!columns %in% colnames(data)),

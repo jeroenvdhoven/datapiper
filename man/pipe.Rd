@@ -24,6 +24,38 @@ Creates a pipe object out of a function and a list of arguments
 }
 \details{
 Both .function and all ... arguments are force evaluated upon calling this function. This should guarantee that when calling this function in a clean
-environment, it will still be able to use the function and arguments. Any functions that function depends on will most likely not be included, so library dependencies
-aren't taken into account here.
+environment, it will still be able to use the function and arguments. Any functions that .function depends on will most likely not be included, so library dependencies
+aren't taken into account here. The problem here lies in the fact that underlying functions in \code{.function} aren't automatically copied, but lazily evaluated.
+See the example for details.
+}
+\examples{
+# This example should work
+dataset <- data.frame(x = 1:10, y= 1:10)
+f <- function(data) data[1,]
+saved_f <- pipe(.function = f)
+
+without_removing_result <- invoke(saved_f, dataset)
+rm(f)
+with_removing_result <- invoke(saved_f, dataset)
+
+# This example should fail
+g <- function(data) data
+f <- function(data) g(data)[1,]
+saved_f <- pipe(.function = f)
+
+without_removing_result <- invoke(saved_f, dataset)
+rm(f, g)
+# The following line will fail
+# with_removing_result <- invoke(saved_f, dataset)
+
+# The following is a work-around that currently should function
+f <- function(data) {
+  g <- function(data) data
+  g(data)[1,]
+}
+saved_f <- pipe(.function = f)
+
+without_removing_result <- invoke(saved_f, dataset)
+rm(f)
+with_removing_result <- invoke(saved_f, dataset)
 }
