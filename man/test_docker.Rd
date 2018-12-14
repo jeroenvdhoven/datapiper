@@ -4,24 +4,28 @@
 \alias{test_docker}
 \title{Test your docker image}
 \usage{
-test_docker(data, image_name, process_name = image_name,
-  package_name = "deploymodel", batch_size = nrow(data), ping_time = 5,
-  verbose = T)
+test_docker(data, package_name, image_name = package_name,
+  process_name = image_name, base_url = "localhost", port = 8004,
+  batch_size = nrow(data), ping_time = 5, verbose = T)
 }
 \arguments{
 \item{data}{A new dataset to get predictions for}
+
+\item{package_name}{The name of the package}
 
 \item{image_name}{The name of the docker image}
 
 \item{process_name}{The name you want the docker image to be run as. Defaults to \code{image_name}}
 
-\item{package_name}{The name of the package}
+\item{base_url}{The base url where the docker image is located. If this is equals \code{"localhost"}, this function will also start and stop the image.}
 
-\item{batch_size}{Allows you to set how many rows you want to send each time}
+\item{port}{The host port on which the docker image is accessible. Defaults to 8004.}
+
+\item{batch_size}{Allows you to set how many rows you want to send each time.}
 
 \item{ping_time}{How many seconds we'll try to ping the docker image before declaring the launch a failure.}
 
-\item{verbose}{Flag indicating if you want status updates printed}
+\item{verbose}{Flag indicating if you want status updates printed.}
 }
 \value{
 A dataframe of predictions, one row per row in \code{data}

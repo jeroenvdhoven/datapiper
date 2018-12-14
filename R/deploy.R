@@ -261,27 +261,38 @@ RUN ", add_preloaded_library_command, "
 #' Test your docker image
 #'
 #' @param data A new dataset to get predictions for
-#' @param image_name The name of the docker image
 #' @param package_name The name of the package
+#' @param image_name The name of the docker image
 #' @param process_name The name you want the docker image to be run as. Defaults to \code{image_name}
-#' @param batch_size Allows you to set how many rows you want to send each time
+#' @param base_url The base url where the docker image is located. If this is equals \code{"localhost"}, this function will also start and stop the image.
+#' @param port The host port on which the docker image is accessible. Defaults to 8004.
+#' @param batch_size Allows you to set how many rows you want to send each time.
 #' @param ping_time How many seconds we'll try to ping the docker image before declaring the launch a failure.
-#' @param verbose Flag indicating if you want status updates printed
+#' @param verbose Flag indicating if you want status updates printed.
 #'
 #' @return A dataframe of predictions, one row per row in \code{data}
 #' @export
 #' @importFrom jsonlite toJSON fromJSON
 #' @importFrom httr POST GET
-test_docker <- function(data, image_name, process_name = image_name, package_name = "deploymodel", batch_size = nrow(data), ping_time = 5, verbose = T) {
+test_docker <- function(data, package_name, image_name = package_name, process_name = image_name,
+                        base_url = "localhost", port = 8004,
+                        batch_size = nrow(data), ping_time = 5, verbose = T) {
     stopifnot(
         is.data.frame(data),
         is.character(image_name),
         length(image_name) == 1,
-        is_docker_running()
+        length(package_name) == 1,
+        length(process_name) == 1
     )
 
-    if(verbose) cat("Starting image\n")
-    system2(command = "docker", args = paste("run --name", process_name, "-t -p 8004:8004", image_name), wait = F, stdout = F)
+    model_url <- paste0("http://", base_url, ":", port, "/ocpu/library/", package_name, "/R/predict_model/json")
+    if(verbose) cat("Url:", model_url, "\n")
+
+    if(base_url == "localhost"){
+        stopifnot(is_docker_running())
+        if(verbose) cat("Starting image\n")
+        system2(command = "docker", args = paste0("run --name ", process_name, " -t -p ", port, ":8004 ", image_name), wait = F, stdout = F)
+    }
 
     if(verbose) cat("Start pinging for server to be up\n")
     current_time <- Sys.time()
@@ -289,7 +300,7 @@ test_docker <- function(data, image_name, process_name = image_name, package_nam
     while(difftime(time1 = test_time, time2 = current_time, units = "s") < ping_time){
         tryCatch({
             test_time <- Sys.time()
-            response <- httr::GET("http://localhost:8004/ocpu/library/deploymodel/R/predict_model/json")
+            response <- httr::GET(model_url)
             break
         }, error = function(e) {
             test_time <- Sys.time()
@@ -300,7 +311,6 @@ test_docker <- function(data, image_name, process_name = image_name, package_nam
     if(verbose) cat("Start predictions\n")
     result <- data.frame()
     batch_start_indices <- seq.int(from = 1, to = nrow(data), by = batch_size)
-    model_url <- paste0("http://localhost:8004/ocpu/library/", package_name, "/R/predict_model/json")
     for(batch_start in batch_start_indices){
         tryCatch({
             batch_end <- min(nrow(data), batch_start + batch_size - 1)
@@ -312,8 +322,7 @@ test_docker <- function(data, image_name, process_name = image_name, package_nam
                 factor = "string", complex = "list", raw = "base64", null = "null",
                 na = "null", digits = 8, pretty = F)
 
-            response <- httr::POST(url = model_url,
-                                   encode = "json", body = list("input" = data_json))
+            response <- httr::POST(url = model_url, encode = "json", body = list("input" = data_json))
             predictions <- jsonlite::fromJSON(flatten = T, txt = rawToChar(response$content))
 
             if(nrow(result) == 0) result <- predictions
@@ -331,8 +340,10 @@ test_docker <- function(data, image_name, process_name = image_name, package_nam
     if(verbose) cat("Successfully finished predictions\n")
     if(nrow(result) != nrow(data)) warning(paste("Warning: dataset had", nrow(data), "rows, predictions gave", nrow(result), "predictions"))
 
-    if(verbose) cat("Stopping image\n")
-    kill_docker_process(process_name = process_name)
+    if(base_url == "localhost"){
+        if(verbose) cat("Stopping image\n")
+        kill_docker_process(process_name = process_name)
+    }
 
     return(result)
 }
