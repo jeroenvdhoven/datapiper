@@ -328,8 +328,8 @@ test_docker <- function(data, image_name, process_name = image_name, package_nam
             ))
         })
     }
-    if(verbose) cat("Finished predictions\n")
-    if(nrow(result) != nrow(data)) warning(paste("Error: dataset had", nrow(data), "rows, predictions gave", nrow(result), "predictions"))
+    if(verbose) cat("Successfully finished predictions\n")
+    if(nrow(result) != nrow(data)) warning(paste("Warning: dataset had", nrow(data), "rows, predictions gave", nrow(result), "predictions"))
 
     if(verbose) cat("Stopping image\n")
     kill_docker_process(process_name = process_name)
