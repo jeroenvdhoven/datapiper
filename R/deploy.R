@@ -338,7 +338,8 @@ test_docker <- function(data, package_name, image_name = package_name, process_n
         })
     }
     if(verbose) cat("Successfully finished predictions\n")
-    if(nrow(result) != nrow(data)) warning(paste("Warning: dataset had", nrow(data), "rows, predictions gave", nrow(result), "predictions"))
+    if(!is.data.frame(result)) warning(paste("Warning: 0 predictions were returned"))
+    else if(nrow(result) != nrow(data)) warning(paste("Warning: dataset had", nrow(data), "rows, predictions gave", nrow(result), "predictions"))
 
     if(base_url == "localhost"){
         if(verbose) cat("Stopping image\n")
