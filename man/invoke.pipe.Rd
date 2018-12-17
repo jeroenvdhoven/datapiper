@@ -4,12 +4,14 @@
 \alias{invoke.pipe}
 \title{Applies a pipe to new data}
 \usage{
-\method{invoke}{pipe}(x, data)
+\method{invoke}{pipe}(x, data, ...)
 }
 \arguments{
 \item{x}{The pipe to be applied}
 
 \item{data}{A new dataframe}
+
+\item{...}{Currently not used by this method}
 }
 \value{
 The transformed dataset

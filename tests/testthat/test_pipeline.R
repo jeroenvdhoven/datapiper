@@ -172,6 +172,18 @@ describe("invoke.pipeline", {
         result <- invoke(r_nested, 1:10)
         expect_equal((1:10) + (10 - 20) * 2, result)
     })
+
+    it("can print updates if requested", {
+        add_one <- function(data, value) data + value
+        p1 <- pipe(.function = add_one, value = 10)
+        p2 <- pipe(.function = add_one, value = -20)
+
+        r <- pipeline(p1, p2)
+        r_nested <- pipeline(p1, p2, a_custom_pipe_name = r)
+
+        expect_output(invoke(r, 1:10, verbose = T))
+        expect_output(invoke(r_nested, 1:10, verbose = T), regexp = "a_custom_pipe_name")
+    })
 })
 
 

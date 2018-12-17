@@ -4,12 +4,14 @@
 \alias{invoke}
 \title{Generic function to apply either a pipe or pipeline to new data}
 \usage{
-invoke(x, data)
+invoke(x, data, ...)
 }
 \arguments{
 \item{x}{The pipe / pipeline to be applied}
 
 \item{data}{A new dataframe}
+
+\item{...}{Arguments for other \code{invoke} functions}
 }
 \value{
 The transformed dataset

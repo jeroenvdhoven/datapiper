@@ -4,12 +4,16 @@
 \alias{invoke.pipeline}
 \title{Applies a pipeline to new data}
 \usage{
-\method{invoke}{pipeline}(x, data)
+\method{invoke}{pipeline}(x, data, verbose = F, ...)
 }
 \arguments{
 \item{x}{The pipeline to be applied}
 
 \item{data}{A new dataframe}
+
+\item{verbose}{Flag indicating if updates should be printed. Defaults to FALSE}
+
+\item{...}{Currently not used by this method}
 }
 \value{
 The transformed dataset

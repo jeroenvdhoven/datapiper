@@ -398,20 +398,22 @@ pipeline <- function(...) {
 #'
 #' @param x The pipe / pipeline to be applied
 #' @param data A new dataframe
+#' @param ... Arguments for other \code{invoke} functions
 #'
 #' @return The transformed dataset
 #' @export
-invoke <- function(x, data) UseMethod("invoke", x)
+invoke <- function(x, data, ...) UseMethod("invoke", x)
 
 
 #' Applies a pipe to new data
 #'
 #' @param x The pipe to be applied
 #' @param data A new dataframe
+#' @param ... Currently not used by this method
 #'
 #' @return The transformed dataset
 #' @export
-invoke.pipe <- function(x, data) {
+invoke.pipe <- function(x, data, ...) {
     arg_list <- x$args
     arg_list$data <- data
     return(do.call(what = x$predict_function, args = arg_list))
@@ -421,11 +423,15 @@ invoke.pipe <- function(x, data) {
 #'
 #' @param x The pipeline to be applied
 #' @param data A new dataframe
+#' @param verbose Flag indicating if updates should be printed. Defaults to FALSE
+#' @param ... Currently not used by this method
 #'
 #' @return The transformed dataset
 #' @export
-invoke.pipeline <- function(x, data) {
-    for(pipe_ in x){
+invoke.pipeline <- function(x, data, verbose = F, ...) {
+    for(i in seq_along(x)){
+        pipe_ <- x[[i]]
+        if(verbose) cat("Processing pipe ", i, " out of ", length(x), " named: ", names(x)[i], "\n", sep = "")
         data <- invoke(pipe_, data)
     }
 
