@@ -4,14 +4,12 @@
 #' @param test The testing dataset
 #' @param response The response column as a string
 #' @param model A list containing at least a training function \code{.train} and a \code{.predict} function, plus optional named
-#' vectors of parameters to explore.
+#' parameters to the train function.
 #'
 #' The \code{.train} function has to take a \code{data} argument that stores the training data and a \code{...} argument for the parameters.
 #' The \code{.predict} function needs to take two arguments, where the first is the model and the second the new dataset.
 #'
-#' If a parameter only takes a single value, you can use a vector to store options. Otherwise use a list.
-#'
-#' You can use \code{\link{model_trainer}} as a wrapper for this list. It will also test your inputs to a certain degree
+#' You can use \code{\link{model_trainer}} as a wrapper for this list. It will also test your inputs to a certain degree.
 #' @param difference A function that calculates the difference between labels and predictions, for example
 #' \code{function(x,y) abs(x-y)}
 #' @param verbose Flag indicating if intermediate updates should be printed
