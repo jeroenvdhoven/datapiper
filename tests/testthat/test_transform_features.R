@@ -50,6 +50,7 @@ testthat::describe("pipe_feature_transformer()", {
 
         r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
                                       retransform_columns = retransform_columns)
+        expect_true("post_pipe" %in% names(r))
         retransformed <- invoke(r$post_pipe, r$train)
 
         for(col in retransform_columns) expect_equal(unlist(retransformed[col]), unlist(dataset1[col]))
@@ -67,22 +68,32 @@ testthat::describe("pipe_feature_transformer()", {
         for(col in retransform_columns) expect_equal(unlist(retransformed[col]), unlist(new_dataset[col]))
     })
 
-    it("will return an NA when the values to transform can't be transformed or when it's too far outside of the preset range.", {
-        new_dataset <- mutate(dataset1, a = a - 10, b = b * - 100000)
-        retransform_columns <- c("a", "b")
+    it("will be able to handle impossible values gracefully", {
+        new_dataset <- mutate(dataset1, a = a - 10)
+        retransform_columns <- c("a")
 
-        r <- suppressWarnings(pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
-                                      retransform_columns = retransform_columns))
+        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
+                                      retransform_columns = retransform_columns)
         new_transformed <- suppressWarnings(invoke(r$pipe, new_dataset))
 
-        expect_error(invoke(r$post_pipe, new_transformed), regexp = "f() values at end points not of opposite sign", fixed = T)
-
-        retransformed_with_error <- suppressWarnings(invoke(r$post_pipe, new_transformed))
+        retransformed_with_error <- (invoke(r$post_pipe, new_transformed))
         a_where_NaN_expected <- retransformed_with_error$a[new_dataset$a < 0]
         expect_equal(a_where_NaN_expected, rep(NaN, length(a_where_NaN_expected)))
 
         a_where_no_NaN_expected <- retransformed_with_error$a[new_dataset$a >= 0]
         expect_equal(a_where_no_NaN_expected, new_dataset$a[new_dataset$a >= 0])
+    })
+
+    it("will return an NA when a value is too far outside of the preset range.", {
+        new_dataset <- mutate(dataset1, b = b * - 100000)
+        retransform_columns <- c("b")
+
+        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
+                                      retransform_columns = retransform_columns)
+        new_transformed <- (invoke(r$pipe, new_dataset))
+
+        expect_warning(invoke(r$post_pipe, new_transformed), regexp = "f() values at end points not of opposite sign", fixed = T)
+        retransformed_with_error <- suppressWarnings(invoke(r$post_pipe, new_transformed))
 
         b_where_outside_range <- retransformed_with_error$b[new_dataset$b < r$post_pipe$args$lower_thresholds['b']]
         expect_equal(b_where_outside_range, rep(NA_real_, length(b_where_outside_range)))
@@ -144,6 +155,40 @@ testthat::describe("pipe_scaler()", {
         expect_error(pipe_scaler(train = dataset1[0, ], exclude_columns = "x", type = "N(0,1)"),
                      regexp = "nrow(train) > 0 is not TRUE", fixed = T)
     })
+
+    it("can create a rescale pipe for requested columns", {
+        retransform_columns <- c("a", "b")
+        r_01 <- pipe_scaler(train = dataset1, exclude_columns = "x", type = "[0-1]", retransform_columns = retransform_columns)
+        r_normal <- pipe_scaler(train = dataset1, exclude_columns = "x", type = "N(0,1)", retransform_columns = retransform_columns)
+
+        expect_true("post_pipe" %in% names(r_01))
+        expect_true("post_pipe" %in% names(r_normal))
+
+        r_01_retransformed <- invoke(r_01$post_pipe, r_01$train)
+        for(col in retransform_columns) expect_equal(unlist(r_01_retransformed[col]), unlist(dataset1[col]))
+
+        r_norm_retransformed <- invoke(r_normal$post_pipe, r_normal$train)
+        for(col in retransform_columns) expect_equal(unlist(r_norm_retransformed[col]), unlist(dataset1[col]))
+    })
+
+    it("can apply the rescale pipe for new data", {
+        retransform_columns <- c("a", "b")
+        r_01 <- pipe_scaler(train = dataset1, exclude_columns = "x", type = "[0-1]", retransform_columns = retransform_columns)
+        r_normal <- pipe_scaler(train = dataset1, exclude_columns = "x", type = "N(0,1)", retransform_columns = retransform_columns)
+
+        new_data <- mutate(dataset1, a = a + 10, b = b * -.2)
+
+        expect_true("post_pipe" %in% names(r_01))
+        expect_true("post_pipe" %in% names(r_normal))
+
+        r_01_new_data_transformed <- invoke(r_01$pipe, new_data)
+        r_01_retransformed <- invoke(r_01$post_pipe, r_01_new_data_transformed)
+        for(col in retransform_columns) expect_equal(unlist(r_01_retransformed[col]), unlist(new_data[col]))
+
+        r_01_new_data_transformed <- invoke(r_normal$pipe, new_data)
+        r_norm_retransformed <- invoke(r_normal$post_pipe, r_01_new_data_transformed)
+        for(col in retransform_columns) expect_equal(unlist(r_norm_retransformed[col]), unlist(new_data[col]))
+    })
 })
 
 # Skeleton
@@ -175,7 +220,7 @@ testthat::describe("pipe_one_hot_encode()", {
         stats_functions <- list("mean" = mean, "quantile" = function(x) quantile(x = x, .25))
         cols <- c("y", "s")
         r_mean <- pipe_one_hot_encode(train = dataset1, use_pca = F, columns = cols,
-                                         stat_functions = stats_functions, response = "x")
+                                      stat_functions = stats_functions, response = "x")
 
         generated_cols <- expand.grid(cols, names(stats_functions))
         generated_cols <- paste0(generated_cols[,2], "_", generated_cols[,1])
@@ -203,7 +248,7 @@ testthat::describe("pipe_one_hot_encode()", {
         stats_functions <- list("mean" = mean, "quantile" = function(x) quantile(x = x, .25))
         cols <- c("y", "s")
         r_mean <- pipe_one_hot_encode(train = dataset1, use_pca = F, columns = cols,
-                                         stat_functions = stats_functions, response = "x")
+                                      stat_functions = stats_functions, response = "x")
         ctest_pipe_has_working_predict_function(r_mean, dataset1)
     })
 
@@ -211,7 +256,7 @@ testthat::describe("pipe_one_hot_encode()", {
         stats_functions <- list("mean" = mean, "quantile" = function(x) quantile(x = x, .25))
         cols <- c("y", "s")
         r_mean_pca <- pipe_one_hot_encode(train = dataset1, use_pca = T, columns = cols,
-                                         stat_functions = stats_functions, response = "x")
+                                          stat_functions = stats_functions, response = "x")
 
         generated_cols <- expand.grid(cols, names(stats_functions))
         generated_cols <- paste0(generated_cols[,2], "_", generated_cols[,1])
@@ -226,7 +271,7 @@ testthat::describe("pipe_one_hot_encode()", {
         stats_functions <- list("mean" = mean, "quantile" = function(x) quantile(x = x, .25))
         cols <- c("y", "s")
         r_mean_pca <- pipe_one_hot_encode(train = dataset1, use_pca = T, columns = cols,
-                                             stat_functions = stats_functions, response = "x")
+                                          stat_functions = stats_functions, response = "x")
         ctest_pipe_has_working_predict_function(r_mean_pca, dataset1)
     })
 
@@ -244,7 +289,7 @@ testthat::describe("pipe_one_hot_encode()", {
 # Skeleton
 testthat::describe("pipe_categorical_filter()", {
     r <- pipe_categorical_filter(train = dataset1, response = "x",
-                                    insufficient_occurance_marker = "marker", threshold_function = function(data) 5)
+                                 insufficient_occurance_marker = "marker", threshold_function = function(data) 5)
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)

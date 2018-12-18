@@ -4,7 +4,8 @@
 \alias{pipe_scaler}
 \title{Rescales data to standardised ranges}
 \usage{
-pipe_scaler(train, exclude_columns = character(length = 0), type = "[0-1]")
+pipe_scaler(train, exclude_columns = character(length = 0), type = "[0-1]",
+  retransform_columns)
 }
 \arguments{
 \item{train}{Data frame containing the train data.}
@@ -16,9 +17,11 @@ pipe_scaler(train, exclude_columns = character(length = 0), type = "[0-1]")
 \item \code{"[0-1]"}: rescales the columns to the [0-1] range
 \item \code{"N(0,1)"}: rescales the columns to mean 0 and sd 1
 }}
+
+\item{retransform_columns}{Columns that should be rescaled later on. A new pipe will be created and returned as a separate list entry.}
 }
 \value{
-A list containing the transformed train dataset and a trained pipe.
+A list containing the transformed train dataset and a trained pipe. If \code{retransform_columns} was set, the reverting pipe will also be provided.
 }
 \description{
 Rescales data to standardised ranges

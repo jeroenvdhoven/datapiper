@@ -24,7 +24,7 @@ Defaults to \code{is.na}. Set to NA to skip NA feature generation and imputation
 numerical approximation of the inverse of the optimal tranformation function. This pipe will be returned as a separate list entry.}
 }
 \value{
-A list containing the transformed train dataset and a trained pipe.
+A list containing the transformed train dataset and a trained pipe. If \code{retransform_columns} was set, the reverting pipe will also be provided.
 }
 \description{
 Applies different transformations to each numeric feature and selects the one with the highest correlation to the response per feature

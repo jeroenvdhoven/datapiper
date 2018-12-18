@@ -9,7 +9,7 @@
 #' @param retransform_columns Columns that should be retransformed later on. If this is set to one or more column names, this function will generate a
 #' numerical approximation of the inverse of the optimal tranformation function. This pipe will be returned as a separate list entry.
 #'
-#' @return A list containing the transformed train dataset and a trained pipe.
+#' @return A list containing the transformed train dataset and a trained pipe. If \code{retransform_columns} was set, the reverting pipe will also be provided.
 #' @export
 #' @importFrom stats cor
 pipe_feature_transformer <- function(train, response, transform_columns, missing_func = is.na,
@@ -179,9 +179,8 @@ feature_transformer_post_predict <- function(data, retransform_columns, lower_th
                 success <- T
                 return(var)
             }, error = function(e) {
-                    warning(e)
-                }
-            )
+                warning(as.character(e))
+            })
             if(success) return(result)
             else return(NA)
         })
@@ -201,10 +200,11 @@ feature_transformer_post_predict <- function(data, retransform_columns, lower_th
 #' \item \code{"[0-1]"}: rescales the columns to the [0-1] range
 #' \item \code{"N(0,1)"}: rescales the columns to mean 0 and sd 1
 #' }
+#' @param retransform_columns Columns that should be rescaled later on. A new pipe will be created and returned as a separate list entry.
 #'
-#' @return A list containing the transformed train dataset and a trained pipe.
+#' @return A list containing the transformed train dataset and a trained pipe. If \code{retransform_columns} was set, the reverting pipe will also be provided.
 #' @export
-pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "[0-1]"){
+pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "[0-1]", retransform_columns){
     stopifnot(
         is.data.frame(train),
         nrow(train) > 0,
@@ -234,15 +234,46 @@ pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "
     predict_function <- function(data, centers, scales, columns) {
         stopifnot(
             is.data.frame(data),
-            !any(!columns %in% colnames(data))
+            !any(!columns %in% colnames(data)),
+            is.numeric(centers), length(centers) == length(columns),
+            is.numeric(scales), length(scales) == length(columns)
         )
 
         data[, columns] %<>% scale(center = centers, scale = scales)
         return(data)
     }
-
     predict_pipe <- pipe(.function = predict_function, centers = centers, scales = scales, columns = columns)
-    return(list("train" = train, "pipe" = predict_pipe))
+    result <- list("train" = train, "pipe" = predict_pipe)
+
+    retransform_requested <- !missing(retransform_columns)
+    if(retransform_requested) {
+        stopifnot(
+            is.character(retransform_columns),
+            !any(!retransform_columns %in% columns)
+        )
+        retransform_columns <- columns[columns %in% retransform_columns]
+        retransform_centers <- centers[columns %in% retransform_columns]
+        retransform_scales <- scales[columns %in% retransform_columns]
+
+        post_predict_function <- function(data, centers, scales, columns) {
+            stopifnot(
+                is.data.frame(data),
+                !any(!columns %in% colnames(data)),
+                is.numeric(centers), length(centers) == length(columns),
+                is.numeric(scales), length(scales) == length(columns)
+            )
+
+            for(i in seq_along(columns)) {
+                current_col <- unlist(data[, columns[i]])
+                current_col <- current_col * scales[i] + centers[i]
+                data[, columns[i]] <- current_col
+            }
+            return(data)
+        }
+        result$post_pipe <- pipe(.function = post_predict_function, centers = retransform_centers, scales = retransform_scales, columns = retransform_columns)
+    }
+
+    return(result)
 }
 
 #' Train one-hot encoding
