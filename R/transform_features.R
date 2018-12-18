@@ -3,14 +3,17 @@
 #' @param train Data frame containing the train data.
 #' @param response String denoting the name of the column that should be used as the response variable. Mandatory
 #' @param transform_columns Columns to consider for transformation.
-#' @param missing_func A function that determines if an observation is missing, e.g. \code{is.na}, \code{is.nan}, or \code{function(x) x == 0}. Defaults to \code{is.na}. Set to NA to skip NA feature generation and imputation.
+#' @param missing_func A function that determines if an observation is missing, e.g. \code{is.na}, \code{is.nan}, or \code{function(x) x == 0}.
+#' Defaults to \code{is.na}. Set to NA to skip NA feature generation and imputation.
 #' @param transform_functions A list of function used to transform features. Should be one-to-one transformations like sqrt or log.
+#' @param retransform_columns Columns that should be retransformed later on. If this is set to one or more column names, this function will generate a
+#' numerical approximation of the inverse of the optimal tranformation function. This pipe will be returned as a separate list entry.
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
-#' @importFrom stats lm cor
+#' @importFrom stats cor
 pipe_feature_transformer <- function(train, response, transform_columns, missing_func = is.na,
-                                     transform_functions = list(sqrt, log, function(x)x^2)){
+                                     transform_functions = list(sqrt, log, function(x)x^2), retransform_columns){
     stopifnot(
         response %in% colnames(train), is.numeric(unlist(train[response])),
         is.data.frame(train),
@@ -20,15 +23,58 @@ pipe_feature_transformer <- function(train, response, transform_columns, missing
         transform_columns <- colnames(train)[purrr::map_lgl(train, is.numeric)] %>% .[. != response]
     }else stopifnot(!any(!(transform_columns %in% colnames(train))))
 
-    func_list <- list()
-    for(col in transform_columns){
-        res <- feature_transform_col(train, response, transform_functions, col, missing_func, comparison_method = "cor")
-        train <- res$train
-        func_list %<>% c(res$best_function)
+    retransform_requested <- !missing(retransform_columns)
+    if(retransform_requested) {
+        stopifnot(
+            is.character(retransform_columns),
+            !any(!retransform_columns %in% transform_columns)
+        )
+        retransform_columns <- transform_columns[transform_columns %in% retransform_columns]
     }
 
+    func_list <- list()
+    lower_thresholds <- numeric(0)
+    upper_thresholds <- numeric(0)
+    for(col in transform_columns){
+        res <- feature_transform_col(train, response, transform_functions, col, missing_func, comparison_method = "cor")
+        best_function <- res$best_function
+
+        if(retransform_requested && (col %in% retransform_columns)) {
+            column_values <- unlist(train[col])
+            col_min <- min(column_values, na.rm = T)
+            col_max <- max(column_values, na.rm = T)
+
+            range_fraction <- .2
+            extend_range <- abs(range_fraction * (col_max - col_min))
+
+            lower_threshold <- col_min - extend_range
+            upper_threshold <- col_max + extend_range
+
+            # Ensure our threshold is feasible
+            suppressWarnings(if(is.nan(best_function(lower_threshold)) || is.na(best_function(lower_threshold))) lower_threshold <- col_min * ifelse(col_min > 0, 1 - range_fraction, 1 + range_fraction))
+            suppressWarnings(if(is.nan(best_function(upper_threshold)) || is.na(best_function(upper_threshold))) upper_threshold <- col_max * ifelse(col_max > 0, 1 + range_fraction, 1 - range_fraction))
+
+            lower_thresholds <- c(lower_thresholds, lower_threshold)
+            upper_thresholds <- c(upper_thresholds, upper_threshold)
+        }
+
+        train <- res$train
+        func_list <- c(func_list, best_function)
+    }
+    names(func_list) <- transform_columns
     predict_pipe <- pipe(.function = feature_transformer_predict, transform_columns = transform_columns, transform_functions = func_list)
-    return(list("train" = train, "pipe" = predict_pipe))
+    result <- list("train" = train, "pipe" = predict_pipe)
+
+    if(retransform_requested){
+        retransform_functions <- func_list[retransform_columns]
+        names(lower_thresholds) <- retransform_columns
+        names(upper_thresholds) <- retransform_columns
+
+        result$post_pipe <- pipe(.function = feature_transformer_post_predict, retransform_columns = retransform_columns,
+                                 lower_thresholds = lower_thresholds, upper_thresholds = upper_thresholds,
+                                 retransform_functions = retransform_functions)
+    }
+    return(result)
 }
 
 feature_transform_col <- function(train, response, transform_functions, transform_column, missing_func = is.na, comparison_method){
@@ -72,7 +118,7 @@ feature_transform_col <- function(train, response, transform_functions, transfor
 #' @param transform_columns The same columns used to obtain these selected transform_functions
 #' @param transform_functions Result of \code{\link{pipe_feature_transformer}}
 #'
-#' @return Returns
+#' @return Returns the dataset with transformed columns
 feature_transformer_predict <- function(data, transform_columns, transform_functions){
     #test input
     stopifnot(
@@ -88,6 +134,63 @@ feature_transformer_predict <- function(data, transform_columns, transform_funct
 
     return(data)
 }
+
+#' Uses the results of \code{\link{pipe_feature_transformer}} on new datasets
+#'
+#' @param data A new dataset
+#' @param retransform_columns The same columns used to obtain these selected retransform_functions
+#' @param lower_thresholds A vector of lower treshold used by \code{\link{uniroot}}, used to approximate the inverse function.
+#' @param upper_thresholds A vector of upper treshold used by \code{\link{uniroot}}, used to approximate the inverse function.
+#' @param retransform_functions Result of \code{\link{pipe_feature_transformer}}
+#'
+#' @return Returns the dataset with retransformed columns
+#' @importFrom stats uniroot
+feature_transformer_post_predict <- function(data, retransform_columns, lower_thresholds, upper_thresholds, retransform_functions){
+    inverse = function (f, lower = 0, upper = Inf) {
+        function (y)  {
+            new_f <- function (x) (f(x) - y)
+            f_new_lower <- new_f(lower)
+            f_new_upper <- new_f(upper)
+            f.lower <- ifelse(is.na(f_new_lower) || is.nan(f_new_lower), lower, f_new_lower)
+            f.upper <- ifelse(is.na(f_new_upper) || is.nan(f_new_upper), lower, f_new_upper)
+            uniroot(f = new_f, lower = lower, upper = upper, tol = sqrt(.Machine$double.eps), maxiter = 100,
+                    f.lower = f.lower, f.upper = f.upper)$root
+        }
+    }
+
+    stopifnot(
+        is.data.frame(data),
+        is.character(retransform_columns), !any(!retransform_columns %in% colnames(data)),
+        is.numeric(lower_thresholds), length(lower_thresholds) == length(retransform_columns),
+        is.numeric(upper_thresholds), length(upper_thresholds) == length(retransform_columns),
+        is.list(retransform_functions), !any(!purrr::map_lgl(retransform_functions, is.function)),
+        length(retransform_functions) == length(retransform_columns)
+    )
+
+    for(i in seq_along(retransform_columns)){
+        col <- retransform_columns[i]
+        inverse_function <- inverse(retransform_functions[[i]], lower = lower_thresholds[i], upper = upper_thresholds[i])
+        current_col <- unlist(data[, col])
+        current_col[!is.na(current_col)] <- purrr::map_dbl(.x = current_col[!is.na(current_col)], .f = function(x) {
+            success <- F
+            result <- tryCatch({
+                # Will return NA if the inverse function fails.
+                var <- inverse_function(x)
+                success <- T
+                return(var)
+            }, error = function(e) {
+                    warning(e)
+                }
+            )
+            if(success) return(result)
+            else return(NA)
+        })
+        data[, col] <- current_col
+    }
+
+    return(data)
+}
+
 
 #' Rescales data to standardised ranges
 #'

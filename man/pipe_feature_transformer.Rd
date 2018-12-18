@@ -6,7 +6,7 @@
 \usage{
 pipe_feature_transformer(train, response, transform_columns,
   missing_func = is.na, transform_functions = list(sqrt, log, function(x)
-  x^2))
+  x^2), retransform_columns)
 }
 \arguments{
 \item{train}{Data frame containing the train data.}
@@ -15,9 +15,13 @@ pipe_feature_transformer(train, response, transform_columns,
 
 \item{transform_columns}{Columns to consider for transformation.}
 
-\item{missing_func}{A function that determines if an observation is missing, e.g. \code{is.na}, \code{is.nan}, or \code{function(x) x == 0}. Defaults to \code{is.na}. Set to NA to skip NA feature generation and imputation.}
+\item{missing_func}{A function that determines if an observation is missing, e.g. \code{is.na}, \code{is.nan}, or \code{function(x) x == 0}.
+Defaults to \code{is.na}. Set to NA to skip NA feature generation and imputation.}
 
 \item{transform_functions}{A list of function used to transform features. Should be one-to-one transformations like sqrt or log.}
+
+\item{retransform_columns}{Columns that should be retransformed later on. If this is set to one or more column names, this function will generate a
+numerical approximation of the inverse of the optimal tranformation function. This pipe will be returned as a separate list entry.}
 }
 \value{
 A list containing the transformed train dataset and a trained pipe.

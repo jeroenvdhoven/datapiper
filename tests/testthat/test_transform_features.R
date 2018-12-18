@@ -44,6 +44,62 @@ testthat::describe("pipe_feature_transformer()", {
         r <- pipe_feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
         expect_equal(r$train$c, c(seq_len(N-1), NA))
     })
+
+    it("can generate retransformations if requested", {
+        retransform_columns <- c("a", "b", "c")
+
+        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
+                                      retransform_columns = retransform_columns)
+        retransformed <- invoke(r$post_pipe, r$train)
+
+        for(col in retransform_columns) expect_equal(unlist(retransformed[col]), unlist(dataset1[col]))
+    })
+
+    it("can generate retransformations for values outside of the original range, within reason", {
+        new_dataset <- mutate(dataset1, a = a * 1.1, b = b * .9)
+        retransform_columns <- c("a", "b")
+
+        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
+                                      retransform_columns = retransform_columns)
+        new_transformed <- invoke(r$pipe, new_dataset)
+        retransformed <- invoke(r$post_pipe, new_transformed)
+
+        for(col in retransform_columns) expect_equal(unlist(retransformed[col]), unlist(new_dataset[col]))
+    })
+
+    it("will return an NA when the values to transform can't be transformed or when it's too far outside of the preset range.", {
+        new_dataset <- mutate(dataset1, a = a - 10, b = b * - 100000)
+        retransform_columns <- c("a", "b")
+
+        r <- suppressWarnings(pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
+                                      retransform_columns = retransform_columns))
+        new_transformed <- suppressWarnings(invoke(r$pipe, new_dataset))
+
+        expect_error(invoke(r$post_pipe, new_transformed), regexp = "f() values at end points not of opposite sign", fixed = T)
+
+        retransformed_with_error <- suppressWarnings(invoke(r$post_pipe, new_transformed))
+        a_where_NaN_expected <- retransformed_with_error$a[new_dataset$a < 0]
+        expect_equal(a_where_NaN_expected, rep(NaN, length(a_where_NaN_expected)))
+
+        a_where_no_NaN_expected <- retransformed_with_error$a[new_dataset$a >= 0]
+        expect_equal(a_where_no_NaN_expected, new_dataset$a[new_dataset$a >= 0])
+
+        b_where_outside_range <- retransformed_with_error$b[new_dataset$b < r$post_pipe$args$lower_thresholds['b']]
+        expect_equal(b_where_outside_range, rep(NA_real_, length(b_where_outside_range)))
+
+        b_where_inside_range <- retransformed_with_error$b[new_dataset$b >= r$post_pipe$args$lower_thresholds['b']]
+        expect_equal(b_where_inside_range, new_dataset$b[new_dataset$b >= r$post_pipe$args$lower_thresholds['b']])
+    })
+
+    it("can deal with NA's while retransforming", {
+        retransform_columns <- c("m", "m2")
+
+        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
+                                      retransform_columns = retransform_columns)
+        retransformed <- invoke(r$post_pipe, r$train)
+
+        for(col in retransform_columns) expect_equal(unlist(retransformed[col]), unlist(dataset1[col]))
+    })
 })
 
 ctest_01_range <- function(col) {

@@ -14,7 +14,7 @@ feature_transformer_predict(data, transform_columns, transform_functions)
 \item{transform_functions}{Result of \code{\link{pipe_feature_transformer}}}
 }
 \value{
-Returns
+Returns the dataset with transformed columns
 }
 \description{
 Uses the results of \code{\link{pipe_feature_transformer}} on new datasets
