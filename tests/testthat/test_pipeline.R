@@ -436,6 +436,54 @@ describe("train_pipeline()", {
         pipe_result <- r(dataset1)
         expect_named(object = pipe_result$pipe, c("mutate_a", "pipe_1", "unselect_b", "pipe_2"))
     })
+
+    it("can train the post-pipeline when needed", {
+        retransform_columns <- c("a", "b")
+        r <- train_pipeline(
+            segment(.segment = pipe_scaler, exclude_columns = "x", retransform_columns = retransform_columns),
+            segment(.segment = pipe_feature_transformer, response = "x", retransform_columns = retransform_columns,
+                                                        transform_functions = list("sqrt" = sqrt, "log" = log))
+        )
+
+        pipe_result <- r(dataset1)
+        post_transformed <- invoke(pipe_result$post_pipe, pipe_result$train)
+
+        for(col in retransform_columns) expect_equal(unlist(post_transformed[col]), unlist(dataset1[col]))
+    })
+
+    it("can nest post-pipelines when needed", {
+        retransform_columns <- c("a", "b")
+        r <- train_pipeline(
+            segment(.segment = pipe_scaler, exclude_columns = "x", retransform_columns = retransform_columns),
+            segment(.segment = pipe_feature_transformer, response = "x", retransform_columns = retransform_columns,
+                    transform_functions = list("sqrt" = sqrt, "log" = log))
+        )
+
+        r_nested <- train_pipeline(
+            segment(.segment = r),
+            segment(.segment = pipe_scaler, exclude_columns = "x", retransform_columns = retransform_columns, type = "N(0,1)")
+        )
+
+        pipe_result <- r(dataset1)
+        post_transformed <- invoke(pipe_result$post_pipe, pipe_result$train)
+
+        for(col in retransform_columns) expect_equal(unlist(post_transformed[col]), unlist(dataset1[col]))
+    })
+
+    it("can train the post-pipeline when needed with appropriate names", {
+        retransform_columns <- c("a", "b")
+        r <- train_pipeline(
+            "scaler" = segment(.segment = pipe_scaler, exclude_columns = "x", retransform_columns = retransform_columns),
+            "x+1" = segment(.segment = pipe_mutate, x = "x + 1"),
+            "transformer" = segment(.segment = pipe_feature_transformer, response = "x", retransform_columns = retransform_columns,
+                    transform_functions = list("sqrt" = sqrt, "log" = log))
+        )
+
+        pipe_result <- r(dataset1)
+        post_transformed <- invoke(pipe_result$post_pipe, pipe_result$train)
+
+        expect_equal(names(pipe_result$post_pipe), c("transformer", "scaler"))
+    })
 })
 
 describe("flatten_pipeline()", {

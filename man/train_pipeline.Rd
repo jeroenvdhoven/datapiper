@@ -17,7 +17,10 @@ on the datasets just before starting the processing, remember you can always wra
 
 The function should always accept at least a \code{train} argument for the train dataset.
 Each function should also return a list with (at a minimum) two named items: \code{train} and \code{pipe}, a trained pipe segment.
-You can create these using \code{\link{pipe}}.}
+You can create these pipe segments using \code{\link{pipe}}.
+
+If a function also returns a \code{post_pipe} item in the list, that will be added to a post-transformation pipeline. The post-pipeline will be automatically
+reversed to ensure re-transformations are executed in the correct order.}
 
 \item{response}{Since \code{response} is a parameter often used in this package, you can set it here to have it automatically set in pipeline where needed.}
 }

@@ -10,7 +10,10 @@
 #'
 #' The function should always accept at least a \code{train} argument for the train dataset.
 #' Each function should also return a list with (at a minimum) two named items: \code{train} and \code{pipe}, a trained pipe segment.
-#' You can create these using \code{\link{pipe}}.
+#' You can create these pipe segments using \code{\link{pipe}}.
+#'
+#' If a function also returns a \code{post_pipe} item in the list, that will be added to a post-transformation pipeline. The post-pipeline will be automatically
+#' reversed to ensure re-transformations are executed in the correct order.
 #'
 #' @param response Since \code{response} is a parameter often used in this package, you can set it here to have it automatically set in pipeline where needed.
 #'
@@ -73,6 +76,7 @@ train_pipeline <- function(..., response){
 
     res <- function(train) {
         trained_pipelines <- as.list(seq_along(pipes))
+        trained_post_pipelines <- list()
         mandatory_variables <- c("train", "pipe")
 
         # Construct and train the pipeline
@@ -100,12 +104,22 @@ train_pipeline <- function(..., response){
             }
             train <- pipe_res$train
             trained_pipelines[[i]] <- pipe_res$pipe
+
+            # Extend the post-pipeline if needed
+            if("post_pipe" %in% names(pipe_res)) {
+                trained_post_pipelines <- c(list(pipe_res$post_pipe), trained_post_pipelines)
+                names(trained_post_pipelines)[1] <- pipe_names[i]
+            }
         }
 
         names(trained_pipelines) <- pipe_names
         trained_pipeline <- do.call(what = pipeline, args = trained_pipelines)
+        result <- list("train" = train, "pipe" = trained_pipeline)
 
-        return(list("train" = train, "pipe" = trained_pipeline))
+        if(length(trained_post_pipelines) > 0) {
+            result$post_pipe <- do.call(what = pipeline, args = trained_post_pipelines)
+        }
+        return(result)
     }
     return(res)
 }
