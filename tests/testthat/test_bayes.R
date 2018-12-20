@@ -7,7 +7,7 @@ p_1 <- datapiper::train_pipeline(
 )
 p_2 <- datapiper::train_pipeline(
     segment(.segment = p_1),
-    segment(.segment = datapiper::pipe_scaler, exclude_columns = "x")
+    segment(.segment = datapiper::pipe_scaler, retransform_columns = "a", exclude_columns = "x")
 )
 m_1 <- util_RMSE
 m_2 <- util_RMSLE
@@ -96,6 +96,16 @@ describe("find_model_through_bayes()", {
         expect_equal(r$.id, c("one_xgb", "two_xgb"))
         expect_equal(r$.preprocess_pipe[[1]], p_1(train)$pipe)
         expect_equal(r$.preprocess_pipe[[2]], p_2(train)$pipe)
+    })
+
+    it("also stores post_pipes if requested by pipelines", {
+        r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
+                                                 preprocess_pipes = list("one" = p_1, "two" = p_2),
+                                                 models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
+                                                 target_metric = "rmse", seed = 1, prepend_data_checker = F)
+        expect_true(".post_pipe" %in% colnames(r))
+        expect_equal(r$.post_pipe[[1]], NULL)
+        expect_equal(r$.post_pipe[[2]], p_2(train)$post_pipe)
     })
 
     it("can use multiple models", {

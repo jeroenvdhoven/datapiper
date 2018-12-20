@@ -133,6 +133,7 @@ find_model_through_bayes <- function(
                                                N_init = N_init, N_experiment = N_experiment, save_model = save_model)
             current_results$.id = paste0(pipe_names[preprocess_index], "_", model_names[model_index])
             current_results$.preprocess_pipe = list(trained_pipeline)
+            if("post_pipe" %in% names(piped)) current_results$.post_pipe <- list(piped$post_pipe)
             res <- bind_rows(res, current_results)
         }
     }

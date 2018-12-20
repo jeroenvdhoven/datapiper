@@ -138,6 +138,7 @@ find_model <- function(train, test, response,
                 tmp[paste0("train_", metric_names)] <- train_metrics_calculated
                 tmp[paste0("test_", metric_names)] <- test_metrics_calculated
                 if(save_model) tmp$.model <- list(model)
+                if("post_pipe" %in% names(piped)) tmp$.post_pipe <- list(piped$post_pipe)
                 res <- bind_rows(res, tmp)
             }
         }
