@@ -108,7 +108,7 @@ train_pipeline <- function(..., response){
             # Extend the post-pipeline if needed
             if("post_pipe" %in% names(pipe_res)) {
                 trained_post_pipelines <- c(list(pipe_res$post_pipe), trained_post_pipelines)
-                names(trained_post_pipelines)[1] <- pipe_names[i]
+                names(trained_post_pipelines)[1] <- paste0("post_", pipe_names[i])
             }
         }
 

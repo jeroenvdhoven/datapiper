@@ -482,7 +482,7 @@ describe("train_pipeline()", {
         pipe_result <- r(dataset1)
         post_transformed <- invoke(pipe_result$post_pipe, pipe_result$train)
 
-        expect_equal(names(pipe_result$post_pipe), c("transformer", "scaler"))
+        expect_equal(names(pipe_result$post_pipe), c("post_transformer", "post_scaler"))
     })
 })
 
