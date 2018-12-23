@@ -47,15 +47,15 @@ year <- 1973
 stat_functions <- list("mean" = mean)
 
 basic_pipeline <- train_pipeline(
-    segment(.segment = pipeline_function, f = standard_column_names),
-    segment(.segment = pipeline_mutate, 
+    segment(.segment = pipe_function, f = standard_column_names),
+    segment(.segment = pipe_mutate, 
         date = "as.Date(paste0(year, '-', month, '-', day))",
         distance_from_july = "as.numeric(difftime(as.Date(paste0(year, '-', 07, '-', 16)), date, units = 'days'))",
         date = "as.numeric(date)"),
-    segment(.segment = impute_all, columns = c("ozone", "solar_r"), type = "mean"),
-    segment(.segment = feature_create_all_generic_stats, stat_cols = 'month', response = 'temp', 
+    segment(.segment = pipe_impute, columns = c("ozone", "solar_r"), type = "mean"),
+    segment(.segment = pipe_create_stats, stat_cols = 'month', response = 'temp', 
         functions = stat_functions, too_few_observations_cutoff = 10),
-    segment(.segment = pipeline_select, "-month", "-day")
+    segment(.segment = pipe_select, "-month", "-day")
 )
 
 pipe_result <- basic_pipeline(train)
