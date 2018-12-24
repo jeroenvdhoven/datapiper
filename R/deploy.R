@@ -38,6 +38,7 @@ delete_image <- function(image_name) {
 #' @param package_name The name of the package
 #' @param libraries A list of library names required by the package. Defaults to all loaded non-base packages
 #' @param tar_file The name and path of the final tarred package
+#' @param extra_functions A character vector of function names to be included in the package.
 #' @param prediction_precision Number of digits to be returned by the prediction
 #' @param may_overwrite_tar_file Flag indicating if, when \code{tar_file} exists, this function is allowed to override it.
 #'
@@ -47,9 +48,14 @@ delete_image <- function(image_name) {
 #' @return A logical: TRUE for success and FALSE for failure
 #' @importFrom devtools document build create
 #' @export
-build_model_package <- function(trained_pipeline, package_name = "deploymodel", libraries = names(utils::sessionInfo()$otherPkgs), tar_file = "deploy.tar.gz",
+build_model_package <- function(trained_pipeline, package_name = "deploymodel", libraries = names(utils::sessionInfo()$otherPkgs),
+                                tar_file = "deploy.tar.gz", extra_functions = character(0),
                                 prediction_precision = 8, may_overwrite_tar_file = F) {
-    stopifnot(!missing(trained_pipeline), is.character(libraries))
+    stopifnot(
+        !missing(trained_pipeline),
+        is.character(libraries),
+        is.character(extra_functions)
+    )
     is_valid_package_name <- grepl(pattern = "^[a-zA-Z0-9\\.]+$", libraries)
 
     if(any(!is_valid_package_name)) warning(paste("Possible typo in package name:", paste0(collapse = ", ", libraries[!is_valid_package_name])))
@@ -58,7 +64,6 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
         is.logical(may_overwrite_tar_file),
         may_overwrite_tar_file || !file.exists(tar_file),
         is.pipe(trained_pipeline) || is.pipeline(trained_pipeline),
-        is.character(libraries),
         is.numeric(prediction_precision), prediction_precision >= 0
     )
 
@@ -67,6 +72,9 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
     current_ws <- getwd()
     on.exit(setwd(current_ws))
     has_succeeded <- F
+
+    # If any extra functions are provided, ensure they will be added correctly.
+    for(func in extra_functions) get(x = func)
 
     tryCatch({
         # Setup temp dir with package
@@ -83,6 +91,8 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
         dir.create("data")
         save(trained_pipeline, file = "data/model.rda")
         save(libraries, file = "data/libraries.rda")
+        if(length(extra_functions) > 0)
+            save(list = extra_functions, file = "data/extra_functions.rda")
 
         save(invoke, file = "data/invoke.rda")
         save(invoke.pipe, file = "data/invoke.pipe.rda")

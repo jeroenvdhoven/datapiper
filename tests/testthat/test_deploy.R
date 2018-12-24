@@ -39,6 +39,29 @@ generate_model_function <- function(extra_pipe){
 }
 
 describe("build_model_package()", {
+    it("allows you to include extra functions", {
+        x <- sqrt
+        test_df <- data.frame(10)
+        transformed_df <- x(test_df)
+        library_name <- "test.package"
+        tar_file_name <- "test.tar.gz"
+        p <- pipeline(
+            pipe(.function = function(data) {
+                x(data)
+            })
+        )
+
+        build_model_package(extra_functions = "x", trained_pipeline = p, package_name = library_name,
+                            libraries = character(0), tar_file = tar_file_name)
+        install.packages(tar_file_name, repos = NULL)
+        rm(x)
+        r <- ctest_for_no_errors(test.package::predict_model(test_df), error_message = "Error: x was not exported")
+        expect_equal(r, transformed_df)
+
+        remove.packages(pkgs = library_name)
+        expect_true(file.remove(tar_file_name))
+    })
+
     it("can build a package around a model pipeline", {
         r <- generate_model_function()
         train <- r$train

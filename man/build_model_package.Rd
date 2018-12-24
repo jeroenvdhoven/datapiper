@@ -6,8 +6,8 @@
 \usage{
 build_model_package(trained_pipeline, package_name = "deploymodel",
   libraries = names(utils::sessionInfo()$otherPkgs),
-  tar_file = "deploy.tar.gz", prediction_precision = 8,
-  may_overwrite_tar_file = F)
+  tar_file = "deploy.tar.gz", extra_functions = character(0),
+  prediction_precision = 8, may_overwrite_tar_file = F)
 }
 \arguments{
 \item{trained_pipeline}{The model function from \code{find_best_models}}
@@ -17,6 +17,8 @@ build_model_package(trained_pipeline, package_name = "deploymodel",
 \item{libraries}{A list of library names required by the package. Defaults to all loaded non-base packages}
 
 \item{tar_file}{The name and path of the final tarred package}
+
+\item{extra_functions}{A character vector of function names to be included in the package.}
 
 \item{prediction_precision}{Number of digits to be returned by the prediction}
 
