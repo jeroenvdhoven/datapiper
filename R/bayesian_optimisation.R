@@ -62,6 +62,7 @@ find_model_through_bayes <- function(
         !missing(test) , is.data.frame(test),
         is.character(response), length(response) == 1,
         is.logical(prepend_data_checker),
+        is.logical(higher_is_better),
         is.logical(save_model),
         is.list(models),
         is.list(metrics), !any(!purrr::map_lgl(metrics, is.function)), !is.null(names(metrics)),
