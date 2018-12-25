@@ -3,15 +3,15 @@
 #' Use classification models to classify if the response is larger than a series of given values for regression tasks
 #'
 #' @param train Data frame containing the train data.
-#' @param response_col String denoting the name of the column that should be used as the response_col variable.
+#' @param response String denoting the name of the column that should be used as the response variable.
 #' @param exclude_columns Columns that shouldn't be used in the models. Defaults to the response column and will ALWAYS include the response column.
 #' @param base_temporary_column_name Base name that will be used to create a temporary variable for training the classifier. Use this to ensure no existing columns are overwritten.
 #' @param base_definitive_column_name Base name that will be used to store the predictions of the created classifiers. Will be appended by the threshold value.
 #' Use this to ensure no existing columns are overwritten.
 #' @param quantiles Number of quantiles to use to generate threshold values. Will actually generate \code{quantiles+2} quantiles and look at 2nd to \code{quantiles+1}-th
 #' quantiles to remove non-sensical thresholds. Non-negative integer, defaults to 10.
-#' @param even_spreads Number of evenly spread thresholds to use. These will be based on the minimum and maximum value of the response_col in \code{train}. Defines its thresholds simarly to \code{quantiles}
-#' @param values Threshold values to use. We will check if these fall in the range of the response_col in \code{train}.
+#' @param even_spreads Number of evenly spread thresholds to use. These will be based on the minimum and maximum value of the response in \code{train}. Defines its thresholds simarly to \code{quantiles}
+#' @param values Threshold values to use. We will check if these fall in the range of the response in \code{train}.
 #' @param model Type of model to use. Currently only binomial glm is available.
 #' @param controls Parameters for the models to use. Leave empty or set to NA to use defaults:
 #' \itemize{
@@ -26,24 +26,24 @@
 #' @importFrom xgboost xgb.train xgb.DMatrix
 #' @importFrom stats glm predict as.formula quantile glm.control
 #' @export
-pipe_range_classifier <- function(train, response_col, exclude_columns = response_col,
+pipe_range_classifier <- function(train, response, exclude_columns = response,
                              tolerable_performance_reduction = .2,
                              base_temporary_column_name = "base_temporary_column_name",
-                             base_definitive_column_name = paste0(response_col, "_quantile"),
+                             base_definitive_column_name = paste0(response, "_quantile"),
                              quantiles = 10, even_spreads, values, model = c("glm"), controls){
     env <- environment()
-    tryCatch(exclude_columns, error = function(e) env[["exclude_columns"]] <- env[["response_col"]])
-    tryCatch(base_definitive_column_name, error = function(e) env[["base_definitive_column_name"]] <- env[[paste0(response_col, "_quantile")]])
+    tryCatch(exclude_columns, error = function(e) env[["exclude_columns"]] <- env[["response"]])
+    tryCatch(base_definitive_column_name, error = function(e) env[["base_definitive_column_name"]] <- env[[paste0(response, "_quantile")]])
     stopifnot(
         !missing(train), is.data.frame(train),
-        is.character(response_col), length(response_col) == 1, response_col %in% colnames(train),
+        is.character(response), length(response) == 1, response %in% colnames(train),
         is.character(exclude_columns), !any(!exclude_columns %in% colnames(train)),
         is.character(base_temporary_column_name), length(base_temporary_column_name) == 1,
         !any(grepl(pattern = base_temporary_column_name, colnames(train))),
         tolerable_performance_reduction >= 0, tolerable_performance_reduction <= 1
     )
-    if(!response_col %in% exclude_columns) exclude_columns %<>% c(response_col)
-    resp <- unlist(train[response_col])
+    if(!response %in% exclude_columns) exclude_columns %<>% c(response)
+    resp <- unlist(train[response])
 
     if(missing(values) || is.na(values)) values <- numeric(length = 0)
 
@@ -72,7 +72,7 @@ pipe_range_classifier <- function(train, response_col, exclude_columns = respons
 
     included_cols <- colnames(train) %>% .[
         (!. %in% exclude_columns ) &          #All columns that are not excluded.
-            (!grepl(pattern = response_col, x = ., fixed = T)) #All columns that contain exactly the same column name.
+            (!grepl(pattern = response, x = ., fixed = T)) #All columns that contain exactly the same column name.
         ]
 
     conserved_models <- rep(T, length(values))
@@ -80,9 +80,9 @@ pipe_range_classifier <- function(train, response_col, exclude_columns = respons
     scales <- as.list(1:length(values))
     column_names <- character(length = length(values))
 
-    # test_contains_response <- response_col %in% colnames(test)
+    # test_contains_response <- response %in% colnames(test)
     # if(test_contains_response) {
-    #     resp_test <- unlist(test[response_col])
+    #     resp_test <- unlist(test[response])
     #     aucs <- data_frame(
     #         values = values,
     #         train = rep(0, length(values)),
