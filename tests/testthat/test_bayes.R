@@ -42,14 +42,14 @@ describe("find_model_through_bayes()", {
         r <- ctest_for_no_errors(
             error_message = "find_model_through_bayes does not run without errors on basic settings",
             to_eval = datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                            preprocess_pipes = list("one" = p_1),
+                                            preprocess_pipes = list("one" = p_1), higher_is_better = F,
                                             models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
                                             target_metric = "rmse", seed = 1, prepend_data_checker = F))
     })
 
     it("return a dataframe containing the results", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1),
+                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
                                    models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
                                    target_metric = "rmse", seed = 1, prepend_data_checker = F)
         expect_true(is.data.frame(r))
@@ -74,7 +74,7 @@ describe("find_model_through_bayes()", {
 
     it("trains models as expected", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1),
+                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
                                    models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
                                    target_metric = "rmse", seed = 1, prepend_data_checker = F)
 
@@ -89,7 +89,7 @@ describe("find_model_through_bayes()", {
 
     it("can use multiple pipelines", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1, "two" = p_2),
+                                   preprocess_pipes = list("one" = p_1, "two" = p_2), higher_is_better = F,
                                    models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
                                    target_metric = "rmse", seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 2)
@@ -100,7 +100,7 @@ describe("find_model_through_bayes()", {
 
     it("also stores post_pipes if requested by pipelines", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                                 preprocess_pipes = list("one" = p_1, "two" = p_2),
+                                                 preprocess_pipes = list("one" = p_1, "two" = p_2), higher_is_better = F,
                                                  models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
                                                  target_metric = "rmse", seed = 1, prepend_data_checker = F)
         expect_true(".post_pipe" %in% colnames(r))
@@ -110,7 +110,7 @@ describe("find_model_through_bayes()", {
 
     it("can use multiple models", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1),
+                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
                                    models = list("xgb" = model_xgb, "forest" = model_forest), metrics = list("rmse" = m_1),
                                    target_metric = "rmse", seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 2)
@@ -124,7 +124,7 @@ describe("find_model_through_bayes()", {
 
     it("can use multiple metrics", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1),
+                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
                                    models = list("xgb" = model_xgb), metrics = list("rmse" = m_1, "rmsle" = m_2),
                                    target_metric = "rmse", seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 1)
@@ -138,7 +138,7 @@ describe("find_model_through_bayes()", {
             response = "x", training_function = randomForest::randomForest, ntree = ntree, nodesize = nodesize)
 
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1),
+                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
                                    models = list("forest" = model_forest_w_params), metrics = list("rmse" = m_1, "rmsle" = m_2),
                                    target_metric = "rmse", seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 9)
@@ -155,7 +155,7 @@ describe("find_model_through_bayes()", {
             response = "x", training_function = randomForest::randomForest, ntree = ntree, nodesize = nodesize)
 
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1),
+                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
                                    models = list("forest" = model_forest_w_params), metrics = list("rmse" = m_1, "rmsle" = m_2),
                                    target_metric = "rmse", seed = 1, prepend_data_checker = F)
 
@@ -197,7 +197,7 @@ describe("find_model_through_bayes()", {
 
     it("can prepend pipeline_check to all pipelines", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1),
+                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
                                    models = list("forest" = model_xgb), metrics = list("rmse" = m_1),
                                    target_metric = "rmse", seed = 1, prepend_data_checker = T)
 
@@ -220,20 +220,20 @@ describe("find_model_through_bayes()", {
         r <- ctest_for_no_errors(
             error_message = "find_model_through_bayes does not check for response after piping",
             to_eval = find_model_through_bayes(train = dataset1, test = test, response = "target", verbose = F,
-                                 preprocess_pipes = list("one" = p_3),
+                                 preprocess_pipes = list("one" = p_3), higher_is_better = F,
                                  models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
                                  target_metric = "rmse", seed = 1, prepend_data_checker = F))
     })
 
     it("can save generated models if asked", {
         r_without <- find_model_through_bayes(train = dataset1, test = test, response = "x", verbose = F,
-                                preprocess_pipes = list("one" = p_1),
+                                preprocess_pipes = list("one" = p_1), higher_is_better = F,
                                 models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
                                 target_metric = "rmse", seed = 1, prepend_data_checker = F, save_model = F)
         expect_false(".model" %in% colnames(r_without))
 
         r_with <- find_model_through_bayes(train = dataset1, test = test, response = "x", verbose = F,
-                             preprocess_pipes = list("one" = p_1),
+                             preprocess_pipes = list("one" = p_1), higher_is_better = F,
                              models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
                              target_metric = "rmse", seed = 1, prepend_data_checker = F, save_model = T)
         expect_true(".model" %in% colnames(r_with))
