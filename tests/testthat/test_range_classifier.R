@@ -24,20 +24,42 @@ describe("pipe_range_classifier", {
 
     it("can use quantiles, even spreads or regular values", {
         r_quantile <- suppressWarnings(datapiper::pipe_range_classifier(dataset1, response = col, quantiles = n_quantile, exclude_columns = c("m2", "m", "z", "z2", "y")))
-        expected_columns <- paste0(col, "_quantile_", quantile(x = resp, probs = seq(0, 1, length.out = n_quantile + 2))[2:(n_quantile + 1)])
-        ctest_dataset_has_columns(r_quantile$train, expected_columns)
+        expected_columns <- paste0(col, "_quantile_", quantile(x = resp, probs = seq(0, 1, length.out = n_quantile + 2))[2:(n_quantile + 1)]) %>% sort %>% unique
+        generated_columns <- colnames(r_quantile$train)[grepl(pattern = "_quantile_", x = colnames(r_quantile$train))] %>% sort
+        expect_equal(expected_columns, generated_columns)
 
-        r_even <- suppressWarnings(datapiper::pipe_range_classifier(dataset1, response = "a", even_spreads = n_even, exclude_columns = c("m2", "m", "z", "z2", "y")))
-        expected_columns <- paste0(col, "_quantile_", seq(min(resp), max(resp), length.out = n_even + 2)[2:(n_even + 1)])
-        ctest_dataset_has_columns(r_even$train, expected_columns)
+        r_even <- suppressWarnings(datapiper::pipe_range_classifier(dataset1, response = col, even_spreads = n_even, exclude_columns = c("m2", "m", "z", "z2", "y")))
+        expected_columns <- paste0(col, "_quantile_", seq(min(resp), max(resp), length.out = n_even + 2)[2:(n_even + 1)]) %>% sort %>% unique
+        generated_columns <- colnames(r_even$train)[grepl(pattern = "_quantile_", x = colnames(r_even$train))] %>% sort
+        expect_equal(expected_columns, generated_columns)
 
-        r_values <- suppressWarnings(datapiper::pipe_range_classifier(dataset1, response = "a", values = def_values, exclude_columns = c("m2", "m", "z", "z2", "y")))
-        expected_columns <- paste0(col, "_quantile_", def_values)
-        ctest_dataset_has_columns(r_values$train, expected_columns)
+        r_values <- suppressWarnings(datapiper::pipe_range_classifier(dataset1, response = col, values = def_values, exclude_columns = c("m2", "m", "z", "z2", "y")))
+        expected_columns <- paste0(col, "_quantile_", def_values) %>% sort
+        generated_columns <- colnames(r_values$train)[grepl(pattern = "_quantile_", x = colnames(r_values$train))] %>% sort
+        expect_equal(expected_columns, generated_columns)
+    })
+
+    it("can use quantiles, even spreads or regular values when the response has missing values", {
+        na_col <- "m2"
+        resp <- unlist(dataset1[na_col])
+        r_quantile <- suppressWarnings(datapiper::pipe_range_classifier(dataset1, response = na_col, quantiles = n_quantile, exclude_columns = c("m2", "m", "z", "z2", "y")))
+        expected_columns <- paste0(na_col, "_quantile_", quantile(x = resp, probs = seq(0, 1, length.out = n_quantile + 2), na.rm = T)[2:(n_quantile + 1)]) %>% sort %>% unique
+        generated_columns <- colnames(r_quantile$train)[grepl(pattern = "_quantile_", x = colnames(r_quantile$train))] %>% sort
+        expect_equal(expected_columns, generated_columns)
+
+        r_even <- suppressWarnings(datapiper::pipe_range_classifier(dataset1, response = na_col, even_spreads = n_even, exclude_columns = c("m2", "m", "z", "z2", "y")))
+        expected_columns <- paste0(na_col, "_quantile_", seq(min(resp, na.rm = T), max(resp, na.rm = T), length.out = n_even + 2)[2:(n_even + 1)]) %>% sort %>% unique
+        generated_columns <- colnames(r_even$train)[grepl(pattern = "_quantile_", x = colnames(r_even$train))] %>% sort
+        expect_equal(expected_columns, generated_columns)
+
+        r_values <- suppressWarnings(datapiper::pipe_range_classifier(dataset1, response = na_col, values = def_values, exclude_columns = c("m2", "m", "z", "z2", "y")))
+        expected_columns <- paste0(na_col, "_quantile_", def_values) %>% sort
+        generated_columns <- colnames(r_values$train)[grepl(pattern = "_quantile_", x = colnames(r_values$train))] %>% sort
+        expect_equal(expected_columns, generated_columns)
     })
 
     it("can combine quantiles, even spreads and regular values", {
-        r_all <- suppressWarnings(datapiper::pipe_range_classifier(dataset1, response = "a", even_spreads = n_even, quantiles = n_quantile, values = def_values,
+        r_all <- suppressWarnings(datapiper::pipe_range_classifier(dataset1, response = col, even_spreads = n_even, quantiles = n_quantile, values = def_values,
                                              exclude_columns = c("m2", "m", "z", "z2", "y")))
         expected_columns <- c(
             paste0(col, "_quantile_", quantile(x = resp, probs = seq(0, 1, length.out = n_quantile + 2))[2:(n_quantile + 1)]),
@@ -53,7 +75,7 @@ describe("pipe_range_classifier", {
     })
 
     it("can use xgboost models as well, which handle missing values", {
-        r_all_xgb <- pipe_range_classifier(dataset1, response = "a", even_spreads = n_even, quantiles = n_quantile, values = def_values,
+        r_all_xgb <- pipe_range_classifier(dataset1, response = col, even_spreads = n_even, quantiles = n_quantile, values = def_values,
                                              exclude_columns = c("z", "z2", "y", "s"), model = "xgboost")
         ctest_pipe_has_working_predict_function(r_all_xgb, dataset1)
     })

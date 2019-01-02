@@ -4,21 +4,17 @@
 \alias{pipe_range_classifier}
 \title{Generates features for regression problems through classification}
 \usage{
-pipe_range_classifier(train, response_col, exclude_columns = response_col,
-  tolerable_performance_reduction = 0.2,
+pipe_range_classifier(train, response, exclude_columns = response,
   base_temporary_column_name = "base_temporary_column_name",
-  base_definitive_column_name = paste0(response_col, "_quantile"),
-  quantiles = 10, even_spreads, values, model = c("glm"), controls)
+  base_definitive_column_name = paste0(response, "_quantile"),
+  quantiles = 0, even_spreads = 0, values, model = c("glm"), controls)
 }
 \arguments{
 \item{train}{Data frame containing the train data.}
 
-\item{response_col}{String denoting the name of the column that should be used as the response_col variable.}
+\item{response}{String denoting the name of the column that should be used as the response variable.}
 
 \item{exclude_columns}{Columns that shouldn't be used in the models. Defaults to the response column and will ALWAYS include the response column.}
-
-\item{tolerable_performance_reduction}{If \code{test} contains the response column, we will test each model if it's good enough.
-We will calculate the AUC of each model on train and test sets and if the AUC on test is bigger than \code{1-tolerable_performance_reduction} times the model is deemed good enough.}
 
 \item{base_temporary_column_name}{Base name that will be used to create a temporary variable for training the classifier. Use this to ensure no existing columns are overwritten.}
 
@@ -26,11 +22,12 @@ We will calculate the AUC of each model on train and test sets and if the AUC on
 Use this to ensure no existing columns are overwritten.}
 
 \item{quantiles}{Number of quantiles to use to generate threshold values. Will actually generate \code{quantiles+2} quantiles and look at 2nd to \code{quantiles+1}-th
-quantiles to remove non-sensical thresholds. Non-negative integer, defaults to 10.}
+quantiles to remove non-sensical thresholds. Non-negative integer, defaults to 0.}
 
-\item{even_spreads}{Number of evenly spread thresholds to use. These will be based on the minimum and maximum value of the response_col in \code{train}. Defines its thresholds simarly to \code{quantiles}}
+\item{even_spreads}{Number of evenly spread thresholds to use. These will be based on the minimum and maximum value of the response in \code{train}. Defines its thresholds simarly to \code{quantiles}
+Non-negative integer, defaults to 0.}
 
-\item{values}{Threshold values to use. We will check if these fall in the range of the response_col in \code{train}.}
+\item{values}{Threshold values to use. We will check if these fall in the range of the response in \code{train}.}
 
 \item{model}{Type of model to use. Currently only binomial glm is available.}
 
