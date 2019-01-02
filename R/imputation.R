@@ -15,6 +15,7 @@
 #' @param type The type of algorithm to use for imputation. Options: mean, lm, and xgboost. Mean will calculate the mean for numeric sets and the mode for non-numerics.
 #'
 #' @return The model built based on \code{type} If train_fraction is below 1, will also return the prediction results on the train and test set.
+#' @importFrom stats lm
 impute_model <- function(data, column, NA_value = is.na, exclude_columns, train_fraction = .9, controls = NA, type = "xgboost"){
     if(is.function(NA_value)) missing <- NA_value(data[column])
     else stop('NA_value must be a function')
