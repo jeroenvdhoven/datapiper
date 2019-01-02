@@ -488,3 +488,62 @@ feature_categorical_filter_predict <- function(data, categorical_columns, mappin
     return(data)
 }
 
+#' Apply PCA to a subset of the columns in a dataset
+#'
+#' @param train Data frame containing the train data.
+#' @param columns Columns to use in the PCA transformation.
+#' @param pca_tol The \code{tol} of \code{\link[stats]{prcomp}}
+#' @param keep_old_columns Flag indicating if columns used to perform the PCA transformation should be kept.
+#'
+#' @return A list containing the transformed train dataset and a trained pipe.
+#' @export
+pipe_pca <- function(train, columns, pca_tol, keep_old_columns = F) {
+    stopifnot(
+        is.data.frame(train),
+        is.character(columns),
+        length(columns) > 0,
+        !any(!columns %in% colnames(train)),
+        is.numeric(pca_tol),
+        pca_tol >= 0, pca_tol <= 1
+    )
+
+    pca_set <- train[, columns]
+    numeric_cols <- purrr::map_lgl(pca_set, ~ is.numeric(.) || is.logical(.))
+    if(any(!numeric_cols)) stop("Some selected columns aren't numeric or logical")
+
+    na_rows <- apply(pca_set, 1, anyNA)
+    if(any(na_rows)) {
+        pca_set <- pca_set[!na_rows, ]
+        if(nrow(pca_set) == 0) stop("No rows were left after checking for NA's")
+
+        warning("Removed ", round(mean(na_rows) * 100, digits = 2), "% of rows due to missing values")
+    }
+
+    pca <- prcomp(x = pca_set, center = T, scale. = T, tol = pca_tol, retx = F)
+
+    predict_pipe <- pipe(.function = pca_predict, pca = pca, columns = columns, keep_old_columns = keep_old_columns)
+    train <- invoke(predict_pipe, train)
+
+    return(list(train = train, pipe = predict_pipe))
+}
+
+pca_predict <- function(data, pca, columns, keep_old_columns) {
+    stopifnot(
+        is.data.frame(data),
+        is.character(columns),
+        length(columns) > 0,
+        !any(!columns %in% colnames(data)),
+        "prcomp" %in% class(pca)
+    )
+
+    subset <- data[, columns]
+    if(anyNA(subset)) {
+        warning("Encountered missing values in data to be used for PCA transformation")
+    }
+
+    subset_pca <- predict(pca, subset)
+    if(!keep_old_columns) data <- dplyr::select_(data, .dots = paste0("-", columns))
+    data <- cbind(data, subset_pca)
+
+    return(data)
+}

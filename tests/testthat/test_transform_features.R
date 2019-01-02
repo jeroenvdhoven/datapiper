@@ -322,3 +322,69 @@ testthat::describe("pipe_categorical_filter()", {
     })
 })
 
+describe("pipe_pca()", {
+    default_pca_columns <- c("x", "a", "b", "c")
+    r <- ctest_for_no_errors(pipe_pca(train = dataset1, columns = default_pca_columns, pca_tol = .05),
+                             error_message = "pipe_pca does not run on basic settings")
+
+    it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
+        ctest_pipe_has_correct_fields(r)
+    })
+
+    it("create PCA transformations of the requested columns", {
+        expect_false(any(colnames(r$train) %in% default_pca_columns))
+
+        pca_set <- as_data_frame(predict(r$pipe$args$pca, dataset1))
+        predicted_set <- r$train[, grepl(pattern = "^PC", x = colnames(r$train))]
+
+        expect_equal(pca_set, predicted_set)
+    })
+
+    it("can apply its results to a new dataset using pipe, a wrapper for pipe_pca_predict()", {
+        ctest_pipe_has_working_predict_function(r, dataset1)
+    })
+
+    it("gives a warning when training on missing data", {
+        pca_columns_with_missing_values <- c("x", "a", "b", "c", "m2")
+        expect_warning(pipe_pca(train = dataset1, columns = pca_columns_with_missing_values, pca_tol = .05),
+                       regexp = c("Removed \\d+\\.\\d+\\% of rows due to missing values"))
+    })
+
+    it("gives a warning when predicting on missing data", {
+        pca_columns_with_missing_values <- c("x", "a", "b", "c", "m2")
+        r_with_missing <- suppressWarnings(pipe_pca(train = dataset1, columns = pca_columns_with_missing_values, pca_tol = .05))
+
+        expect_warning(invoke(r_with_missing$pipe, dataset1), regexp = c("Encountered missing values in data to be used for PCA transformation"))
+    })
+
+    it("handles missing values", {
+        pca_columns_with_missing_values <- c("x", "a", "b", "c", "m2")
+        r_with_missing <- suppressWarnings(pipe_pca(train = dataset1, columns = pca_columns_with_missing_values, pca_tol = .05))
+
+        missing_originaly <- apply(dataset1[, pca_columns_with_missing_values], 1 , anyNA)
+        pca_set <- r_with_missing$train[grepl(pattern = "PC", x = colnames(r_with_missing$train))]
+
+        expect_equal(nrow(pca_set), length(missing_originaly))
+        expect_false(any(!is.na(pca_set[missing_originaly, ])))
+        expect_false(any(is.na(pca_set[!missing_originaly, ])))
+    })
+
+
+    it("stops if no data is left to train on after removing missing values", {
+        pca_columns_with_missing_values <- c("x", "a", "b", "c", "m2")
+        no_good_rows <- filter(dataset1, is.na(m2))
+
+        expect_error(pipe_pca(train = no_good_rows, columns = pca_columns_with_missing_values, pca_tol = .05),
+                       regexp = "No rows were left after checking for NA's", fixed = T)
+    })
+
+    it("allows you to set a flag to keep the old columns", {
+        r_with_old <- pipe_pca(train = dataset1, columns = default_pca_columns, pca_tol = .05, keep_old_columns = T)
+        expect_false(any(!default_pca_columns %in% colnames(r_with_old$train)))
+
+        pca_set <- as_data_frame(predict(r_with_old$pipe$args$pca, dataset1))
+        predicted_set <- r_with_old$train[, grepl(pattern = "^PC", x = colnames(r_with_old$train))]
+
+        expect_equal(pca_set, predicted_set)
+    })
+})
