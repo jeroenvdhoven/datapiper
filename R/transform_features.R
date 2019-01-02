@@ -36,7 +36,7 @@ pipe_feature_transformer <- function(train, response, transform_columns, missing
     lower_thresholds <- numeric(0)
     upper_thresholds <- numeric(0)
     for(col in transform_columns){
-        res <- feature_transform_col(train, response, transform_functions, col, missing_func, comparison_method = "cor")
+        res <- feature_transform_col(train, response, transform_functions, col, missing_func)
         best_function <- res$best_function
 
         if(retransform_requested && (col %in% retransform_columns)) {
@@ -77,7 +77,7 @@ pipe_feature_transformer <- function(train, response, transform_columns, missing
     return(result)
 }
 
-feature_transform_col <- function(train, response, transform_functions, transform_column, missing_func = is.na, comparison_method){
+feature_transform_col <- function(train, response, transform_functions, transform_column, missing_func = is.na){
     vec_train <- unlist(train[transform_column])
     missing_vector <- missing_func(vec_train)
     vec_train %<>% .[!missing_vector]
@@ -94,15 +94,8 @@ feature_transform_col <- function(train, response, transform_functions, transfor
     transform_functions %<>% .[!any_faulty]
 
     if(length(new_features) > 0){
-        if(comparison_method == "cor"){
-            correlations <- abs(purrr::map_dbl(new_features, . %>% .[1:nrow(train)] %>% .[!missing_vector] %>% cor(y = response, use = "na.or.complete")))
-            original_correlation <- cor(response, vec_train, use = "na.or.complete")
-        } else if (comparison_method == "lm") {
-            test_dfs <- purrr::map(new_features, . %>% .[1:nrow(train)] %>% .[!missing_vector] %>% data_frame(x = ., y = response))
-            correlations <- purrr::map_dbl(test_dfs, function(x) summary(lm(formula = y ~ x, data = x))$adj.r.squared)
-            original_correlation <- cor(response, vec_train, use = "na.or.complete")
-        }
-
+        correlations <- abs(purrr::map_dbl(new_features, . %>% .[1:nrow(train)] %>% .[!missing_vector] %>% cor(y = response, use = "na.or.complete")))
+        original_correlation <- cor(response, vec_train, use = "na.or.complete")
         if(max(correlations) > original_correlation){
             best_function <- transform_functions[correlations == max(correlations)][[1]]
             train[transform_column] %<>% best_function %>% unlist %>% as.vector
