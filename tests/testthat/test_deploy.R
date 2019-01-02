@@ -40,22 +40,26 @@ generate_model_function <- function(extra_pipe){
 
 describe("build_model_package()", {
     it("allows you to include extra functions", {
-        x <- sqrt
+        # Assigment to global environment like this is unfortunately needed since running the tests automatically causes an error otherwise.
+        sqrt_global_name <- "sqrt_substitute_function"
+        .GlobalEnv[[sqrt_global_name]] <- sqrt
+        sqrt_substitute_function <- get(sqrt_global_name)
+
         test_df <- data.frame(10)
-        transformed_df <- x(test_df)
+        transformed_df <- sqrt_substitute_function(test_df)
         library_name <- "test.package"
         tar_file_name <- "test.tar.gz"
         p <- pipeline(
             pipe(.function = function(data) {
-                x(data)
+                sqrt_substitute_function(data)
             })
         )
 
-        build_model_package(extra_functions = "x", trained_pipeline = p, package_name = library_name,
+        build_model_package(extra_functions = sqrt_global_name, trained_pipeline = p, package_name = library_name,
                             libraries = character(0), tar_file = tar_file_name)
         install.packages(tar_file_name, repos = NULL)
-        rm(x)
-        r <- ctest_for_no_errors(test.package::predict_model(test_df), error_message = "Error: x was not exported")
+        rm(sqrt_substitute_function)
+        r <- ctest_for_no_errors(test.package::predict_model(test_df), error_message = "Error: sqrt_substitute_function was not exported")
         expect_equal(r, transformed_df)
 
         remove.packages(pkgs = library_name)
@@ -144,7 +148,7 @@ describe("build_docker()", {
         tryCatch({
             curl::nslookup("www.r-project.org")
             connectivity <- T
-        }, error = function(e) warning(e))
+        }, error = function(e) return())
 
         if(connectivity){
             r <- generate_model_function()
