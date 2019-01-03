@@ -4,7 +4,8 @@
 \alias{pipe_remove_single_value_columns}
 \title{Remove all columns that have only a single value}
 \usage{
-pipe_remove_single_value_columns(train, na_function = function(x) {     F })
+pipe_remove_single_value_columns(train, na_function = function(x) {     F
+  })
 }
 \arguments{
 \item{train}{train data frame to select columns from to remove.}

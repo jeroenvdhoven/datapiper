@@ -39,8 +39,8 @@ delete_image <- function(image_name) {
 #' @param libraries A list of library names required by the package. Defaults to all loaded non-base packages
 #' @param tar_file The name and path of the final tarred package
 #' @param extra_functions A character vector of function names to be included in the package.
-#' @param prediction_precision Number of digits to be returned by the prediction
 #' @param may_overwrite_tar_file Flag indicating if, when \code{tar_file} exists, this function is allowed to override it.
+#' @param verbose Flag indicating if devtools functions should print anything.
 #'
 #' @details A tip for finding out which libraries you need: start with just datapiper, build the package and check the output of building the package.
 #' It will display which functions you use that aren't included yet.
@@ -50,11 +50,12 @@ delete_image <- function(image_name) {
 #' @export
 build_model_package <- function(trained_pipeline, package_name = "deploymodel", libraries = names(utils::sessionInfo()$otherPkgs),
                                 tar_file = "deploy.tar.gz", extra_functions = character(0),
-                                prediction_precision = 8, may_overwrite_tar_file = F) {
+                                may_overwrite_tar_file = F, verbose = F) {
     stopifnot(
         !missing(trained_pipeline),
         is.character(libraries),
-        is.character(extra_functions)
+        is.character(extra_functions),
+        is.logical(verbose)
     )
     is_valid_package_name <- grepl(pattern = "^[a-zA-Z0-9\\.]+$", libraries)
 
@@ -63,8 +64,7 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
     stopifnot(
         is.logical(may_overwrite_tar_file),
         may_overwrite_tar_file || !file.exists(tar_file),
-        is.pipe(trained_pipeline) || is.pipeline(trained_pipeline),
-        is.numeric(prediction_precision), prediction_precision >= 0
+        is.pipe(trained_pipeline) || is.pipeline(trained_pipeline)
     )
 
     if(is.pipeline(trained_pipeline)) trained_pipeline <- flatten_pipeline(trained_pipeline)
@@ -81,14 +81,31 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
         tmpdir <- tempdir()
         package_path <- paste0(tmpdir, "/", package_name)
         if(dir.exists(package_path)) unlink(package_path, recursive = T)
-        devtools::create(path = package_path)
+
+        # Taken from devtools, adapted for our needs
+        parent_dir <- normalizePath(dirname(package_path), winslash = "/",
+                                    mustWork = TRUE)
+        if(verbose) message("Creating package '", extract_package_name(package_path),
+                            "' in '", parent_dir, "'")
+
+        dir.create(package_path, showWarnings = F)
+        dir.create(file.path(package_path, "R"), showWarnings = FALSE)
+        dir.create(file.path(package_path, "data"), showWarnings = FALSE)
+        dir.create(file.path(package_path, "src"), showWarnings = FALSE)
+
+        devtools::create_description(package_path, extra = list(
+            "Imports" = libraries,
+            "Version" = "1.0.0",
+            "Date" = Sys.Date(),
+            "Description" = "Data pipeline deployed automatically with datapiper"
+        ), quiet = !verbose)
+        # End of devtools adaptation
+
         setwd(package_path)
 
         # Always add jsonlite since we need it for exporting / importing data
         if(!"jsonlite" %in% libraries) libraries <- c(libraries, "jsonlite")
-        if(!package_name %in% libraries) libraries <- c(libraries, package_name)
 
-        dir.create("data")
         save(trained_pipeline, file = "data/model.rda")
         save(libraries, file = "data/libraries.rda")
         if(length(extra_functions) > 0)
@@ -98,7 +115,7 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
         save(invoke.pipe, file = "data/invoke.pipe.rda")
         save(invoke.pipeline, file = "data/invoke.pipeline.rda")
 
-        target_script_file <- file(description = "file://R/deploy_model.R", open = "w")
+        target_script_file <- file(description = "file://R/predictions.R", open = "w")
         script <- paste0(
             '
 # Auto generated script: please do not edit.
@@ -116,8 +133,9 @@ utils::data(model, package = pkg, envir = parent.env(environment()))
 #\'
 #\' @param input Either a dataframe or a JSON string.
 #\'
-#\' @return Predictions
+#\' @return Predictions from the pipeline
 #\' @export
+#\' @import ', paste0(libraries, collapse = " "), '
 predict_model <- function(input){
     for(lib in libraries) {
         library(lib, character.only = T)
@@ -129,11 +147,6 @@ predict_model <- function(input){
         input_df <- jsonlite::fromJSON(txt = input, flatten = T)
     }
     predictions <- invoke(trained_pipeline, input_df)
-
-    # res <- jsonlite::toJSON(x = predictions, dataframe = "rows",
-    #                         Date = "ISO8601", POSIXt = "ISO8601", factor = "string", complex = "list", raw = "base64",
-    #                         null = "null", na = "null", digits = ', prediction_precision, ', pretty = F)
-    # return(res)
     return(predictions)
 }
 #-------------------#
@@ -144,7 +157,7 @@ predict_model <- function(input){
         close(target_script_file)
 
         devtools::document()
-        build_package <- devtools::build()
+        build_package <- devtools::build(quiet = !verbose)
 
         result_file <- paste0(current_ws, "/", tar_file)
         if(file.exists(result_file)) file.remove(result_file)

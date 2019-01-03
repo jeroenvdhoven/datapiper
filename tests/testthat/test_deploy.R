@@ -39,6 +39,10 @@ generate_model_function <- function(extra_pipe){
 }
 
 describe("build_model_package()", {
+    tar_file_name <- "tmp_test_package.tar.gz"
+    library_name <- "test.package"
+    libs <- c("dplyr", "magrittr")
+
     it("allows you to include extra functions", {
         # Assigment to global environment like this is unfortunately needed since running the tests automatically causes an error otherwise.
         sqrt_global_name <- "sqrt_substitute_function"
@@ -47,17 +51,23 @@ describe("build_model_package()", {
 
         test_df <- data.frame(10)
         transformed_df <- sqrt_substitute_function(test_df)
-        library_name <- "test.package"
-        tar_file_name <- "test.tar.gz"
         p <- pipeline(
             pipe(.function = function(data) {
                 sqrt_substitute_function(data)
             })
         )
 
-        build_model_package(extra_functions = sqrt_global_name, trained_pipeline = p, package_name = library_name,
-                            libraries = character(0), tar_file = tar_file_name)
-        install.packages(tar_file_name, repos = NULL)
+        result <- build_model_package(trained_pipeline = p,
+                                       package_name = library_name,
+                                       libraries = character(0),
+                                       tar_file = tar_file_name,
+                                       may_overwrite_tar_file = T,
+                                       extra_functions = sqrt_global_name,
+                                       verbose = F)
+        expect_true(object = result, info = "Build function returned a success")
+        expect_true(file.exists(tar_file_name))
+
+        install.packages(tar_file_name, repos = NULL, verbose = F, quiet = T)
         rm(sqrt_substitute_function)
         r <- ctest_for_no_errors(test.package::predict_model(test_df), error_message = "Error: sqrt_substitute_function was not exported")
         expect_equal(r, transformed_df)
@@ -71,19 +81,17 @@ describe("build_model_package()", {
         train <- r$train
         test <- r$test
         full_pipe <- r$full_pipe
-        tar_file_name <- "tmp_test_package.tar.gz"
-        library_name <- "test.package"
-        libs <- c("dplyr", "magrittr", "data.table")
 
-        result <- datapiper::build_model_package(trained_pipeline = full_pipe,
+        result <- build_model_package(trained_pipeline = full_pipe,
                                                  package_name = library_name,
                                                  libraries = libs,
                                                  tar_file = tar_file_name,
-                                                 may_overwrite_tar_file = T)
+                                                 may_overwrite_tar_file = T,
+                                                 verbose = F)
         expect_true(object = result, info = "Build function returned a success")
         expect_true(file.exists(tar_file_name))
 
-        install.packages(tar_file_name, repos = NULL, type = "source")
+        install.packages(tar_file_name, repos = NULL, verbose = F, quiet = T)
 
         lib_predictions <- get_library_predictions(library_name = library_name, test = test)
         lib_df_predictions <- predict_model(test)
@@ -92,6 +100,26 @@ describe("build_model_package()", {
         expect_equal(lib_predictions$one_lm_1, function_predictions$one_lm_1)
         expect_equal(lib_df_predictions$one_lm_1, function_predictions$one_lm_1)
         remove.packages(pkgs = library_name)
+
+        it("also adds dependencies to NAMESPACE and DESCRIPTION exports", {
+            extract_dir <- paste(Sys.time(), "tmp file for testing datapiper")
+            if(file.exists(extract_dir)) stop("Error: expected output directory already exists for testing NAMESPACE and DESCRIPTION files")
+            untar(tarfile = tar_file_name, exdir = extract_dir)
+
+            namespace_file <- paste0(extract_dir, "/", library_name, "/NAMESPACE")
+            description_file <- paste0(extract_dir, "/", library_name, "/DESCRIPTION")
+
+            expect_true(file.exists(namespace_file))
+            namespace_contents <- scan(file = namespace_file, what = "character", sep = "\n", quiet = T)
+            for(lib in libs) expect_true(any(grepl(pattern = lib, x = namespace_contents)), info = paste(lib, "not found in namespace file"))
+
+            expect_true(file.exists(description_file))
+            description_contents <- scan(file = description_file, what = "character", sep = "\n", quiet = T)
+            for(lib in libs) expect_true(any(grepl(pattern = lib, x = description_contents)), info = paste(lib, "not found in description file"))
+
+            unlink(x = extract_dir, recursive = T)
+        })
+
         expect_true(file.remove(tar_file_name))
     })
 
@@ -115,19 +143,15 @@ describe("build_model_package()", {
         full_pipe <- r$full_pipe
         rm(custom_pipe, custom_pipe_predict)
 
-        tar_file_name <- "tmp_test_package.tar.gz"
-        library_name <- "test.package"
-        libs <- c("dplyr", "magrittr", "data.table")
-
         result <- datapiper::build_model_package(trained_pipeline = full_pipe,
                                                  package_name = library_name,
                                                  libraries = libs,
                                                  tar_file = tar_file_name,
-                                                 may_overwrite_tar_file = T)
+                                                 may_overwrite_tar_file = T, verbose = F)
         expect_true(object = result, info = "Build function returned a success")
         expect_true(file.exists(tar_file_name))
 
-        install.packages(tar_file_name, repos = NULL, type = "source")
+        install.packages(tar_file_name, repos = NULL, verbose = F, quiet = T)
 
         lib_predictions <- get_library_predictions(library_name = library_name, test = test)
         lib_df_predictions <- predict_model(test)
@@ -164,8 +188,8 @@ describe("build_docker()", {
             package_result <- datapiper::build_model_package(trained_pipeline = full_pipe,
                                                              package_name = library_name,
                                                              libraries = libs,
-                                                             tar_file = tar_file_name, prediction_precision = 12,
-                                                             may_overwrite_tar_file = T)
+                                                             tar_file = tar_file_name,
+                                                             may_overwrite_tar_file = T, verbose = F)
             expect_true(object = package_result, info = "Build function returned a success")
 
             tryCatch({
@@ -176,7 +200,7 @@ describe("build_docker()", {
                 docker_prediction <- test_docker(data = test, image_name = image_name, process_name = process_name,
                                                  package_name = library_name, batch_size = 1e3, ping_time = 5, verbose = T)
 
-                install.packages(tar_file_name, repos = NULL, type = "source")
+                install.packages(tar_file_name, repos = NULL, verbose = F, quiet = T)
                 lib_prediction <- get_library_predictions(library_name = library_name, test = test)
                 pipe_prediction <- invoke(full_pipe, test)
 

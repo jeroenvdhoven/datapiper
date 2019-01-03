@@ -6,8 +6,8 @@
 \usage{
 pipe_categorical_filter(train, response,
   insufficient_occurance_marker = "insignificant_category",
-  categorical_columns = colnames(train)[purrr::map_lgl(train, is.character)],
-  threshold_function = function(data) 30)
+  categorical_columns = colnames(train)[purrr::map_lgl(train,
+  is.character)], threshold_function = function(data) 30)
 }
 \arguments{
 \item{train}{Data frame containing the train data.}

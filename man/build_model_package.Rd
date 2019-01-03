@@ -7,7 +7,7 @@
 build_model_package(trained_pipeline, package_name = "deploymodel",
   libraries = names(utils::sessionInfo()$otherPkgs),
   tar_file = "deploy.tar.gz", extra_functions = character(0),
-  prediction_precision = 8, may_overwrite_tar_file = F)
+  may_overwrite_tar_file = F, verbose = F)
 }
 \arguments{
 \item{trained_pipeline}{The model function from \code{find_best_models}}
@@ -20,9 +20,9 @@ build_model_package(trained_pipeline, package_name = "deploymodel",
 
 \item{extra_functions}{A character vector of function names to be included in the package.}
 
-\item{prediction_precision}{Number of digits to be returned by the prediction}
-
 \item{may_overwrite_tar_file}{Flag indicating if, when \code{tar_file} exists, this function is allowed to override it.}
+
+\item{verbose}{Flag indicating if devtools functions should print anything.}
 }
 \value{
 A logical: TRUE for success and FALSE for failure

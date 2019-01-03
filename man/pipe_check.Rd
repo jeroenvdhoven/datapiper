@@ -5,8 +5,8 @@
 \title{Create a pipeline step that learns what the data looks like}
 \usage{
 pipe_check(train, response, on_missing_column = c("error", "add")[1],
-  on_extra_column = c("remove", "error")[1], on_type_error = c("ignore",
-  "error")[1])
+  on_extra_column = c("remove", "error")[1],
+  on_type_error = c("ignore", "error")[1])
 }
 \arguments{
 \item{train}{Data frame containing the train data.}

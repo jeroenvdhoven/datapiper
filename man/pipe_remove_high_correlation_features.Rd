@@ -4,8 +4,8 @@
 \alias{pipe_remove_high_correlation_features}
 \title{Removes highly correlated features whilst keeping as many as possible, using heuristics.}
 \usage{
-pipe_remove_high_correlation_features(train, exclude_columns = character(0),
-  threshold = 0.8)
+pipe_remove_high_correlation_features(train,
+  exclude_columns = character(0), threshold = 0.8)
 }
 \arguments{
 \item{train}{Data frame containing the train data.}

@@ -5,8 +5,8 @@
 \title{Applies different transformations to each numeric feature and selects the one with the highest correlation to the response per feature}
 \usage{
 pipe_feature_transformer(train, response, transform_columns,
-  missing_func = is.na, transform_functions = list(sqrt, log, function(x)
-  x^2), retransform_columns)
+  missing_func = is.na, transform_functions = list(sqrt, log,
+  function(x) x^2), retransform_columns)
 }
 \arguments{
 \item{train}{Data frame containing the train data.}

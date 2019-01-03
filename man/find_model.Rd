@@ -4,12 +4,14 @@
 \alias{find_model}
 \title{Find fitting models and test them using given metrics on the test dataset}
 \usage{
-find_model(train, test, response, models, metrics, parameter_sample_rate = 1,
-  seed = 1, prepend_data_checker = T, on_missing_column = c("error",
-  "add")[1], on_extra_column = c("remove", "error")[1],
-  on_type_error = c("ignore", "error")[1], verbose = T, save_model = F,
-  preprocess_pipes = list(function(train, test) return(list(train = train,
-  test = train, .predict = function(data) return(data)))))
+find_model(train, test, response, models, metrics,
+  parameter_sample_rate = 1, seed = 1, prepend_data_checker = T,
+  on_missing_column = c("error", "add")[1],
+  on_extra_column = c("remove", "error")[1],
+  on_type_error = c("ignore", "error")[1], verbose = T,
+  save_model = F, preprocess_pipes = list(function(train, test)
+  return(list(train = train, test = train, .predict = function(data)
+  return(data)))))
 }
 \arguments{
 \item{train}{The training dataset}

@@ -4,8 +4,8 @@
 \alias{pipe_scaler}
 \title{Rescales data to standardised ranges}
 \usage{
-pipe_scaler(train, exclude_columns = character(length = 0), type = "[0-1]",
-  retransform_columns)
+pipe_scaler(train, exclude_columns = character(length = 0),
+  type = "[0-1]", retransform_columns)
 }
 \arguments{
 \item{train}{Data frame containing the train data.}

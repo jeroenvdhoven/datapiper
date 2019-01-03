@@ -4,8 +4,8 @@
 \alias{feature_transformer_post_predict}
 \title{Uses the results of \code{\link{pipe_feature_transformer}} on new datasets}
 \usage{
-feature_transformer_post_predict(data, retransform_columns, lower_thresholds,
-  upper_thresholds, retransform_functions)
+feature_transformer_post_predict(data, retransform_columns,
+  lower_thresholds, upper_thresholds, retransform_functions)
 }
 \arguments{
 \item{data}{A new dataset}

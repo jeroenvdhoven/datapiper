@@ -4,9 +4,10 @@
 \alias{pipe_one_hot_encode}
 \title{Train one-hot encoding}
 \usage{
-pipe_one_hot_encode(train, columns = colnames(train)[purrr::map_lgl(train,
-  function(x) return(!(is.numeric(x) || is.logical(x))))], stat_functions,
-  response, use_pca = FALSE, pca_tol = 0.1)
+pipe_one_hot_encode(train,
+  columns = colnames(train)[purrr::map_lgl(train, function(x)
+  return(!(is.numeric(x) || is.logical(x))))], stat_functions, response,
+  use_pca = FALSE, pca_tol = 0.1)
 }
 \arguments{
 \item{train}{Dataframe to determine one-hot-encoding.}

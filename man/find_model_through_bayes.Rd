@@ -5,13 +5,14 @@
 \title{Hyper parameter search using bayesian optimisation}
 \usage{
 find_model_through_bayes(train, test, response,
-  preprocess_pipes = list(function(train, test) return(list(train = train,
-  test = train, .predict = function(data) return(data)))), models, metrics,
-  target_metric, higher_is_better, N_init = 20, N_experiment = 40,
-  sigma_noise = 1e-08, prepend_data_checker = T,
-  on_missing_column = c("error", "add")[1], on_extra_column = c("remove",
-  "error")[1], on_type_error = c("ignore", "error")[1], seed = 1,
-  verbose = T, save_model = F)
+  preprocess_pipes = list(function(train, test) return(list(train =
+  train, test = train, .predict = function(data) return(data)))), models,
+  metrics, target_metric, higher_is_better, N_init = 20,
+  N_experiment = 40, sigma_noise = 1e-08, prepend_data_checker = T,
+  on_missing_column = c("error", "add")[1],
+  on_extra_column = c("remove", "error")[1],
+  on_type_error = c("ignore", "error")[1], seed = 1, verbose = T,
+  save_model = F)
 }
 \arguments{
 \item{train}{The training dataset}
