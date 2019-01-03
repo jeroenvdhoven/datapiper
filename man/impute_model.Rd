@@ -5,7 +5,7 @@
 \title{Generate a model to impute missing data in a column}
 \usage{
 impute_model(data, column, NA_value = is.na, exclude_columns,
-  train_fraction = 0.9, controls = NA, type = "xgboost")
+  controls = NA, type = "xgboost")
 }
 \arguments{
 \item{data}{The dataset, as a data.frame.}
@@ -16,8 +16,6 @@ impute_model(data, column, NA_value = is.na, exclude_columns,
 
 \item{exclude_columns}{Columns that shouldn't be included in the imputation.}
 
-\item{train_fraction}{The fraction of training data that should be used for imputation vs verification. The fraction will be taken from the data that doesn't have missing values. The remaining data will be used as a test set}
-
 \item{controls}{Either:
 \itemize{
 \item NA for defaults
@@ -27,7 +25,7 @@ impute_model(data, column, NA_value = is.na, exclude_columns,
 \item{type}{The type of algorithm to use for imputation. Options: mean, lm, and xgboost. Mean will calculate the mean for numeric sets and the mode for non-numerics.}
 }
 \value{
-The model built based on \code{type} If train_fraction is below 1, will also return the prediction results on the train and test set.
+The model built based on \code{type}.
 }
 \description{
 We don't recommend to impute categorical variables with many levels.
