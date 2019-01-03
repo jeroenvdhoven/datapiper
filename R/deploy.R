@@ -46,7 +46,8 @@ delete_image <- function(image_name) {
 #' It will display which functions you use that aren't included yet.
 #'
 #' @return A logical: TRUE for success and FALSE for failure
-#' @importFrom devtools document build create
+#' @importFrom usethis create_package
+#' @importFrom devtools document build
 #' @export
 build_model_package <- function(trained_pipeline, package_name = "deploymodel", libraries = names(utils::sessionInfo()$otherPkgs),
                                 tar_file = "deploy.tar.gz", extra_functions = character(0),

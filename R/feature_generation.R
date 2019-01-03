@@ -16,7 +16,7 @@ pipe_NA_indicators <- function(train, conditions = list(is.na), columns = colnam
     data <- train
     train_pos <- seq_len(nrow(train))
 
-    if(is.logical(columns)) columns %<>% "*"(1L:ncol(data)) %>% .[. != 0]
+    if(is.logical(columns)) columns <- (columns * (1L:ncol(data))) %>% .[. != 0]
     else if(is.character(columns)) columns %<>% match(colnames(data)) %>% .[!is.na(.)]
     else stopifnot(is.integer(columns), length(conditions) > 0)
 
@@ -58,7 +58,7 @@ pipe_NA_indicators <- function(train, conditions = list(is.na), columns = colnam
 #' @import magrittr
 #' @importFrom purrr map
 NA_indicators_predict <- function(data, conditions, columns){
-    if(is.logical(columns)) columns %<>% "*"(1L:ncol(data)) %>% .[. != 0]
+    if(is.logical(columns)) columns <- (columns * (1L:ncol(data))) %>% .[. != 0]
     else if(is.character(columns)) columns %<>% match(colnames(data)) %>% .[!is.na(.)]
     else stopifnot(is.integer(columns), length(conditions) > 0)
 
