@@ -74,7 +74,7 @@ describe("pipe_range_classifier", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
-    it("can use xgboost models as well, which handle missing values", {
+    it("can use xgboost models as well, which handles missing values", {
         r_all_xgb <- pipe_range_classifier(dataset1, response = col, even_spreads = n_even, quantiles = n_quantile, values = def_values,
                                              exclude_columns = c("z", "z2", "y", "s"), model = "xgboost")
         ctest_pipe_has_working_predict_function(r_all_xgb, dataset1)

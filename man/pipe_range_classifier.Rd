@@ -7,7 +7,8 @@
 pipe_range_classifier(train, response, exclude_columns = response,
   base_temporary_column_name = "base_temporary_column_name",
   base_definitive_column_name = paste0(response, "_quantile"),
-  quantiles = 0, even_spreads = 0, values, model = c("glm"), controls)
+  quantiles = 0, even_spreads = 0, values, model = c("glm",
+  "xgboost")[1], controls)
 }
 \arguments{
 \item{train}{Data frame containing the train data.}
@@ -29,11 +30,12 @@ Non-negative integer, defaults to 0.}
 
 \item{values}{Threshold values to use. We will check if these fall in the range of the response in \code{train}.}
 
-\item{model}{Type of model to use. Currently only binomial glm is available.}
+\item{model}{Type of model to use. Currently only binomial glm and xgboost are available.}
 
 \item{controls}{Parameters for the models to use. Leave empty or set to NA to use defaults:
 \itemize{
 \item glm: \code{\link[stats]{glm.control}}
+\item xgboost: see \code{\link[xgboost]{xgb.train}}
 }}
 }
 \value{
