@@ -82,25 +82,13 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
         package_path <- paste0(tmpdir, "/", package_name)
         if(dir.exists(package_path)) unlink(package_path, recursive = T)
 
-        # Taken from devtools, adapted for our needs
-        parent_dir <- normalizePath(dirname(package_path), winslash = "/",
-                                    mustWork = TRUE)
-        if(verbose) message("Creating package '", extract_package_name(package_path),
-                            "' in '", parent_dir, "'")
-
-        dir.create(package_path, showWarnings = F)
-        dir.create(file.path(package_path, "R"), showWarnings = FALSE)
-        dir.create(file.path(package_path, "data"), showWarnings = FALSE)
-        dir.create(file.path(package_path, "src"), showWarnings = FALSE)
-
-        devtools::create_description(package_path, extra = list(
+        usethis::create_package(path = package_path, rstudio = F, fields = list(
             "Imports" = libraries,
             "Version" = "1.0.0",
             "Date" = Sys.Date(),
             "Description" = "Data pipeline deployed automatically with datapiper"
-        ), quiet = !verbose)
-        # End of devtools adaptation
-
+        ), open = F)
+        dir.create(file.path(package_path, "data"), showWarnings = FALSE)
         setwd(package_path)
 
         # Always add jsonlite since we need it for exporting / importing data

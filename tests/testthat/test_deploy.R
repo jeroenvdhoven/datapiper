@@ -82,12 +82,14 @@ describe("build_model_package()", {
         test <- r$test
         full_pipe <- r$full_pipe
 
+        ws_before_package <- getwd()
         result <- build_model_package(trained_pipeline = full_pipe,
                                                  package_name = library_name,
                                                  libraries = libs,
                                                  tar_file = tar_file_name,
                                                  may_overwrite_tar_file = T,
                                                  verbose = F)
+        expect_equal(ws_before_package, getwd(), info = "Workspace should not have changed")
         expect_true(object = result, info = "Build function returned a success")
         expect_true(file.exists(tar_file_name))
 
@@ -183,7 +185,7 @@ describe("build_docker()", {
             library_name <- "test.package"
             image_name <- "model.image"
             process_name <- "datapiper.test"
-            libs <- c("dplyr", "magrittr", "data.table")
+            libs <- c("dplyr", "magrittr")
 
             package_result <- datapiper::build_model_package(trained_pipeline = full_pipe,
                                                              package_name = library_name,
