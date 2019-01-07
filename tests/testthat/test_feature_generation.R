@@ -34,8 +34,8 @@ describe("pipe_NA_indicators", {
 
     it("can force columns to exist", {
         col_without_missing_values <- "b"
-        r_unforced <- datapiper::pipe_NA_indicators(train = dataset1, condition = na_func, columns = col_without_missing_values, force_column = F)
-        r_forced <- datapiper::pipe_NA_indicators(train = dataset1, condition = na_func, columns = col_without_missing_values, force_column = T)
+        r_unforced <- datapiper::pipe_NA_indicators(train = dataset1, condition = is.na, columns = col_without_missing_values, force_column = F)
+        r_forced <- datapiper::pipe_NA_indicators(train = dataset1, condition = is.na, columns = col_without_missing_values, force_column = T)
 
         expect_false("b_NA_indicator" %in% colnames(r_unforced$train))
         expect_true("b_NA_indicator" %in% colnames(r_forced$train))
@@ -127,6 +127,18 @@ describe("pipe_create_stats", {
         }
     })
 
+    it("can set different thresholds for what is considered a value that occurs too little", {
+        r_no_missing <- datapiper::pipe_create_stats(
+            train = dataset1, response = "x", interaction_level = 1, stat_cols = "m",
+            too_few_observations_cutoff = 0, functions = f_list)
+        expect_equal(object = nrow(r_no_missing$pipe$args$tables[[1]]), expected = length(unique(dataset1$m)))
+
+        r_all_missing <- datapiper::pipe_create_stats(
+            train = dataset1, response = "x", interaction_level = 1, stat_cols = "m",
+            too_few_observations_cutoff = nrow(dataset1), functions = f_list)
+        expect_equal(object = nrow(r_all_missing$pipe$args$tables[[1]]), expected = 0)
+    })
+
     it("can go up to interaction level 2", {
         affected_columns <- c("y", "s", "z")
 
@@ -168,11 +180,33 @@ describe("pipe_remove_single_value_columns", {
         ctest_dataset_does_not_have_columns(r$train, c("z"))
         ctest_dataset_has_columns(r$train, c("z2"))
     })
+
+    it("can set a custom na function", {
+        na_func <- function(x) x < 10 | is.na(x)
+        r <- datapiper::pipe_remove_single_value_columns(dataset1, na_function = na_func)
+
+        good_columns <- purrr::map_lgl(.x = dataset1, .f = ~ length(unique(.[!na_func(.)])) > 1L)
+        expect_equal(dataset1[, good_columns], r$train)
+    })
 })
 
 describe("pipe_feature_interactions", {
     r <- ctest_for_no_errors(datapiper::pipe_feature_interactions(dataset1, response = "x", columns = c("a", "b", "c"), max_interactions = 3),
                              error_message = "pipe_feature_interactions does not run with defaults")
+
+    ctest_interactions <- function(data, interactions, n) {
+        number_of_uniques <- purrr::map_int(.x = select(dataset1, -x), .f = ~ length(unique(.)))
+        number_of_uniques <- number_of_uniques[!purrr::map_lgl(.x = select(dataset1, -x), is.character)]
+
+        r <- datapiper::pipe_feature_interactions(dataset1, response = "x", max_interactions = interactions, columns = n)
+        n_generated_columns <- length(number_of_uniques[number_of_uniques > n])
+
+        number_of_interaction_features <- length(colnames(r$train)[grepl(pattern = "^interaction_", x = colnames(r$train))])
+        expected_number_of_interaction_features <- sum(choose(n = n_generated_columns, k = seq.int(from = 2, to = interactions)))
+
+        expect_equal(expected = expected_number_of_interaction_features, object = number_of_interaction_features,
+                     info = paste(interactions, "interactions and", n, "column level generates not the expected number of columns"))
+    }
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
@@ -192,6 +226,19 @@ describe("pipe_feature_interactions", {
     it("ignores non-numeric input", {
         r_no_numerics <- datapiper::pipe_feature_interactions(dataset1, response = "x", max_interactions = 2, columns = 2)
         expect_false(any(!purrr::map_lgl(dataset1[, r_no_numerics$pipe$args$columns], is.numeric)), info = "All used columns should be numeric")
+    })
+
+    it("can select columns based on the number of unique values", {
+        ctest_interactions(data = dataset1, interactions = 2, n = 5)
+        ctest_interactions(data = dataset1, interactions = 2, n = 2)
+        ctest_interactions(data = dataset1, interactions = 2, n = 20)
+    })
+
+    it("can increase the interaction level above 2", {
+        ctest_interactions(data = dataset1, interactions = 2, n = 5)
+        ctest_interactions(data = dataset1, interactions = 3, n = 5)
+        ctest_interactions(data = dataset1, interactions = 4, n = 5)
+        ctest_interactions(data = dataset1, interactions = 5, n = 5)
     })
 
     it("handles missing values", {

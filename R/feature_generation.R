@@ -233,11 +233,11 @@ create_stats_predict <- function(data, stat_cols, tables, interaction_level, def
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 pipe_remove_single_value_columns <- function(train, na_function = function(x){F}){
-    more_than_one_unique_value <- purrr::map_dbl(train, function(x) {
+    more_than_one_unique_value <- purrr::map_lgl(train, function(x) {
         res <- unique(x)
         res <- res[!na_function(res)]
-        return(length(res))
-    }) > 1L
+        return(length(res) > 1L)
+    })
     keep_cols <- names(more_than_one_unique_value[more_than_one_unique_value])
 
     train %<>% select_(.dots = keep_cols)
