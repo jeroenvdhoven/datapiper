@@ -13,7 +13,7 @@ pipe_feature_interactions(train, response, columns = 10L,
 \item{response}{The column containing the response variable.}
 
 \item{columns}{Columns to use for interaction effects. Can be a character vector referencing numeric columns, or an integer larger than 2 denoting
-the minimum number of unique values in any column except \code{response} for that column to be considered for interaction effect. This is intended to exclude
+the minimum number of unique values in any column except \code{response} for that column to be considered for interaction effects. This is intended to exclude
 ordinal columns using numeric representations.}
 
 \item{max_interactions}{The maximum number of columns that will be considered for interaction effects per variable. E.g. for the value 3, this function

@@ -100,7 +100,7 @@ pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(
 
         tables[[tables_index]] <- stats$table
         defaults[[tables_index]] <- stats$defaults
-        tables_index %<>% {.+1L}
+        tables_index <- tables_index + 1L
     }
     if(interaction_level > 1){
         for(i in 1:(L-1)) for(j in (i+1):L){
@@ -113,7 +113,7 @@ pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(
             train <- stats$train
 
             tables[[tables_index]] <- stats$table
-            tables_index %<>% {.+1L}
+            tables_index <- tables_index + 1L
         }
     }
 
@@ -157,7 +157,9 @@ create_stats <- function(train, statistics_col, response, functions, too_few_obs
 
     statistics_train <- train_target %>% as.data.table %>%
         .[, c(var_names) := purrr::map(.x = functions, .f = function(x) x(get(response, pos = .SD))), by = statistics_col] %>%
-        as.data.frame %>% select_(paste0("-", response)) %>% unique %>% right_join(train_count_table, by = statistics_col)
+        select_(paste0("-", response)) %>%
+        unique %>%
+        right_join(train_count_table, by = statistics_col)
     train %<>% dplyr::left_join(statistics_train, by = statistics_col)
 
     target <- unlist(train[response])
@@ -189,6 +191,7 @@ create_stats_predict <- function(data, stat_cols, tables, interaction_level, def
         is.data.frame(data),
         !any(!stat_cols %in% colnames(data)),
         interaction_level == 1 || interaction_level == 2,
+        # Ensure the number of tables is what we'd expect
         length(tables) == (L + (interaction_level == 2) * (L * (L-1)) / 2)
     )
 
@@ -230,15 +233,14 @@ create_stats_predict <- function(data, stat_cols, tables, interaction_level, def
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 pipe_remove_single_value_columns <- function(train, na_function = function(x){F}){
-    keep_cols <- purrr::map_dbl(train, function(x) {
+    more_than_one_unique_value <- purrr::map_dbl(train, function(x) {
         res <- unique(x)
         res <- res[!na_function(res)]
         return(length(res))
-    }) %>% magrittr::is_greater_than(1L) %>%
-        .[.] %>%
-        names
+    }) > 1L
+    keep_cols <- names(more_than_one_unique_value[more_than_one_unique_value])
 
-    train %<>% .[,keep_cols, drop = F]
+    train %<>% select_(.dots = keep_cols)
 
     predict_pipe <- pipe(.function = preserve_columns_predict, preserved_columns = keep_cols)
     return(list("train" = train, "pipe" = predict_pipe))
@@ -261,7 +263,7 @@ preserve_columns_predict <- function(data, preserved_columns) {
 #' @param train Data frame containing the train data.
 #' @param response The column containing the response variable.
 #' @param columns Columns to use for interaction effects. Can be a character vector referencing numeric columns, or an integer larger than 2 denoting
-#' the minimum number of unique values in any column except \code{response} for that column to be considered for interaction effect. This is intended to exclude
+#' the minimum number of unique values in any column except \code{response} for that column to be considered for interaction effects. This is intended to exclude
 #' ordinal columns using numeric representations.
 #' @param max_interactions The maximum number of columns that will be considered for interaction effects per variable. E.g. for the value 3, this function
 #' will generate ALL 2-way interactions between variables and ALL 3-way interactions between variables. Caution is advised to not set this value too high. Defaults to 2.
@@ -278,8 +280,8 @@ pipe_feature_interactions <- function(train, response, columns = 10L, max_intera
             number_of_uniques <- length(unique(x))
             return(number_of_uniques >= columns)
         })
-        columns <- colnames(train)[columns] %>%
-            .[. != response]
+        columns <- colnames(train)[columns]
+        columns <- columns[columns != response]
     }
     stopifnot(
         is.data.frame(train),
