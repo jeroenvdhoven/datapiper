@@ -4,12 +4,12 @@
 \alias{NA_indicators_predict}
 \title{Indicate which fields are NA}
 \usage{
-NA_indicators_predict(data, conditions, columns)
+NA_indicators_predict(data, condition, columns)
 }
 \arguments{
 \item{data}{The new dataset, as a data.frame.}
 
-\item{conditions}{Vector of functions / values. All functions / values will be tested against each column. If at least one function returns true or one value matches, the records is considered a missing value.}
+\item{condition}{Function to test if a value is missing. Should return true when a value is missing and false otherwise.}
 
 \item{columns}{The columns to check for missing values. Can be provided as logicals, integers, or characters}
 }

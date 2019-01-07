@@ -1,7 +1,7 @@
 context("Feature generation")
 describe("pipe_NA_indicators", {
     r <- ctest_for_no_errors(datapiper::pipe_NA_indicators(train = dataset1),
-                             "Can't apply pipe_NA_indicators")
+                             "Can't apply pipe_NA_indicators with default settings")
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
@@ -18,10 +18,30 @@ describe("pipe_NA_indicators", {
         ctest_pipe_has_working_predict_function(r, dataset1)
     })
 
-    it("can handle multiple NA functions", {
-        r_multi <- datapiper::pipe_NA_indicators(train = dataset1, conditions = list(is.na, function(x) x == 1))
+    it("can handle custom NA functions", {
+        na_func <- function(x) x == 1 | is.na(x)
+        columns <- c("x", "a", "c")
+
+        r_multi <- datapiper::pipe_NA_indicators(train = dataset1, condition = na_func, columns = columns)
         ctest_dataset_has_columns(dataset = r_multi$train, c("x_NA_indicator", "a_NA_indicator", "c_NA_indicator"))
+
+        for(col in columns) {
+            y_expected <- na_func(dataset1[, col])
+            expect_equal(expected = y_expected[,1], object = unlist(r_multi$train[, paste0(col, "_NA_indicator")], use.names = F),
+                         info = paste(col, "was not equal to its expected value after applying NA function"))
+        }
     })
+
+    it("can force columns to exist", {
+        col_without_missing_values <- "b"
+        r_unforced <- datapiper::pipe_NA_indicators(train = dataset1, condition = na_func, columns = col_without_missing_values, force_column = F)
+        r_forced <- datapiper::pipe_NA_indicators(train = dataset1, condition = na_func, columns = col_without_missing_values, force_column = T)
+
+        expect_false("b_NA_indicator" %in% colnames(r_unforced$train))
+        expect_true("b_NA_indicator" %in% colnames(r_forced$train))
+    })
+
+
 })
 
 

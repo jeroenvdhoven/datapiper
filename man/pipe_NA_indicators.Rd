@@ -4,15 +4,15 @@
 \alias{pipe_NA_indicators}
 \title{Indicate which fields are NA}
 \usage{
-pipe_NA_indicators(train, conditions = list(is.na),
-  columns = colnames(train), force_column = F)
+pipe_NA_indicators(train, condition = is.na, columns = colnames(train),
+  force_column = F)
 }
 \arguments{
 \item{train}{The train dataset, as a data.frame.}
 
-\item{conditions}{Vector of functions / values. All functions / values will be tested against each column. If at least one function returns true or one value matches, the records is considered a missing value.}
+\item{condition}{Function to test if a value is missing. Should return true when a value is missing and false otherwise.}
 
-\item{columns}{The columns to check for missing values. Can be provided as logicals, integers, or characters}
+\item{columns}{Names of the columns to check for missing values.}
 
 \item{force_column}{If true, always add new columns, even if no missing values were found.}
 }
@@ -21,4 +21,7 @@ A list containing the transformed train dataset and a trained pipe.
 }
 \description{
 Takes the dataset, scans the given columns for values that have been listed as indicating NA, and adds a column indicating if this is a NA
+}
+\details{
+Generated columns will be of type logical.
 }

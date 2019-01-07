@@ -3,45 +3,37 @@
 #' Takes the dataset, scans the given columns for values that have been listed as indicating NA, and adds a column indicating if this is a NA
 #'
 #' @param train The train dataset, as a data.frame.
-#' @param conditions Vector of functions / values. All functions / values will be tested against each column. If at least one function returns true or one value matches, the records is considered a missing value.
-#' @param columns The columns to check for missing values. Can be provided as logicals, integers, or characters
+#' @param condition Function to test if a value is missing. Should return true when a value is missing and false otherwise.
+#' @param columns Names of the columns to check for missing values.
 #' @param force_column If true, always add new columns, even if no missing values were found.
 #'
+#' @details Generated columns will be of type logical.
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 #'
 #' @import magrittr
 #' @importFrom purrr map
-pipe_NA_indicators <- function(train, conditions = list(is.na), columns = colnames(train), force_column = F){
-    data <- train
-    train_pos <- seq_len(nrow(train))
-
-    if(is.logical(columns)) columns <- (columns * (1L:ncol(data))) %>% .[. != 0]
-    else if(is.character(columns)) columns %<>% match(colnames(data)) %>% .[!is.na(.)]
-    else stopifnot(is.integer(columns), length(conditions) > 0)
-
-    if(is.function(conditions)) conditions %<>% list
-    func_list <- conditions %>% .[purrr::map_lgl(., is.function)]
-    value_list <- conditions %>% .[!purrr::map_lgl(., is.function)]
+pipe_NA_indicators <- function(train, condition = is.na, columns = colnames(train), force_column = F){
+    stopifnot(
+        is.data.frame(train),
+        is.function(condition),
+        is.character(columns),
+        !any(!columns %in% colnames(train)),
+        is.logical(force_column)
+    )
 
     final_columns <- character(0)
-    for(i in columns){
-        x = data[,i]
+    for(col in columns){
+        x = train[, col]
 
-        y_func <- func_list %>% purrr::map(function(f, X) f(X), X = x) %>% as.data.frame
-        y_value <- value_list %>% purrr::map(function(v, X) v == X, X = x) %>% as.data.frame
-
-        if(nrow(y_func) == 0) y <- y_value %>% apply(1, any) %>% as.integer
-        else if(nrow(y_value) == 0) y <- y_func %>% apply(1, any, na.rm = T) %>% as.integer
-        else y <- cbind(y_func, y_value) %>% apply(1, any) %>% as.integer
-        if(any(y) || force_column) {
-            data[paste(colnames(data)[i],"NA_indicator", sep = "_")] <- y
-            final_columns <- c(final_columns, colnames(data)[i])
+        y_missing <- condition(x)
+        if(any(y_missing) || force_column) {
+            train[paste(col, "NA_indicator", sep = "_")] <- y_missing
+            final_columns <- c(final_columns, col)
         }
     }
 
-    train <- data[train_pos,]
-    predict_pipe <- pipe(.function = NA_indicators_predict, columns = final_columns, conditions = conditions)
+    predict_pipe <- pipe(.function = NA_indicators_predict, columns = final_columns, condition = condition)
     return(list("train" = train, "pipe" = predict_pipe))
 }
 
@@ -50,34 +42,26 @@ pipe_NA_indicators <- function(train, conditions = list(is.na), columns = colnam
 #' Takes the dataset, scans the given columns for values that have been listed as indicating NA, and adds a column indicating if this is a NA
 #'
 #' @param data The new dataset, as a data.frame.
-#' @param conditions Vector of functions / values. All functions / values will be tested against each column. If at least one function returns true or one value matches, the records is considered a missing value.
+#' @param condition Function to test if a value is missing. Should return true when a value is missing and false otherwise.
 #' @param columns The columns to check for missing values. Can be provided as logicals, integers, or characters
 #'
 #' @return The dataset with NA's properly processed.
 #'
 #' @import magrittr
 #' @importFrom purrr map
-NA_indicators_predict <- function(data, conditions, columns){
-    if(is.logical(columns)) columns <- (columns * (1L:ncol(data))) %>% .[. != 0]
-    else if(is.character(columns)) columns %<>% match(colnames(data)) %>% .[!is.na(.)]
-    else stopifnot(is.integer(columns), length(conditions) > 0)
+NA_indicators_predict <- function(data, condition, columns){
+    stopifnot(
+        is.data.frame(data),
+        is.function(condition),
+        is.character(columns),
+        !any(!columns %in% colnames(data))
+    )
 
-    if(is.function(conditions)) conditions %<>% list
-    func_list <- conditions %>% .[purrr::map_lgl(., is.function)]
-    value_list <- conditions %>% .[!purrr::map_lgl(., is.function)]
-
-    for(i in columns){
-        x = data[,i]
-
-        y_func <- func_list %>% purrr::map(function(f, X) f(X), X = x) %>% as.data.frame
-        y_value <- value_list %>% purrr::map(function(v, X) v == X, X = x) %>% as.data.frame
-
-        if(nrow(y_func) == 0) y <- y_value %>% apply(1, any) %>% as.integer
-        else if(nrow(y_value) == 0) y <- y_func %>% apply(1, any, na.rm = T) %>% as.integer
-        else y <- cbind(y_func, y_value) %>% apply(1, any) %>% as.integer
-        data[paste(colnames(data)[i],"NA_indicator", sep = "_")] <- y
+    for(col in columns){
+        x = data[, col]
+        y_missing <- condition(x)
+        data[paste(col, "NA_indicator", sep = "_")] <- y_missing
     }
-
     return(data)
 }
 
