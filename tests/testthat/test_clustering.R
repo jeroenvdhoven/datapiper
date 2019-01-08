@@ -53,7 +53,16 @@ describe("pipe_clustering()", {
     })
 
     it("allows you to set the distance metric", {
-        r <- ctest_for_no_errors(error_message = "pipe_clustering() does not run on defaults",
+        r <- ctest_for_no_errors(error_message = "pipe_clustering() does not run with manhattan metric",
                             to_eval = pipe_clustering(train = dataset1, metric = "manhattan"))
+    })
+
+    it("can exclude selected columns from the clustering", {
+        test_df <- data_frame(
+            x = c(rnorm(n = 100), rnorm(n = 100, mean = 10)),
+            y = c(rnorm(n = 50, mean = -5, sd = 1), rnorm(n = 100, mean = 6, sd = 1), rnorm(n = 50, mean = 30, sd = 1))
+        )
+        r <- pipe_clustering(train = test_df, exclude_columns = "x", k = 3)
+        expect_equal(r$train$cluster, c(rep("1", 50), rep("2", 100), rep("3", 50)))
     })
 })
