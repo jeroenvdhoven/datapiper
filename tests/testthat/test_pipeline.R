@@ -514,8 +514,8 @@ describe("flatten_pipeline()", {
         expect_equal(piped_original, piped_flatten)
     })
 
-    # Non-flat in this context means there's a pipeline within the pipeline
-    it("can take a non-flat pipeline and return a flattened pipeline", {
+    # Nested in this context means there's a pipeline within the pipeline
+    it("can take a nested pipeline and return a flattened pipeline", {
         p_2 <- datapiper::train_pipeline(
             segment(.segment = p_1),
             last_segment = segment(.segment = datapiper::pipe_scaler, exclude_columns = "x")
