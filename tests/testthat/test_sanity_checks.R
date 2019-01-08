@@ -94,7 +94,7 @@ describe("sanity_checks()", {
         n_num <- r$numerical_summary
 
         expect_true(is.data.frame(n_num))
-        expect_named(n_num, c("column_name", "number_of_unique_values", "ratio_of_unique_values", "lower_bound", "upper_bound", "any_outside"))
+        expect_named(n_num, c("column_name", "number_of_unique_values", "ratio_of_unique_values", "lower_bound", "upper_bound", "fraction_outside_range"))
 
         expect_true(is.character(n_num$column_name))
         expect_equal(sort(numeric_columns), sort(n_num$column_name))
@@ -133,9 +133,9 @@ describe("sanity_checks()", {
 
     it("detects outliers in numeric columns", {
         n_num <- r$numerical_summary
-        expect_true(filter(n_num, column_name == "m")$any_outside)
-        expect_false(any(is.na(n_num$any_outside)))
-        expect_false(any(filter(n_num, column_name %in% c("a", "b", "d", "k", "n", "p"))$any_outside))
+        expect_true(filter(n_num, column_name == "m")$fraction_outside_range > 0)
+        expect_false(any(is.na(n_num$fraction_outside_range)))
+        expect_false(any(filter(n_num, column_name %in% c("a", "b", "d", "k", "n", "p"))$fraction_outside_range > 0))
     })
 
     it("detects outliers in character columns", {

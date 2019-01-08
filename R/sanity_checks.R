@@ -95,7 +95,7 @@ check_numerical <- function(numerical_data, n_sigma) {
         return(list(
             lower = lower,
             upper = upper,
-            any_outside = any(x > upper | x < lower, na.rm = T)
+            fraction_outside_range = mean(x > upper | x < lower, na.rm = T)
         ))
     })
 
@@ -105,7 +105,7 @@ check_numerical <- function(numerical_data, n_sigma) {
         ratio_of_unique_values = no_uniques / nrow(numerical_data),
         lower_bound = outlier_ranges$lower,
         upper_bound = outlier_ranges$upper,
-        any_outside = outlier_ranges$any_outside
+        fraction_outside_range = outlier_ranges$fraction_outside_range
     ))
 }
 
