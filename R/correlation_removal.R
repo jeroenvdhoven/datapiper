@@ -41,13 +41,14 @@ high_correlation_features <- function(data, exclude_columns = character(0), thre
     correlation_matrix <- data %>% as.matrix %>% stats::cor(use = "complete.obs")
     correlation_matrix[upper.tri(correlation_matrix, diag = T)] <- 0
 
-    highly_correlated_matrix <- abs(correlation_matrix) >= threshold
+    highly_correlated_matrix <- as_data_frame(abs(correlation_matrix) >= threshold)
 
-    correlated_names = apply(MARGIN = 2, highly_correlated_matrix, function(vec){
+    correlated_names = purrr::map(.x = highly_correlated_matrix, .f = function(vec){
         rownames(correlation_matrix)[!is.na(vec) & vec]
     })
-    if(length(correlated_names) == 0) return(data.frame(Node1 = "", Node2 = "", stringsAsFactors = F)[0,])
+
     correlated_names %<>% .[purrr::map_lgl(.x = ., .f = function(x) length(x) > 0)]
+    if(length(correlated_names) == 0) return(data.frame(Node1 = "", Node2 = "", stringsAsFactors = F)[0,])
 
     df_list <- as.list(seq_len(length.out = length(correlated_names)))
     for(i in seq_along(correlated_names)){

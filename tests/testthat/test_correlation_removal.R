@@ -36,6 +36,20 @@ describe("pipe_remove_high_correlation_features", {
         expect_gte(sum(c("a", "b", "x") %in% colnames(r_sub$train)), 1)
         expect_lt(sum(c("a", "b", "x") %in% colnames(r_sub$train)), 3)
     })
+
+    it("can set different values for the correlation threshold", {
+        r_full <- datapiper::pipe_remove_high_correlation_features(train = dataset1, threshold = 1)
+        expect_equal(dataset1, r_full$train)
+
+        r_none <- datapiper::pipe_remove_high_correlation_features(train = dataset1, threshold = 0)
+        expect_true(sum(purrr::map_lgl(r_none$train, is.numeric)) == 1)
+
+        r_mid <- datapiper::pipe_remove_high_correlation_features(train = dataset1, threshold = 0.5)
+        original_number_of_numeric_columns <- sum(purrr::map_lgl(dataset1, is.numeric))
+        number_of_numeric_columns <- sum(purrr::map_lgl(r_mid$train, is.numeric))
+        expect_true(number_of_numeric_columns > 1)
+        expect_true(number_of_numeric_columns < original_number_of_numeric_columns)
+    })
 })
 
 
