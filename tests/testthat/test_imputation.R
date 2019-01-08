@@ -34,8 +34,16 @@ describe("pipe_impute", {
         r_na <- pipe_impute(train = dataset1, exclude_columns = excluded, type = "lm", na_function = is.na)
         expect_false(anyNA(r_na$train[, purrr::map_lgl(r_na$train, is.numeric)]))
 
-        r_zero <- pipe_impute(train = dataset1, exclude_columns = excluded, type = "lm", na_function = function(x) x == 0)
-        expect_true(anyNA(r_zero$train[, purrr::map_lgl(r_zero$train, is.numeric)]))
+        is_missing <- function(x) is.na(x) | x < 2
+        r_custom_missing <- pipe_impute(train = dataset1, exclude_columns = excluded, type = "lm", na_function = is_missing)
+        expect_true(anyNA(r_custom_missing$train[, purrr::map_lgl(r_custom_missing$train, is.numeric)]))
+
+        for(col in r_custom_missing$pipe$args$columns) {
+            missing_indices <- is_missing(dataset1[, col])
+
+            expect_false(any(dataset1[!missing_indices, col] != r_custom_missing$train[!missing_indices, col], na.rm = T),
+                         info = paste(col, "was modified when the missing value function was FALSE"))
+        }
     })
 
     it("ignores non-numeric input for xgboost by default", {
