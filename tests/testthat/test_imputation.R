@@ -47,4 +47,8 @@ describe("pipe_impute", {
         ctest_for_no_errors(pipe_impute(train = select(dataset1, -y), type = "lm"),
                             error_message = "ignores constant input for lm by default")
     })
+
+    it("can give verbose output", {
+        expect_output(pipe_impute(train = select(dataset1, -y), type = "lm", verbose = T))
+    })
 })
