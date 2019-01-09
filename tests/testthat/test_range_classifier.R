@@ -6,8 +6,9 @@ describe("pipe_range_classifier", {
     n_even <- 5
     n_quantile <- 5
 
-    r <- suppressWarnings(ctest_for_no_errors(to_eval = datapiper::pipe_range_classifier(dataset1, response = "x", values = def_values, exclude_columns = c("m2", "m", "z", "z2", "y")),
-                        error_message = "Can't run pipe_range_classifier"))
+    r <- suppressWarnings(ctest_for_no_errors(
+        to_eval = datapiper::pipe_range_classifier(dataset1, response = "x", values = def_values, exclude_columns = c("m2", "m", "z", "z2", "y")),
+        error_message = "Can't run pipe_range_classifier"))
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
@@ -60,7 +61,7 @@ describe("pipe_range_classifier", {
 
     it("can combine quantiles, even spreads and regular values", {
         r_all <- suppressWarnings(datapiper::pipe_range_classifier(dataset1, response = col, even_spreads = n_even, quantiles = n_quantile, values = def_values,
-                                             exclude_columns = c("m2", "m", "z", "z2", "y")))
+                                                                   exclude_columns = c("m2", "m", "z", "z2", "y")))
         expected_columns <- c(
             paste0(col, "_quantile_", quantile(x = resp, probs = seq(0, 1, length.out = n_quantile + 2))[2:(n_quantile + 1)]),
             paste0(col, "_quantile_", seq(min(resp), max(resp), length.out = n_even + 2)[2:(n_even + 1)]),
@@ -76,7 +77,37 @@ describe("pipe_range_classifier", {
 
     it("can use xgboost models as well, which handles missing values", {
         r_all_xgb <- pipe_range_classifier(dataset1, response = col, even_spreads = n_even, quantiles = n_quantile, values = def_values,
-                                             exclude_columns = c("z", "z2", "y", "s"), model = "xgboost")
+                                           exclude_columns = c("z", "z2", "y", "s"), model = "xgboost")
         ctest_pipe_has_working_predict_function(r_all_xgb, dataset1)
+    })
+
+    it("allows you to set temporary column names", {
+        base_tmp_name <- "test_base_tmp"
+        n_quantile <- 5
+        r_base <- pipe_range_classifier(dataset1, response = col, quantiles = n_quantile, base_temporary_column_name = base_tmp_name,
+                                        exclude_columns = c("z", "z2", "y", "s"), model = "xgboost")
+        columns <- colnames(r_base$train)
+        generated_columns <- columns[grepl(pattern = base_tmp_name, x = columns)]
+
+        expect_equal(object = length(generated_columns), expected = 0)
+        expect_equal(object = ncol(r_base$train), expected = ncol(dataset1) + n_quantile,
+                     info = "Additional columns were dropped by setting temporary column names")
+    })
+
+    it("should throw an error when the temporary column name is already in the dataset", {
+        expect_error(pipe_range_classifier(dataset1, response = col, quantiles = 5, base_temporary_column_name = col,
+                                        exclude_columns = c("z", "z2", "y", "s"), model = "xgboost"),
+                     regexp = "is not TRUE$", info = "Checks on temporary column names are not in place")
+    })
+
+    it("allows you to set the base for the final column name", {
+        base_name <- "test_base"
+        n_quantile <- 5
+        r_base <- pipe_range_classifier(dataset1, response = col, quantiles = n_quantile, base_definitive_column_name = base_name,
+                                        exclude_columns = c("z", "z2", "y", "s"), model = "xgboost")
+        columns <- colnames(r_base$train)
+        generated_columns <- columns[grepl(pattern = base_name, x = columns)]
+
+        expect_equal(object = length(generated_columns), expected = n_quantile)
     })
 })

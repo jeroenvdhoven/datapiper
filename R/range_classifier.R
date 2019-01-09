@@ -32,7 +32,7 @@ pipe_range_classifier <- function(train, response, exclude_columns = response,
                                   quantiles = 0, even_spreads = 0, values, model = c("glm", "xgboost")[1], controls){
     env <- environment()
     tryCatch(exclude_columns, error = function(e) env[["exclude_columns"]] <- env[["response"]])
-    if(!missing(base_definitive_column_name)) {
+    if(missing(base_definitive_column_name)) {
         base_definitive_column_name <- paste0(response, "_quantile")
     }
     stopifnot(
