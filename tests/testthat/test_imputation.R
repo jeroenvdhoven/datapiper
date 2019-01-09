@@ -35,8 +35,8 @@ describe("pipe_impute", {
         expect_false(anyNA(r_na$train[, purrr::map_lgl(r_na$train, is.numeric)]))
 
         is_missing <- function(x) is.na(x) | x < 2
-        r_custom_missing <- pipe_impute(train = dataset1, exclude_columns = excluded, type = "lm", na_function = is_missing)
-        expect_true(anyNA(r_custom_missing$train[, purrr::map_lgl(r_custom_missing$train, is.numeric)]))
+        r_custom_missing <- pipe_impute(train = dataset1, exclude_columns = excluded, type = "lm", na_function = is_missing,
+                                        columns = c("x", "a", "b", "c", "m"))
 
         for(col in r_custom_missing$pipe$args$columns) {
             missing_indices <- is_missing(dataset1[, col])
