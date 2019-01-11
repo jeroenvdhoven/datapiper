@@ -1,7 +1,8 @@
 context("Feature transformer")
 library(testthat)
 testthat::describe("pipe_feature_transformer()", {
-    r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
+    transform_functions <- list(sqrt, log, function(x) x ^ 2, exp)
+    r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = transform_functions)
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
     })
@@ -23,32 +24,32 @@ testthat::describe("pipe_feature_transformer()", {
 
     it("should crash when the response is not in the dataset or non-numeric", {
         d <- select(dataset1, -x)
-        expect_error(pipe_feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp)))
+        expect_error(pipe_feature_transformer(train = d, response = "x", transform_functions = transform_functions))
 
         d <- mutate(dataset1, x = as.character(x))
-        expect_error(pipe_feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp)))
+        expect_error(pipe_feature_transformer(train = d, response = "x", transform_functions = transform_functions))
     })
 
     it("transforms numeric input where there is a better correlation with the response", {
-        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
+        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = transform_functions)
     })
 
     it("does not transform input when it creates invalid values", {
         d <- mutate(dataset1, c = c(exp(seq_len(N-1)), -1))
-        r <- pipe_feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
+        r <- pipe_feature_transformer(train = d, response = "x", transform_functions = transform_functions)
         expect_equal(r$train$c, d$c)
     })
 
     it("can transform features that had NA's before", {
         d <- mutate(dataset1, c = c(exp(seq_len(N-1)), NA))
-        r <- pipe_feature_transformer(train = d, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp))
+        r <- pipe_feature_transformer(train = d, response = "x", transform_functions = transform_functions)
         expect_equal(r$train$c, c(seq_len(N-1), NA))
     })
 
     it("can generate retransformations if requested", {
         retransform_columns <- c("a", "b", "c")
 
-        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
+        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = transform_functions,
                                       retransform_columns = retransform_columns)
         expect_true("post_pipe" %in% names(r))
         retransformed <- invoke(r$post_pipe, r$train)
@@ -60,7 +61,7 @@ testthat::describe("pipe_feature_transformer()", {
         new_dataset <- mutate(dataset1, a = a * 1.1, b = b * .9)
         retransform_columns <- c("a", "b")
 
-        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
+        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = transform_functions,
                                       retransform_columns = retransform_columns)
         new_transformed <- invoke(r$pipe, new_dataset)
         retransformed <- invoke(r$post_pipe, new_transformed)
@@ -72,7 +73,7 @@ testthat::describe("pipe_feature_transformer()", {
         new_dataset <- mutate(dataset1, a = a - 10)
         retransform_columns <- c("a")
 
-        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
+        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = transform_functions,
                                       retransform_columns = retransform_columns)
         new_transformed <- suppressWarnings(invoke(r$pipe, new_dataset))
 
@@ -88,7 +89,7 @@ testthat::describe("pipe_feature_transformer()", {
         new_dataset <- mutate(dataset1, b = b * - 100000)
         retransform_columns <- c("b")
 
-        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
+        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = transform_functions,
                                       retransform_columns = retransform_columns)
         new_transformed <- (invoke(r$pipe, new_dataset))
 
@@ -105,7 +106,7 @@ testthat::describe("pipe_feature_transformer()", {
     it("can deal with NA's while retransforming", {
         retransform_columns <- c("m", "m2")
 
-        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = list(sqrt, log, function(x) x ^ 2, exp),
+        r <- pipe_feature_transformer(train = dataset1, response = "x", transform_functions = transform_functions,
                                       retransform_columns = retransform_columns)
         retransformed <- invoke(r$post_pipe, r$train)
 
