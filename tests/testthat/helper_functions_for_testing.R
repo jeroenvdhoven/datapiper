@@ -5,8 +5,10 @@ library(datapiper)
 
 N <- 30
 set.seed(2)
+x = seq_len(N)
+# dataset1 <- data.table::data.table(
 dataset1 <- dplyr::data_frame(
-    x = seq_len(N),
+    x = x,
     # "1stweirdcolumn" = (N - x) ^ 1.2,
     a = x^2,
     b = log(x),

@@ -78,15 +78,14 @@ pipe_feature_transformer <- function(train, response, transform_columns, missing
 }
 
 feature_transform_col <- function(train, response, transform_functions, transform_column, missing_func = is.na){
-    vec_train <- unlist(train[transform_column])
+    vec_train <- unlist(train[, transform_column])
     missing_vector <- missing_func(vec_train)
     vec_train %<>% .[!missing_vector]
     response <- unlist(train[response])[!missing_vector]
     #Include option to remove na's from vec_train
 
-    tot_vec <- unlist(train[transform_column]) %>% .[!missing_func(.)]
     new_features <- suppressWarnings(purrr::map(transform_functions, function(x)
-        tot_vec %>% x %>% unlist %>% as.vector
+        vec_train %>% x %>% unlist %>% as.vector
     ))
     any_faulty <- purrr::map_lgl(new_features, function(x) any(is.null(x)) || anyNA(x) || any(is.nan(x)) || any(is.infinite(x)))
 
@@ -94,7 +93,7 @@ feature_transform_col <- function(train, response, transform_functions, transfor
     transform_functions %<>% .[!any_faulty]
 
     if(length(new_features) > 0){
-        correlations <- abs(purrr::map_dbl(new_features, . %>% .[1:nrow(train)] %>% .[!missing_vector] %>% cor(y = response, use = "na.or.complete")))
+        correlations <- abs(purrr::map_dbl(new_features, . %>% .[seq_len(nrow(train))] %>% .[!missing_vector] %>% cor(y = response, use = "na.or.complete")))
         original_correlation <- cor(response, vec_train, use = "na.or.complete")
         if(max(correlations) > original_correlation){
             best_function <- transform_functions[correlations == max(correlations)][[1]]
