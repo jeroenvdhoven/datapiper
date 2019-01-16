@@ -8,7 +8,7 @@ create_stats(train, statistics_col, response, functions,
   too_few_observations_cutoff = 30)
 }
 \arguments{
-\item{train}{The train dataset, as a data.frame.}
+\item{train}{The train dataset, as a data.table}
 
 \item{statistics_col}{A character vector of column names. Please ensure that you only choose column names of non-numeric columns or numeric columns with few values.
 Combinations that generate too few (<30)}

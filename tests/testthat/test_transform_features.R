@@ -228,6 +228,7 @@ testthat::describe("pipe_one_hot_encode()", {
         ctest_dataset_does_not_have_columns(dataset = r_mean$train, columns = cols)
         ctest_dataset_has_columns(dataset = r_mean$train, columns = generated_cols)
 
+
         for(col in cols){
             for(i in seq_along(stats_functions)){
                 f <- stats_functions[[i]]

@@ -155,6 +155,20 @@ describe("pipe_create_stats", {
 
         expect_equal(sum(expected_columns %in% colnames(r_multi$train)), length(expected_columns) / 2)
     })
+
+    it("can keep the result as a data.table if the input is a data.table", {
+        dt_dataset1 <- data.table::as.data.table(dataset1)
+        r_dt <- datapiper::pipe_create_stats(
+            train = dt_dataset1, response = "x", interaction_level = 2,
+            too_few_observations_cutoff = 1, functions = f_list)
+
+        r_df <- datapiper::pipe_create_stats(
+            train = dataset1, response = "x", interaction_level = 2,
+            too_few_observations_cutoff = 1, functions = f_list)
+
+        expect_true(is.data.table(r_dt$train))
+        expect_equal(object = as_data_frame(r_dt$train), expected = r_df$train)
+    })
 })
 
 describe("pipe_remove_single_value_columns", {

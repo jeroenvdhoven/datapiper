@@ -5,7 +5,7 @@
 \title{Apply one-hot encoding}
 \usage{
 feature_one_hot_encode_predict(data, one_hot_parameters, use_pca, pca,
-  stat_transformer)
+  stat_transformer, generated_columns)
 }
 \arguments{
 \item{data}{A new dataframe}

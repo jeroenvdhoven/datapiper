@@ -2,6 +2,7 @@ library(testthat)
 library(magrittr)
 library(dplyr)
 library(datapiper)
+library(data.table)
 
 N <- 30
 set.seed(2)

@@ -316,20 +316,21 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
         delete_cols <- colnames(train_dt_set) %>% .[grepl(x = ., pattern = "_(<NA>)|(NA)$")]
         if(length(delete_cols) > 0) train_dt_set[, (delete_cols) := NULL]
 
-        stats_transformer <- NA
-        stats_transformer_pipe <- NA
+        stats_transformer <- list(pipe = NA)
+        generated_columns <- NA
     } else {
         stats_transformer <- pipe_create_stats(
             train = train, stat_cols = columns, response = response, functions = stat_functions,
             interaction_level = 1, too_few_observations_cutoff = 0)
 
-        current_columns <- colnames(train)
-        stats_transformer_pipe <- pipe(.function = stat_transformer_for_one_hot, stats_transformer = stats_transformer$pipe,
-                                       orignal_column = current_columns)
 
         one_hot_parameters <- as.list(columns)
         names(one_hot_parameters) <- columns
-        train_dt_set <- invoke(stats_transformer_pipe, train)
+        train_dt_set <- invoke(stats_transformer$pipe, train)
+
+        generated_columns <- colnames(stats_transformer$train)[!colnames(stats_transformer$train) %in% colnames(train)]
+        if(is.data.table(train_dt_set)) train_dt_set <- train_dt_set[, .SD, .SDcols = generated_columns]
+        else train_dt_set %<>% select_(.dots = generated_columns)
     }
 
     if(use_pca){
@@ -339,7 +340,8 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
     train %<>% select_(.dots = paste0("-", columns)) %>% dplyr::bind_cols(train_dt_set)
 
     predict_pipe <- pipe(.function = feature_one_hot_encode_predict, one_hot_parameters = one_hot_parameters,
-                         use_pca = use_pca, pca = pca, stat_transformer = stats_transformer_pipe)
+                         use_pca = use_pca, pca = pca, stat_transformer = stats_transformer$pipe,
+                         generated_columns = generated_columns)
     return(list(train = train, pipe = predict_pipe))
 }
 
@@ -352,7 +354,7 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
 #' @param stat_transformer Stat transformer function from \code{\link{pipe_one_hot_encode}}, or NA (for normal one-hot encoding)
 #'
 #' @return The test dataframe with the required columns one-hot encoded
-feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pca, stat_transformer){
+feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pca, stat_transformer, generated_columns){
     stopifnot(
         is.data.frame(data),
         is.list(one_hot_parameters),
@@ -376,6 +378,8 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
         if(length(delete_cols) > 0) test_dt_set[, (delete_cols) := NULL]
     } else {
         test_dt_set <- invoke(stat_transformer, data)
+        if(is.data.table(test_dt_set)) test_dt_set <- test_dt_set[, .SD, .SDcols = generated_columns]
+        else test_dt_set %<>% select_(.dots = generated_columns)
     }
 
     if(use_pca) {

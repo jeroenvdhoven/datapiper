@@ -82,6 +82,7 @@ NA_indicators_predict <- function(data, condition, columns){
 #' \code{too_few_observations_cutoff}.
 #'
 #' @export
+#' @importFrom data.table as.data.table
 pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(train, is.character)], response, functions, interaction_level = 1, too_few_observations_cutoff = 30) {
     stopifnot(interaction_level == 1 || interaction_level == 2)
 
@@ -89,14 +90,16 @@ pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(
     tables <- as.list(1:(L + (interaction_level == 2) * (L * (L-1)) / 2))
     defaults <- as.list(1:(L + (interaction_level == 2) * (L * (L-1)) / 2))
     tables_index <- 1L
+    if(!is.data.table(train)) train_dt <- as.data.table(train)
+    else train_dt <- train
+
     for(colname in stat_cols){
         stats <- create_stats(
-            train = train,
+            train = train_dt,
             statistics_col = colname,
             response = response,
             functions = functions,
             too_few_observations_cutoff = too_few_observations_cutoff)
-        train <- stats$train
 
         tables[[tables_index]] <- stats$table
         defaults[[tables_index]] <- stats$defaults
@@ -105,12 +108,11 @@ pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(
     if(interaction_level > 1){
         for(i in 1:(L-1)) for(j in (i+1):L){
             stats <- create_stats(
-                train = train,
+                train = train_dt,
                 statistics_col = stat_cols[c(i,j)],
                 response = response,
                 functions = functions,
                 too_few_observations_cutoff = too_few_observations_cutoff)
-            train <- stats$train
 
             tables[[tables_index]] <- stats$table
             tables_index <- tables_index + 1L
@@ -118,18 +120,21 @@ pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(
     }
 
     # create default values
-    target <- unlist(train[response])
+    if(is.data.table(train)) target <- unlist(train[, response, with = F])
+    else target <- unlist(train[response])
     defaults <- purrr::map_dbl(.x = functions, .f = function(x, y) x(y), y = target)
     names(defaults) <- names(functions)
 
     predict_pipe <- pipe(.function = create_stats_predict, tables = tables, stat_cols = stat_cols,
                          interaction_level = interaction_level, defaults = defaults)
+
+    train <- invoke(predict_pipe, train)
     return(list("train" = train, "pipe" = predict_pipe))
 }
 
 #' Calculates stats based on custom functions on the response variable for each group provided in stat_cols.
 #'
-#' @param train The train dataset, as a data.frame.
+#' @param train The train dataset, as a data.table
 #' @param statistics_col A character vector of column names. Please ensure that you only choose column names of non-numeric columns or numeric columns with few values.
 #' Combinations that generate too few (<30)
 #' @param response The column containing the response variable.
@@ -141,33 +146,31 @@ pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(
 #' @details This function will also generate default values for all generated columns that use the entire response column.
 #' This allows us to ensure no NA values will be present in generated columns
 #'
-#' @importFrom data.table as.data.table
+#' @importFrom data.table is.data.table
 #' @import dplyr
 #' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
 create_stats <- function(train, statistics_col, response, functions, too_few_observations_cutoff = 30){
     if(is.null(names(functions))) names(functions) <- paste("gen", 1:length(functions))
+    stopifnot(data.table::is.data.table(train))
 
     var_names <- paste0(names(functions), "_", paste0(statistics_col, collapse = "_"))
 
-    train_target <- train %>% dplyr::select_(.dots = statistics_col, response)
-    train_count_table <- train_target %>% dplyr::group_by_(.dots = statistics_col) %>%
-        dplyr::summarize(feature_create_generic_stats_count = n()) %>%
-        dplyr::filter(feature_create_generic_stats_count >= too_few_observations_cutoff) %>%
-        dplyr::select(-feature_create_generic_stats_count)
+    train_target <- train[, .SD, .SDcols = c(statistics_col, response)]
+    train_count_table <- train[, .N, by = statistics_col][N >= too_few_observations_cutoff][
+        , .SD, .SDcols = statistics_col]
 
-    statistics_train <- train_target %>% as.data.table %>%
-        .[, c(var_names) := purrr::map(.x = functions, .f = function(x) x(get(response, pos = .SD))), by = statistics_col] %>%
-        select_(paste0("-", response)) %>%
-        unique %>%
-        right_join(train_count_table, by = statistics_col)
-    train %<>% dplyr::left_join(statistics_train, by = statistics_col)
+    statistics_train <- train_target[, c(var_names) := purrr::map(.x = functions, .f = function(x) x(get(response, pos = .SD))), by = statistics_col][
+        , c(response) := NULL] %>% unique %>%
+        merge(y = train_count_table, by = statistics_col)
 
-    target <- unlist(train[response])
+    train <- merge(train, statistics_train, by = statistics_col)
+
+    target <- unlist(train[, response, with = F])
     for(i in seq_along(functions)) {
         value <- functions[[i]](target)
         stat_col_name <- var_names[i]
-        missing_index <- is.na(train[stat_col_name])
-        if(any(missing_index)) train[missing_index, stat_col_name] <- value
+        missing_index <- train[, is.na(get(stat_col_name))]
+        if(any(missing_index)) train[missing_index, c(stat_col_name) := value]
     }
 
     defaults <- purrr::map_dbl(.x = functions, .f = function(x, y) x(y), y = target)
@@ -195,28 +198,43 @@ create_stats_predict <- function(data, stat_cols, tables, interaction_level, def
         length(tables) == (L + (interaction_level == 2) * (L * (L-1)) / 2)
     )
 
+    is_dt <- data.table::is.data.table(data)
+
     tables_index <- 1L
     for(colname in stat_cols){
-        data %<>% dplyr::left_join(y = tables[[tables_index]], by = colname)
+        if(is_dt) data %<>% merge(y = tables[[tables_index]], by = colname, all.x = T)
+        else data %<>% dplyr::left_join(y = tables[[tables_index]], by = colname, all.x = T)
 
         stat_col_names <- paste0(names(defaults), "_", colname)
         for(i in seq_along(defaults)) {
             stat_col_name <- stat_col_names[i]
-            missing_index <- is.na(data[stat_col_name])
-            if(any(missing_index)) data[missing_index, stat_col_name] <- defaults[i]
+            if(is_dt) missing_index <- as.vector(is.na(data[, stat_col_name, with = F]))
+            else missing_index <- is.na(data[stat_col_name])
+            if(any(missing_index)) {
+                if(is_dt) data[missing_index, c(stat_col_name) := defaults[i]]
+                else data[missing_index, stat_col_name] <- defaults[i]
+            }
         }
 
         tables_index <- tables_index +1L
     }
     if(interaction_level > 1){
         for(i in 1:(L-1)) for(j in (i+1):L){
-            data %<>% dplyr::left_join(y = tables[[tables_index]], by = stat_cols[c(i,j)])
+            next_table <- tables[[tables_index]]
+            cols <- colnames(next_table)[1:2]
+            if(is_dt) data %<>% merge(y = next_table, by = cols, all.x = T)
+            else data %<>% dplyr::left_join(y = tables[[tables_index]], by = cols, all.x = T)
 
             stat_col_names <- paste0(names(defaults), "_", colname)
             for(i in seq_along(defaults)) {
                 stat_col_name <- stat_col_names[i]
-                missing_index <- is.na(data[stat_col_name])
-                if(any(missing_index)) data[missing_index, stat_col_name] <- defaults[i]
+
+                if(is_dt) missing_index <- as.vector(is.na(data[, stat_col_name, with = F]))
+                else missing_index <- is.na(data[stat_col_name])
+                if(any(missing_index)) {
+                    if(is_dt) data[missing_index, c(stat_col_name) := defaults[i]]
+                    else data[missing_index, stat_col_name] <- defaults[i]
+                }
             }
 
             tables_index <- tables_index +1L
