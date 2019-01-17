@@ -88,8 +88,8 @@ describe("pipe_create_stats", {
         test <- dataset1[-train_indices,]
 
         r_sub <- pipe_create_stats(
-                train = train, response = "x", interaction_level = 1,
-                too_few_observations_cutoff = 5, functions = f_list)
+            train = train, response = "x", interaction_level = 1,
+            too_few_observations_cutoff = 5, functions = f_list)
 
         transformed_test <- invoke(r_sub$pipe, test)
         expected_columns <- purrr::map(names(f_list), ~ paste0(., "_", c("y", "s", "z"))) %>% unlist
@@ -139,21 +139,38 @@ describe("pipe_create_stats", {
         expect_equal(object = nrow(r_all_missing$pipe$args$tables[[1]]), expected = 0)
     })
 
-    it("can go up to interaction level 2", {
+    it("can increase the interaction level to 2", {
         affected_columns <- c("y", "s", "z")
 
-        r_multi <- datapiper::pipe_create_stats(
+        r_2 <- datapiper::pipe_create_stats(
             train = dataset1, response = "x", interaction_level = 2,
             too_few_observations_cutoff = 1, functions = f_list)
 
         expected_columns <- purrr::map(names(f_list), function(f){
-            combinations <- expand.grid(affected_columns, affected_columns, stringsAsFactors = F) %>%
-                filter(Var1 != Var2) %>%
-                apply(1, paste0, collapse = "_")
-            return(paste0(f, "_", combinations))
+            purrr::map(seq_len(2), function(x) {
+                paste(f, sep = "_",
+                      apply(combn(x = affected_columns, m = x), FUN = paste, MARGIN = 2, collapse = "_")
+                )
+            })
         }) %>% unlist
+        expect_false(object = any(!expected_columns %in% colnames(r_2$train)))
+    })
 
-        expect_equal(sum(expected_columns %in% colnames(r_multi$train)), length(expected_columns) / 2)
+    it("can increase the interaction level above 2", {
+        affected_columns <- c("y", "s", "z")
+
+        r_3 <- datapiper::pipe_create_stats(
+            train = dataset1, response = "x", interaction_level = 3,
+            too_few_observations_cutoff = 1, functions = f_list)
+
+        expected_columns <- purrr::map(names(f_list), function(f){
+            purrr::map(seq_len(3), function(x) {
+                paste(f, sep = "_",
+                      apply(combn(x = affected_columns, m = x), FUN = paste, MARGIN = 2, collapse = "_")
+                )
+            })
+        }) %>% unlist
+        expect_false(object = any(!expected_columns %in% colnames(r_3$train)))
     })
 
     it("can keep the result as a data.table if the input is a data.table", {

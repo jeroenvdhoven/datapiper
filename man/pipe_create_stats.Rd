@@ -19,7 +19,7 @@ pipe_create_stats(train,
 \item{functions}{A (named) list of functions to be used to generate statistics. Will take a vector and should return a scalar, e.g. mean / sd.
 If names are provided, the name will be prepended to the generate column. If they are not provided, gen<index of function>_ will be prepended.}
 
-\item{interaction_level}{Either a 1 or 2. Should we gather statistics only for one column, or also for combinations of columns?}
+\item{interaction_level}{An integer of 1 or higher. Should we gather statistics only for one column, or also for combinations of columns?}
 
 \item{too_few_observations_cutoff}{An integer denoting the minimum required observations for a combination of values in statistics_col to be used.
 If not enough observations are present, the statistics will be generated on the entire response column. Default: 30.}

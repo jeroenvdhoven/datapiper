@@ -72,7 +72,7 @@ NA_indicators_predict <- function(data, condition, columns){
 #' @param response The column containing the response variable.
 #' @param functions A (named) list of functions to be used to generate statistics. Will take a vector and should return a scalar, e.g. mean / sd.
 #' If names are provided, the name will be prepended to the generate column. If they are not provided, gen<index of function>_ will be prepended.
-#' @param interaction_level Either a 1 or 2. Should we gather statistics only for one column, or also for combinations of columns?
+#' @param interaction_level An integer of 1 or higher. Should we gather statistics only for one column, or also for combinations of columns?
 #' @param too_few_observations_cutoff An integer denoting the minimum required observations for a combination of values in statistics_col to be used.
 #' If not enough observations are present, the statistics will be generated on the entire response column. Default: 30.
 #' @return A list containing the transformed train dataset and a trained pipe.
@@ -84,38 +84,27 @@ NA_indicators_predict <- function(data, condition, columns){
 #' @export
 #' @importFrom data.table as.data.table
 pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(train, is.character)], response, functions, interaction_level = 1, too_few_observations_cutoff = 30) {
-    stopifnot(interaction_level == 1 || interaction_level == 2)
+    stopifnot(is.numeric(interaction_level), interaction_level >= 1)
 
-    L = length(stat_cols)
-    tables <- as.list(1:(L + (interaction_level == 2) * (L * (L-1)) / 2))
-    defaults <- as.list(1:(L + (interaction_level == 2) * (L * (L-1)) / 2))
-    tables_index <- 1L
+    tables <- list()
+    defaults <- list()
     if(!is.data.table(train)) train_dt <- as.data.table(train)
     else train_dt <- train
 
-    for(colname in stat_cols){
-        stats <- create_stats(
-            train = train_dt,
-            statistics_col = colname,
-            response = response,
-            functions = functions,
-            too_few_observations_cutoff = too_few_observations_cutoff)
+    for(il in seq_len(interaction_level)) {
+        combinations <- combn(x = stat_cols, m = il)
 
-        tables[[tables_index]] <- stats$table
-        defaults[[tables_index]] <- stats$defaults
-        tables_index <- tables_index + 1L
-    }
-    if(interaction_level > 1){
-        for(i in 1:(L-1)) for(j in (i+1):L){
+        for(index in seq_len(ncol(combinations))) {
+            cols <- combinations[, index]
             stats <- create_stats(
                 train = train_dt,
-                statistics_col = stat_cols[c(i,j)],
+                statistics_col = cols,
                 response = response,
                 functions = functions,
                 too_few_observations_cutoff = too_few_observations_cutoff)
 
-            tables[[tables_index]] <- stats$table
-            tables_index <- tables_index + 1L
+            tables %<>% c(list(stats$table))
+            defaults %<>% c(list(stats$defaults))
         }
     }
 
@@ -193,39 +182,23 @@ create_stats_predict <- function(data, stat_cols, tables, interaction_level, def
     stopifnot(
         is.data.frame(data),
         !any(!stat_cols %in% colnames(data)),
-        interaction_level == 1 || interaction_level == 2,
+        interaction_level >= 1,
         # Ensure the number of tables is what we'd expect
-        length(tables) == (L + (interaction_level == 2) * (L * (L-1)) / 2)
+        length(tables) == sum(purrr::map_dbl(.x = seq_len(interaction_level), .f = choose, n = L))
     )
 
     is_dt <- data.table::is.data.table(data)
+    tables_index <- 1
+    for(il in seq_len(interaction_level)) {
+        combinations <- combn(x = stat_cols, m = il)
 
-    tables_index <- 1L
-    for(colname in stat_cols){
-        if(is_dt) data %<>% merge(y = tables[[tables_index]], by = colname, all.x = T)
-        else data %<>% dplyr::left_join(y = tables[[tables_index]], by = colname, all.x = T)
+        for(index in seq_len(ncol(combinations))) {
+            columns <- combinations[, index]
 
-        stat_col_names <- paste0(names(defaults), "_", colname)
-        for(i in seq_along(defaults)) {
-            stat_col_name <- stat_col_names[i]
-            if(is_dt) missing_index <- as.vector(is.na(data[, stat_col_name, with = F]))
-            else missing_index <- is.na(data[stat_col_name])
-            if(any(missing_index)) {
-                if(is_dt) data[missing_index, c(stat_col_name) := defaults[i]]
-                else data[missing_index, stat_col_name] <- defaults[i]
-            }
-        }
+            if(is_dt) data %<>% merge(y = tables[[tables_index]], by = columns, all.x = T)
+            else data %<>% dplyr::left_join(y = tables[[tables_index]], by = columns, all.x = T)
 
-        tables_index <- tables_index +1L
-    }
-    if(interaction_level > 1){
-        for(i in 1:(L-1)) for(j in (i+1):L){
-            next_table <- tables[[tables_index]]
-            cols <- colnames(next_table)[1:2]
-            if(is_dt) data %<>% merge(y = next_table, by = cols, all.x = T)
-            else data %<>% dplyr::left_join(y = tables[[tables_index]], by = cols, all.x = T)
-
-            stat_col_names <- paste0(names(defaults), "_", colname)
+            stat_col_names <- paste0(names(defaults), "_", paste0(columns, collapse = "_"))
             for(i in seq_along(defaults)) {
                 stat_col_name <- stat_col_names[i]
 
@@ -236,8 +209,7 @@ create_stats_predict <- function(data, stat_cols, tables, interaction_level, def
                     else data[missing_index, stat_col_name] <- defaults[i]
                 }
             }
-
-            tables_index <- tables_index +1L
+            tables_index <- tables_index + 1
         }
     }
     return(data)
