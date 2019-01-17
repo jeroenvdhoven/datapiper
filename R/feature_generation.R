@@ -67,7 +67,7 @@ NA_indicators_predict <- function(data, condition, columns){
 
 #' Generic function for creating statistics on the response column, based on custom columns.
 #'
-#' @param train The train dataset, as a data.frame. Will generate the statistics only based on this dataset.
+#' @param train The train dataset, as a data.frame or data.table.
 #' @param stat_cols A character vector of column names. Please ensure that you only choose column names of non-numeric columns
 #' @param response The column containing the response variable.
 #' @param functions A (named) list of functions to be used to generate statistics. Will take a vector and should return a scalar, e.g. mean / sd.
@@ -148,9 +148,11 @@ create_stats <- function(train, statistics_col, response, functions, too_few_obs
     train_count_table <- train[, .N, by = statistics_col][N >= too_few_observations_cutoff][
         , .SD, .SDcols = statistics_col]
 
-    statistics_train <- train_target[, c(var_names) := purrr::map(.x = functions, .f = function(x) x(get(response, pos = .SD))), by = statistics_col][
-        , c(response) := NULL] %>% unique %>%
-        merge(y = train_count_table, by = statistics_col)
+    statistics_train <- train_target[, purrr::map(.x = functions, .f = function(x) x(get(response, pos = .SD))), by = statistics_col]
+    generated_cols <- colnames(statistics_train)[!colnames(statistics_train) %in% statistics_col]
+    setnames(x = statistics_train, old = generated_cols, new = var_names)
+
+    statistics_train %<>% merge(y = train_count_table, by = statistics_col)
 
     train <- merge(train, statistics_train, by = statistics_col)
 
