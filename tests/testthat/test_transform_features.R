@@ -286,6 +286,36 @@ testthat::describe("pipe_one_hot_encode()", {
         ctest_dataset_has_columns(r_pca$train, c("a", "b", "x"))
         ctest_dataset_has_columns(r_non$train, c("a", "b", "x"))
     })
+
+    it("can keep it's input a data.table if it was a data.table (except when using PCA)", {
+        dataset1_dt <- function() data.table(dataset1)
+        stats_functions <- list("mean" = mean)
+        r_mean <- pipe_one_hot_encode(train = dataset1_dt(), use_pca = F,
+                                      stat_functions = stats_functions, response = "x")
+        expect_true(is.data.table(r_mean$train))
+        expect_equal(r_mean$train, invoke(r_mean$pipe, dataset1_dt()))
+
+        r_regular <- pipe_one_hot_encode(train = dataset1_dt(), use_pca = F)
+        expect_true(is.data.table(r_regular$train))
+        expect_equal(r_regular$train, invoke(r_regular$pipe, dataset1_dt()))
+    })
+
+    it("can use either a data.table or data.frame as input and use the result on either", {
+        # Mean
+        stats_functions <- list("mean" = mean)
+        ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
+                   use_pca = F, stat_functions = stats_functions, response = "x")
+
+        ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
+                   use_pca = F, stat_functions = stats_functions, response = "x")
+
+        # Base
+        ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
+                   use_pca = F)
+
+        ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
+                   use_pca = F)
+    })
 })
 
 # Skeleton
@@ -377,7 +407,7 @@ describe("pipe_pca()", {
         no_good_rows <- filter(dataset1, is.na(m2))
 
         expect_error(pipe_pca(train = no_good_rows, columns = pca_columns_with_missing_values, pca_tol = .05),
-                       regexp = "No rows were left after checking for NA's", fixed = T)
+                     regexp = "No rows were left after checking for NA's", fixed = T)
     })
 
     it("allows you to set a flag to keep the old columns", {

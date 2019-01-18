@@ -197,7 +197,7 @@ create_stats_predict <- function(data, stat_cols, tables, interaction_level, def
         for(index in seq_len(ncol(combinations))) {
             columns <- combinations[, index]
 
-            if(is_dt) data %<>% merge(y = tables[[tables_index]], by = columns, all.x = T)
+            if(is_dt) data %<>% merge(x = ., y = tables[[tables_index]], by = columns, all.x = T, sort = F)
             else data %<>% dplyr::left_join(y = tables[[tables_index]], by = columns, all.x = T)
 
             stat_col_names <- paste0(names(defaults), "_", paste0(columns, collapse = "_"))

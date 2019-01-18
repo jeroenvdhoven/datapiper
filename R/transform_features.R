@@ -323,7 +323,6 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
             train = train, stat_cols = columns, response = response, functions = stat_functions,
             interaction_level = 1, too_few_observations_cutoff = 0)
 
-
         one_hot_parameters <- as.list(columns)
         names(one_hot_parameters) <- columns
         train_dt_set <- invoke(stats_transformer$pipe, train)
@@ -337,7 +336,10 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
         pca <- prcomp(x = train_dt_set, center = T, scale. = T, tol = pca_tol, retx = F)
         train_dt_set <- predict(pca, newdata = train_dt_set) %>% as_data_frame
     } else pca <- NA
-    train %<>% select_(.dots = paste0("-", columns)) %>% dplyr::bind_cols(train_dt_set)
+
+    if(is.data.table(train)) train[, c(columns) := NULL]
+    else train %<>% select_(.dots = paste0("-", columns))
+    train %<>% dplyr::bind_cols(train_dt_set)
 
     predict_pipe <- pipe(.function = feature_one_hot_encode_predict, one_hot_parameters = one_hot_parameters,
                          use_pca = use_pca, pca = pca, stat_transformer = stats_transformer$pipe,
@@ -393,7 +395,10 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
         test_dt_set <- predict(pca, newdata = test_dt_set) %>% as_data_frame
     }
 
-    data %<>% select_(.dots = paste0("-", columns)) %>% dplyr::bind_cols(test_dt_set)
+    if(is.data.table(data)) data[, c(columns) := NULL]
+    else data %<>% select_(.dots = paste0("-", columns))
+    data %<>% dplyr::bind_cols(test_dt_set)
+
     return(data)
 }
 

@@ -186,6 +186,14 @@ describe("pipe_create_stats", {
         expect_true(is.data.table(r_dt$train))
         expect_equal(object = as_data_frame(r_dt$train), expected = r_df$train)
     })
+
+    it("can use either a data.table or data.frame as input and use the result on either", {
+        ctest_dt_df(pipe_func = pipe_create_stats, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
+                    response = "x", functions = f_list)
+        ctest_dt_df(pipe_func = pipe_create_stats, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
+                    response = "x", functions = f_list)
+    })
+
 })
 
 describe("pipe_remove_single_value_columns", {
@@ -220,14 +228,9 @@ describe("pipe_remove_single_value_columns", {
         expect_equal(dataset1[, good_columns], r$train)
     })
 
-    it("can apply its result to a data.table", {
-        dataset1_dt <- as.data.table(dataset1)
-
-        res_dt <- invoke(r$pipe, dataset1_dt)
-        res_df <- invoke(r$pipe, dataset1)
-
-        expect_true(is.data.table(res_dt))
-        expect_equal(expected = res_df, object = as_data_frame(res_dt))
+    it("can use either a data.table or data.frame as input and use the result on either", {
+        ctest_dt_df(pipe_func = pipe_remove_single_value_columns, dt = data.table(dataset1), df = dataset1, train_by_dt = T)
+        ctest_dt_df(pipe_func = pipe_remove_single_value_columns, dt = data.table(dataset1), df = dataset1, train_by_dt = F)
     })
 })
 

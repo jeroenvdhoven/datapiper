@@ -73,3 +73,20 @@ util_RMSLE <- function(labels, predicted, base = 2) {
 util_MAE <- function(labels, predicted) {
     mean(abs(labels - predicted))
 }
+
+
+ctest_dt_df <- function(pipe_func, dt, df, train_by_dt = T, ...) {
+    dt_copy <- data.table::copy(dt)
+
+    if(train_by_dt) train_df <- dt_copy else train_df <- df
+    r <- pipe_func(train = train_df, ...)
+
+    invoked_dt <- invoke(x = r$pipe, dt)
+    invoked_df <- invoke(x = r$pipe, df)
+
+    expect_true(is.data.table(invoked_dt))
+    expect_false(is.data.table(invoked_df))
+    expect_true(is.data.frame(invoked_df))
+
+    expect_equal(invoked_df, as_data_frame(invoked_dt))
+}
