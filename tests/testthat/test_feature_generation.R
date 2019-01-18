@@ -219,6 +219,16 @@ describe("pipe_remove_single_value_columns", {
         good_columns <- purrr::map_lgl(.x = dataset1, .f = ~ length(unique(.[!na_func(.)])) > 1L)
         expect_equal(dataset1[, good_columns], r$train)
     })
+
+    it("can apply its result to a data.table", {
+        dataset1_dt <- as.data.table(dataset1)
+
+        res_dt <- invoke(r$pipe, dataset1_dt)
+        res_df <- invoke(r$pipe, dataset1)
+
+        expect_true(is.data.table(res_dt))
+        expect_equal(expected = res_df, object = as_data_frame(res_dt))
+    })
 })
 
 describe("pipe_feature_interactions", {

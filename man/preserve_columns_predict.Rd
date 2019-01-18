@@ -7,12 +7,12 @@
 preserve_columns_predict(data, preserved_columns)
 }
 \arguments{
-\item{data}{New data frame to remove same columns from.}
+\item{data}{New data.frame or data.table to remove same columns from.}
 
 \item{preserved_columns}{A vector of columns that should be preserved}
 }
 \value{
-The same data frame, without single-value columns
+The same data.frame or data.table, without single-value columns
 }
 \description{
 Only keep previously selected columns

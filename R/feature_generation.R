@@ -240,14 +240,18 @@ pipe_remove_single_value_columns <- function(train, na_function = function(x){F}
 
 #' Only keep previously selected columns
 #'
-#' @param data New data frame to remove same columns from.
+#' @param data New data.frame or data.table to remove same columns from.
 #' @param preserved_columns A vector of columns that should be preserved
 #'
 #' @details To be used by \code{\link{pipe_remove_single_value_columns}} and \code{\link{pipe_remove_high_correlation_features}}
 #'
-#' @return The same data frame, without single-value columns
+#' @return The same data.frame or data.table, without single-value columns
 preserve_columns_predict <- function(data, preserved_columns) {
-    return(data[,preserved_columns[preserved_columns %in% colnames(data)], drop = F])
+    if(is.data.table(data)) {
+        return(data[, .SD, .SDcols = preserved_columns[preserved_columns %in% colnames(data)]])
+    } else {
+        return(data[,preserved_columns[preserved_columns %in% colnames(data)], drop = F])
+    }
 }
 
 #' Generates permutation interaction effects between sets of numeric variables

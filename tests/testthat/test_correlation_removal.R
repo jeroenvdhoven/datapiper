@@ -50,6 +50,16 @@ describe("pipe_remove_high_correlation_features", {
         expect_true(number_of_numeric_columns > 1)
         expect_true(number_of_numeric_columns < original_number_of_numeric_columns)
     })
+
+    it("can apply its result to a data.table", {
+        dataset1_dt <- as.data.table(dataset1)
+
+        res_dt <- invoke(r$pipe, dataset1_dt)
+        res_df <- invoke(r$pipe, dataset1)
+
+        expect_true(is.data.table(res_dt))
+        expect_equal(expected = res_df, object = as_data_frame(res_dt))
+    })
 })
 
 
