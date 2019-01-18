@@ -397,12 +397,6 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
     return(data)
 }
 
-stat_transformer_for_one_hot <- function(data, stats_transformer, orignal_column) {
-    data <- invoke(stats_transformer, data)
-    data <- data[, !colnames(data) %in% orignal_column]
-    return(data)
-}
-
 #' Remove values from categorical variables that do not occur often enough
 #'
 #' @param train Data frame containing the train data.
