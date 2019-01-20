@@ -474,6 +474,7 @@ feature_categorical_filter_predict <- function(data, categorical_columns, mappin
         col <- categorical_columns[i]
 
         values <- unlist(data[col])
+        if(is.numeric(values) || is.logical(values)) values <- as.character(values)
         temp_mapping <- mapping[values]
         temp_mapping[!values %in% names(mapping)] <- insufficient_occurance_marker
 

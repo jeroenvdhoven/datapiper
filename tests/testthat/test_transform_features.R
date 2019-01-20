@@ -304,17 +304,17 @@ testthat::describe("pipe_one_hot_encode()", {
         # Mean
         stats_functions <- list("mean" = mean)
         ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
-                   use_pca = F, stat_functions = stats_functions, response = "x")
+                    use_pca = F, stat_functions = stats_functions, response = "x")
 
         ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
-                   use_pca = F, stat_functions = stats_functions, response = "x")
+                    use_pca = F, stat_functions = stats_functions, response = "x")
 
         # Base
         ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
-                   use_pca = F)
+                    use_pca = F)
 
         ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
-                   use_pca = F)
+                    use_pca = F)
     })
 })
 
@@ -351,6 +351,25 @@ testthat::describe("pipe_categorical_filter()", {
         expect_equal(dataset1$x, r$train$x)
         expect_equal(dataset1$a, r$train$a)
         expect_equal(dataset1$b, r$train$b)
+    })
+
+    evaluate_numerical_filter <- function(data, minimum_values, N = 5) {
+        set.seed(1)
+        d <- mutate(data, c2 = c(minimum_values, rep(5, nrow(data) - length(minimum_values))))
+
+        r <- pipe_categorical_filter(
+            train = d, response = "x", categorical_columns = "c2",
+            insufficient_occurance_marker = "marker", threshold_function = function(data) N)
+
+        expect_equal(r$train$c2[seq_along(minimum_values)], expected = rep("marker", length(minimum_values)))
+        expect_equal(r$train$c2[-seq_along(minimum_values)], expected = rep("5", nrow(d) - length(minimum_values)))
+    }
+
+    it("allows you to select numeric columns as well", {
+        evaluate_numerical_filter(dataset1, c(-1, -2, -3, -4))
+        evaluate_numerical_filter(dataset1, c(1, 2, 3, 4) * 10)
+        evaluate_numerical_filter(dataset1, c(0, 0, 0, 0))
+        evaluate_numerical_filter(dataset1, c(NA, NA, NA, NA))
     })
 })
 
