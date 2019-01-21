@@ -60,6 +60,15 @@ describe("pipe_remove_high_correlation_features", {
         expect_true(is.data.table(res_dt))
         expect_equal(expected = res_df, object = as_data_frame(res_dt))
     })
+
+    it("can use either a data.table or data.frame as input and use the result on either", {
+        # Mean
+        ctest_dt_df(pipe_func = pipe_remove_high_correlation_features, dt = data.table(dataset1), df = dataset1,
+                    train_by_dt = T, threshold = .8)
+
+        ctest_dt_df(pipe_func = pipe_remove_high_correlation_features, dt = data.table(dataset1), df = dataset1,
+                    train_by_dt = F, threshold = .8)
+    })
 })
 
 

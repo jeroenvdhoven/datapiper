@@ -17,8 +17,7 @@ pipe_remove_high_correlation_features <- function(train, exclude_columns = chara
     remove_cols <- highly_correlated_features %>% .[!. %in% indep_cols]
     keep_cols <- colnames(train) %>% .[!. %in% remove_cols]
 
-    train %<>% .[,keep_cols, drop = F]
-
+    train <- select_cols(train, keep_cols)
     predict_pipe <- pipe(.function = preserve_columns_predict, preserved_columns = keep_cols)
     return(list("train" = train, "pipe" = predict_pipe))
 }
@@ -35,7 +34,9 @@ high_correlation_features <- function(data, exclude_columns = character(0), thre
     #ADD OPTION FOR STATISTICAL SIGNIFICANCE REMOVAL?
     stopifnot(!any(!exclude_columns %in% colnames(data)))
 
-    if(length(exclude_columns) > 0) data %<>% dplyr::select_(.dots = paste0("-",exclude_columns))
+    if(length(exclude_columns) > 0) {
+        data <- deselect_cols(data, exclude_columns, inplace = T)
+    }
     stopifnot(!any(!purrr::map_lgl(data, ~ is.numeric(.) || is.logical(.))))
 
     correlation_matrix <- data %>% as.matrix %>% stats::cor(use = "complete.obs")

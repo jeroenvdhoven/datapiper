@@ -21,3 +21,16 @@ standard_column_names <- function(data) {
 
     return(data)
 }
+
+select_cols <- function(data, cols = colnames(data), rows = seq_len(nrow(data))) {
+    if(is.data.table(data)) return(data[rows, cols, with = F])
+    else return(select_(data, .dots = cols)[rows, ])
+}
+
+deselect_cols <- function(data, cols, inplace = F) {
+    if(is.data.table(data)) {
+        if(inplace){
+            return(data[, c(cols) := NULL])
+        } else return(data[, .SD, .SDcols = colnames(data)[!colnames(data) %in% cols]])
+    } else return(select_(data, .dots = paste0("-", cols)))
+}
