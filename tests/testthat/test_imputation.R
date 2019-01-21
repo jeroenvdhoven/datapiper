@@ -59,4 +59,20 @@ describe("pipe_impute", {
     it("can give verbose output", {
         expect_output(pipe_impute(train = select(dataset1, -y), type = "lm", verbose = T))
     })
+
+    it("can use either a data.table or data.frame as input and use the result on either", {
+        target_df <- select(dataset1, -y)
+
+        # lm
+        ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = T, type = "lm")
+        ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = F, type = "lm")
+
+        # mean
+        ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = T, type = "mean")
+        ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = F, type = "mean")
+
+        # xgboost
+        ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = T, type = "xgboost")
+        ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = F, type = "xgboost")
+    })
 })

@@ -16,11 +16,15 @@
 #' @return The model built based on \code{type}.
 #' @importFrom stats lm
 impute_model <- function(data, column, NA_value = is.na, exclude_columns, controls = NA, type = "xgboost"){
-    if(is.function(NA_value)) missing <- NA_value(data[column])
+    if(is.function(NA_value)) {
+        missing <- NA_value(select_cols(data, column))
+        if(is.data.table(data)) missing <- as.logical(missing)
+    }
     else stop('NA_value must be a function')
     if(sum(missing) / nrow(data) > .33) warning(paste("Warning:", sum(missing) / nrow(data) * 100L, "% of the data in column", column, "is missing\n"))
 
-    data %<>% .[!missing,]
+    if(is.data.table(data)) data <- data[!missing]
+    else data %<>% .[!missing,]
 
     included_cols <- colnames(data) %>% .[
         (!. %in% c(exclude_columns, column) ) &          #All columns that are not excluded.
@@ -34,15 +38,15 @@ impute_model <- function(data, column, NA_value = is.na, exclude_columns, contro
     }
 
     if(type == "mean"){
-        target_vector <- unlist(data[column])
+        target_vector <- unlist(select_cols(data, cols = column))
         if(is.numeric(target_vector)) model <- mean(target_vector)
         else model <- unique(target_vector) %>% .[which.max(tabulate(match(target_vector, .)))]
     }
     else if(type == "lm") model <- lm(formula = form, data = data)
     else if(type == "xgboost") {
-        reduced_data <- colnames(data) %in% c(exclude_columns, column)
-        reduced_data <- data[,!reduced_data]
-        xgbm <- xgboost::xgb.DMatrix(data = as.matrix(reduced_data), label = unlist(data[column]))
+        reduced_data <- colnames(data)[colnames(data) %in% c(exclude_columns, column)]
+        reduced_data <- deselect_cols(data, reduced_data)
+        xgbm <- xgboost::xgb.DMatrix(data = as.matrix(reduced_data), label = unlist(select_cols(data, column)))
         model <- xgboost::xgb.train(params = controls, nrounds = controls$nrounds, verbose = F, data = xgbm)
     }
     else stop("Invalid type argument for imputation")
@@ -65,23 +69,28 @@ impute_model <- function(data, column, NA_value = is.na, exclude_columns, contro
 #' @return The same dataset as the imputed, but with NA values in the selected columns replaced by their estimated values.
 impute_predict_all <- function(data, columns, na_function, models, included_columns, verbose = F){
     impute_predict <- function(data, column, NA_value, model, included_columns){
-        if(is.function(NA_value)) missing_values <- NA_value(unlist(data[column]))
+        if(is.function(NA_value)) {
+            missing_values <- NA_value(select_cols(data, column))
+            if(is.data.table(data)) missing_values <- as.logical(missing_values)
+        }
+
         else stop('NA_value must be a function')
 
         if(length(missing_values) == 0){
             warning(paste("Column", column, "has no missing values?\n"))
-            return(data[column])
+            return(select_cols(data, column))
         }
 
-        target <- data[column]
-        input_data <- select_(data, .dots = included_columns)
-        if(column %in% colnames(input_data)) input_data %<>% select_(paste0("-", column))
+        target <- unlist(select_cols(data, column))
+        input_data <- select_cols(data, included_columns)
+        if(column %in% colnames(input_data)) input_data %<>% deselect_cols(column)
         if(class(model) == "xgb.Booster") input_data %<>% as.matrix
 
         if(is.vector(model) && length(model) == 1){
-            target[missing_values, column] <- model
+            target[missing_values] <- model
         } else {
-            target[missing_values, column] <- predict(object = model, newdata = input_data[missing_values, , drop = F])
+            new_values <- predict(object = model, newdata = input_data[missing_values, ])
+            target[missing_values] <- new_values
         }
         return(target)
     }
@@ -93,15 +102,14 @@ impute_predict_all <- function(data, columns, na_function, models, included_colu
         length(models) == length(columns)
     )
 
-    temp <- data[,0]
     for(i in seq_along(columns)){
-        if(verbose) print(columns[i])
-        temp[columns[i]] <- impute_predict(data = data, column = columns[i], NA_value = na_function,
-                                           model = models[[i]], included_columns = included_columns)
+        col <- columns[i]
+        if(verbose) print(col)
+        temp <- impute_predict(data = data, column = col, NA_value = na_function,
+                               model = models[[i]], included_columns = included_columns)
+        if(is.data.table(temp)) data[, c(col) := NULL][, c(col) := temp]
+        else data[, col] <- temp
     }
-
-    for(i in colnames(temp))
-        data[i] <- temp[i]
 
     return(data)
 }

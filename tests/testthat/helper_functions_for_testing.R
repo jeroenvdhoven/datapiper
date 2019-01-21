@@ -32,6 +32,7 @@ dataset1 <- dplyr::data_frame(
 #     it("runs without errors on basic settings", {})
 #
 #     it("handles missing values", {})
+#     it("can take data.table and data.frame as input and for predictions", {})
 # })
 
 ctest_pipe_has_correct_fields <- function(pipe_res) {
@@ -83,6 +84,13 @@ ctest_dt_df <- function(pipe_func, dt, df, train_by_dt = T, ...) {
 
     invoked_dt <- invoke(x = r$pipe, dt)
     invoked_df <- invoke(x = r$pipe, df)
+
+    if(train_by_dt) {
+        expect_true(is.data.table(r$train))
+    } else {
+        expect_false(is.data.table(r$train))
+        expect_true(is.data.frame(r$train))
+    }
 
     expect_true(is.data.table(invoked_dt))
     expect_false(is.data.table(invoked_df))
