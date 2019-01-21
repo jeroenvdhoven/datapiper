@@ -232,7 +232,7 @@ pipe_remove_single_value_columns <- function(train, na_function = function(x){F}
     })
     keep_cols <- names(more_than_one_unique_value[more_than_one_unique_value])
 
-    train %<>% select_(.dots = keep_cols)
+    train %<>% select_cols(cols = keep_cols)
 
     predict_pipe <- pipe(.function = preserve_columns_predict, preserved_columns = keep_cols)
     return(list("train" = train, "pipe" = predict_pipe))
