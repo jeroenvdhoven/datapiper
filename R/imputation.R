@@ -31,7 +31,6 @@ impute_model <- function(data, column, NA_value = is.na, exclude_columns, contro
             (!grepl(pattern = column, x = ., fixed = T)) #All columns that contain exactly the same column name.
         ]
 
-    form <- paste0(column, " ~ `", paste0(included_cols, collapse = '` + `'), "`") %>% as.formula
 
     if(is.na(controls)) {
         if(type == "xgboost") controls = list(nrounds = 50)
@@ -41,9 +40,10 @@ impute_model <- function(data, column, NA_value = is.na, exclude_columns, contro
         target_vector <- unlist(select_cols(data, cols = column))
         if(is.numeric(target_vector)) model <- mean(target_vector)
         else model <- unique(target_vector) %>% .[which.max(tabulate(match(target_vector, .)))]
-    }
-    else if(type == "lm") model <- lm(formula = form, data = data)
-    else if(type == "xgboost") {
+    } else if(type == "lm") {
+        form <- paste0(column, " ~ `", paste0(included_cols, collapse = '` + `'), "`") %>% as.formula
+        model <- lm(formula = form, data = data)
+    } else if(type == "xgboost") {
         reduced_data <- colnames(data)[colnames(data) %in% c(exclude_columns, column)]
         reduced_data <- deselect_cols(data, reduced_data)
         xgbm <- xgboost::xgb.DMatrix(data = as.matrix(reduced_data), label = unlist(select_cols(data, column)))
