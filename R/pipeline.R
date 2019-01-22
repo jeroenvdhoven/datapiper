@@ -74,7 +74,7 @@ train_pipeline <- function(..., response){
             pipe_names[missing_pipe_name] <- paste0("pipe_", seq_len(length.out = sum(missing_pipe_name)))
     } else pipe_names <- paste0("pipe_", seq_along(pipes))
 
-    res <- function(train) {
+    res <- function(train, verbose = F) {
         trained_pipelines <- as.list(seq_along(pipes))
         trained_post_pipelines <- list()
         mandatory_variables <- c("train", "pipe")
@@ -94,6 +94,7 @@ train_pipeline <- function(..., response){
             defaults <- formals(f) %>% .[!names(.) %in% names(other_args)] %>% .[names(.) != "..."]
             other_args <- c(other_args, defaults)
 
+            if(verbose) cat("Training", pipe_names[i], "...\n")
             pipe_res <- do.call(what = f, args = other_args)
 
             # Check if pipe_res contains train arguments
