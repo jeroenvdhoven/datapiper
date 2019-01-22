@@ -68,47 +68,48 @@ impute_model <- function(data, column, NA_value = is.na, exclude_columns, contro
 #'
 #' @return The same dataset as the imputed, but with NA values in the selected columns replaced by their estimated values.
 impute_predict_all <- function(data, columns, na_function, models, included_columns, verbose = F){
-    impute_predict <- function(data, column, NA_value, model, included_columns){
-        if(is.function(NA_value)) {
-            missing_values <- NA_value(select_cols(data, column))
-            if(is.data.table(data)) missing_values <- as.logical(missing_values)
-        }
-
-        else stop('NA_value must be a function')
-
-        if(length(missing_values) == 0){
-            warning(paste("Column", column, "has no missing values?\n"))
-            return(select_cols(data, column))
-        }
-
-        target <- unlist(select_cols(data, column))
-        input_data <- select_cols(data, included_columns)
-        if(column %in% colnames(input_data)) input_data %<>% deselect_cols(column)
-        if(class(model) == "xgb.Booster") input_data %<>% as.matrix
-
-        if(is.vector(model) && length(model) == 1){
-            target[missing_values] <- model
-        } else {
-            new_values <- predict(object = model, newdata = input_data[missing_values, ])
-            target[missing_values] <- new_values
-        }
-        return(target)
-    }
-
     stopifnot(
         is.character(columns),
         !any(!columns %in% colnames(data)),
         is.function(na_function),
-        length(models) == length(columns)
+        length(models) == length(columns),
+        is.character(included_columns),
+        !any(!included_columns %in% colnames(data)),
+        is.logical(verbose)
     )
+    if(length(models) < 1) model_type <- "mean"
+    else {
+        m <- models[[1]]
+        if(is.vector(m) && length(m) == 1) model_type <- "mean"
+        else {
+            if(class(m) == "xgb.Booster") model_type <- "xgboost"
+            else model_type <- "lm"
+        }
+    }
+
+    if(model_type %in% c("xgboost", "lm")) subset <- select_cols(data, included_columns)
+    if(model_type == "xgboost") subset <- as.matrix(subset)
 
     for(i in seq_along(columns)){
-        col <- columns[i]
-        if(verbose) print(col)
-        temp <- impute_predict(data = data, column = col, NA_value = na_function,
-                               model = models[[i]], included_columns = included_columns)
-        if(is.data.table(temp)) data[, c(col) := NULL][, c(col) := temp]
-        else data[, col] <- temp
+        column <- columns[i]
+        model <- models[[i]]
+        if(verbose) print(column)
+
+        target <- unlist(select_cols(data, column))
+        missing_values <- na_function(target)
+        if(is.data.table(data)) missing_values <- as.logical(missing_values)
+
+        if(model_type == "mean"){
+            target[missing_values] <- model
+        } else {
+            if(model_type == "xgboost") input_data <- subset[, colnames(subset) != column]
+            else input_data <- subset
+            new_values <- predict(object = model, newdata = input_data[missing_values, ])
+            target[missing_values] <- new_values
+        }
+
+        if(is.data.table(data)) data[, c(column) := NULL][, c(column) := target]
+        else data[, column] <- target
     }
 
     return(data)

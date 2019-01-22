@@ -32,7 +32,7 @@ dataset1 <- dplyr::data_frame(
 #     it("runs without errors on basic settings", {})
 #
 #     it("handles missing values", {})
-#     it("can take data.table and data.frame as input and for predictions", {})
+#     it("can take data.table and data.frame as input and for predictions", {}) # Make sure this test covers all flows in your function
 # })
 
 ctest_pipe_has_correct_fields <- function(pipe_res) {
