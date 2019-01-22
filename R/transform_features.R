@@ -435,7 +435,7 @@ pipe_categorical_filter <- function(
 
     for(i in seq_along(categorical_columns)) {
         col <- categorical_columns[i]
-        values <- unlist(train[col])
+        values <- unlist(select_cols(train, col))
         tabulated <- table(values)
 
         mapping <- names(tabulated)
@@ -476,12 +476,13 @@ feature_categorical_filter_predict <- function(data, categorical_columns, mappin
         mapping <- mappings[[i]]
         col <- categorical_columns[i]
 
-        values <- unlist(data[col])
+        values <- unlist(select_cols(data, col))
         if(is.numeric(values) || is.logical(values)) values <- as.character(values)
         temp_mapping <- mapping[values]
         temp_mapping[!values %in% names(mapping)] <- insufficient_occurance_marker
 
-        data[col] <- temp_mapping
+        if(is.data.table(data)) data[, c(col) := temp_mapping]
+        else data[col] <- temp_mapping
     }
 
     return(data)

@@ -157,13 +157,6 @@ create_stats <- function(train, statistics_col, response, functions, too_few_obs
     train <- merge(train, statistics_train, by = statistics_col)
 
     target <- unlist(train[, response, with = F])
-    for(i in seq_along(functions)) {
-        value <- functions[[i]](target)
-        stat_col_name <- var_names[i]
-        missing_index <- train[, is.na(get(stat_col_name))]
-        if(any(missing_index)) train[missing_index, c(stat_col_name) := value]
-    }
-
     defaults <- purrr::map_dbl(.x = functions, .f = function(x, y) x(y), y = target)
     names(defaults) <- names(functions)
 

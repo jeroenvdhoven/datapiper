@@ -376,6 +376,11 @@ testthat::describe("pipe_categorical_filter()", {
         evaluate_numerical_filter(dataset1, c(0, 0, 0, 0))
         evaluate_numerical_filter(dataset1, c(NA, NA, NA, NA))
     })
+
+    it("can take data.table and data.frame as input and for predictions", {
+        ctest_dt_df(pipe_func = pipe_categorical_filter, dt = data.table(dataset1), df = dataset1, train_by_dt = T, response = "x")
+        ctest_dt_df(pipe_func = pipe_categorical_filter, dt = data.table(dataset1), df = dataset1, train_by_dt = F, response = "x")
+    })
 })
 
 describe("pipe_pca()", {
