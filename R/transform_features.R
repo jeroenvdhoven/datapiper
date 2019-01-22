@@ -217,11 +217,11 @@ pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "
         scale_func <- function(x) max(x, na.rm = T) - min(x, na.rm = T)
     }else stop("Error: wrong type of scaling")
 
-    centers <- purrr::map_dbl(train[, columns], center_func)
-    scales <- purrr::map_dbl(train[, columns], scale_func)
-    scales[scales == 0] <- 1L
+    subset <- select_cols(train, columns)
 
-    train[, columns] %<>% scale(center = centers, scale = scales)
+    centers <- purrr::map_dbl(subset, center_func)
+    scales <- purrr::map_dbl(subset, scale_func)
+    scales[scales == 0] <- 1L
 
     predict_function <- function(data, centers, scales, columns) {
         stopifnot(
@@ -230,11 +230,14 @@ pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "
             is.numeric(centers), length(centers) == length(columns),
             is.numeric(scales), length(scales) == length(columns)
         )
-
-        data[, columns] %<>% scale(center = centers, scale = scales)
+        subset <- scale(x = select_cols(data, columns), center = centers, scale = scales)
+        if(is.data.table(data)) {
+            for(col in columns) data[, c(col) := NULL][, c(col) := subset[, col]]
+        } else data[, columns] <- subset
         return(data)
     }
     predict_pipe <- pipe(.function = predict_function, centers = centers, scales = scales, columns = columns)
+    train <- invoke(predict_pipe, train)
     result <- list("train" = train, "pipe" = predict_pipe)
 
     retransform_requested <- !missing(retransform_columns)

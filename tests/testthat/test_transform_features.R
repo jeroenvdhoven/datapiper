@@ -190,6 +190,11 @@ testthat::describe("pipe_scaler()", {
         r_norm_retransformed <- invoke(r_normal$post_pipe, r_01_new_data_transformed)
         for(col in retransform_columns) expect_equal(unlist(r_norm_retransformed[col]), unlist(new_data[col]))
     })
+
+    it("can take data.table and data.frame as input and for predictions", {
+        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = T, type = "[0-1]")
+        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = F, type = "N(0,1)")
+    })
 })
 
 # Skeleton
