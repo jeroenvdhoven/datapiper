@@ -347,6 +347,11 @@ testthat::describe("pipe_categorical_filter()", {
         expect_equal(invoke(r$pipe, d)$y, rep("marker", N))
     })
 
+    it("can create a pipeline that handles new values well on data.tables", {
+        d <- as.data.table(mutate(dataset1, y = "henk"))
+        expect_equal(invoke(r$pipe, d)$y, rep("marker", N))
+    })
+
     it("can create a pipeline that handles missing values well", {
         d <- mutate(dataset1, y = NA_character_)
         expect_equal(invoke(r$pipe, d)$y, rep("marker", N))
@@ -375,6 +380,14 @@ testthat::describe("pipe_categorical_filter()", {
         evaluate_numerical_filter(dataset1, c(1, 2, 3, 4) * 10)
         evaluate_numerical_filter(dataset1, c(0, 0, 0, 0))
         evaluate_numerical_filter(dataset1, c(NA, NA, NA, NA))
+    })
+
+    it("allows you to select numeric columns as well in data.tables", {
+        tmp_dt <- as.data.table(dataset1)
+        evaluate_numerical_filter(tmp_dt, c(-1, -2, -3, -4))
+        evaluate_numerical_filter(tmp_dt, c(1, 2, 3, 4) * 10)
+        evaluate_numerical_filter(tmp_dt, c(0, 0, 0, 0))
+        evaluate_numerical_filter(tmp_dt, c(NA, NA, NA, NA))
     })
 
     it("can take data.table and data.frame as input and for predictions", {

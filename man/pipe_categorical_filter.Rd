@@ -10,9 +10,9 @@ pipe_categorical_filter(train, response,
   is.character)], threshold_function = function(data) 30)
 }
 \arguments{
-\item{train}{Data frame containing the train data.}
+\item{train}{Data.frame or data.table containing the train data. A data.table tends to be faster.}
 
-\item{response}{The response column, as a string. Will only be used to ensure this is not included in the \code{categorical_columns} variable}
+\item{response}{The response column, as a string. Will only be used to ensure this is not included in the \code{categorical_columns} variable.}
 
 \item{insufficient_occurance_marker}{The value to substitute when another value in the categorical column doesn't occur often enough.}
 

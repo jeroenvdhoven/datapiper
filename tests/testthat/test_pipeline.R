@@ -354,7 +354,7 @@ describe("train_pipeline()", {
 
     it("can take pipe segments and turn them into one function", {
         expect_true(is.function(r))
-        expect_true(formalArgs(r) == "train")
+        expect_true("train" %in% formalArgs(r))
     })
 
     it("generates a train dataset and pipe function on calling", {
