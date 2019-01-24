@@ -311,10 +311,9 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
         for(colname in columns){
             unique_values <- unique(train_dt_set[, colname, with = F]) %>% unlist
             one_hot_parameters[[colname]] <- unique_values
-            train_dt_set[, (paste0(colname, '_', unique_values)) := purrr::map(unique_values, function(x) {
-                col <- get(colname)
+            train_dt_set[, (paste0(colname, '_', unique_values)) := purrr::map(unique_values, function(x, col) {
                 as.integer(!is.na(col) & col == x)
-            })][, (colname) := NULL]
+            }, col = get(colname))][, (colname) := NULL]
         }
         delete_cols <- colnames(train_dt_set) %>% .[grepl(x = ., pattern = "_(<NA>)|(NA)$")]
         if(length(delete_cols) > 0) train_dt_set[, (delete_cols) := NULL]
@@ -373,10 +372,9 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
         test_dt_set <- data %>% data.table::as.data.table() %>% .[, columns, with = F]
         for(colname in columns){
             unique_values <- one_hot_parameters[colname] %>% unlist
-            test_dt_set[, (paste0(colname, '_', unique_values)) := purrr::map(unique_values, function(x) {
-                col <- get(colname)
+            test_dt_set[, (paste0(colname, '_', unique_values)) := purrr::map(unique_values, function(x, col) {
                 as.integer(!is.na(col) & col == x)
-            })][, (colname) := NULL]
+            }, col = get(colname))][, (colname) := NULL]
         }
 
         delete_cols <- colnames(test_dt_set) %>% .[grepl(x = ., pattern = "_(<NA>)|(NA)$")]

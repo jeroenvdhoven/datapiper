@@ -137,7 +137,7 @@ pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(
 #'
 #' @importFrom data.table is.data.table setnames
 #' @import dplyr
-#' @return A list containing the transformed train dataset, a .predict function to repeat the process on new data and all parameters needed to replicate the process.
+#' @return A list containing the generated statistics tables and defaults per columns
 create_stats <- function(train, statistics_col, response, functions, too_few_observations_cutoff = 30){
     if(is.null(names(functions))) names(functions) <- paste("gen", 1:length(functions))
     stopifnot(data.table::is.data.table(train))
@@ -145,22 +145,18 @@ create_stats <- function(train, statistics_col, response, functions, too_few_obs
     var_names <- paste0(names(functions), "_", paste0(statistics_col, collapse = "_"))
 
     train_target <- train[, .SD, .SDcols = c(statistics_col, response)]
-    train_count_table <- train[, .N, by = statistics_col][N >= too_few_observations_cutoff][
-        , .SD, .SDcols = statistics_col]
+    train_count_table <- train[, .N, by = statistics_col][N >= too_few_observations_cutoff, .SD, .SDcols = statistics_col]
 
-    statistics_train <- train_target[, purrr::map(.x = functions, .f = function(x) x(get(response, pos = .SD))), by = statistics_col]
+    statistics_train <- train_target[, purrr::map(.x = functions, .f = function(x, col) x(col), col = get(response)), by = statistics_col]
     generated_cols <- colnames(statistics_train)[!colnames(statistics_train) %in% statistics_col]
     setnames(x = statistics_train, old = generated_cols, new = var_names)
 
     statistics_train %<>% merge(y = train_count_table, by = statistics_col)
 
-    train <- merge(train, statistics_train, by = statistics_col)
-
-    target <- unlist(train[, response, with = F])
-    defaults <- purrr::map_dbl(.x = functions, .f = function(x, y) x(y), y = target)
+    defaults <- train[, lapply(functions, function(x, y) x(y), y = get(response))]
     names(defaults) <- names(functions)
 
-    return(list("train" = train, table = statistics_train, defaults = defaults))
+    return(list(table = statistics_train, defaults = defaults))
 }
 
 #' Uses previous statistics results to generate columns for a new dataset.
