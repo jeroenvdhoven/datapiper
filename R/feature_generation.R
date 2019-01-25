@@ -271,29 +271,24 @@ pipe_feature_interactions <- function(train, response, columns = 10L, max_intera
     stopifnot(
         is.data.frame(train),
         is.character(columns), !any(!columns %in% colnames(train)), length(columns) > 0,
-        !any(!purrr::map_lgl(train[, columns], is.numeric)),
         is.numeric(max_interactions) && max_interactions >= 2
     )
 
-    col_means <- purrr::map_dbl(train[, columns], mean, na.rm = T)
-
-    modified_train <- train[, columns]
-    for(col in columns){
-        modified_train[, col] <- modified_train[, col] - col_means[col]
+    if(is.data.table(train)) columns_are_numeric <- train[, lapply(.SD, is.numeric), .SDcols = columns]
+    else {
+        modified_train <- train[, columns]
+        columns_are_numeric <- purrr::map_lgl(modified_train, is.numeric)
     }
 
-    for(level in seq_len(max_interactions - 1) + 1){
-        combinations <- combn(x = columns, m = level)
+    stopifnot(
+        !any(!columns_are_numeric)
+    )
 
-        for(column_set in seq_len(ncol(combinations))){
-            column_set <- combinations[, column_set]
-            col_name <- paste0("interaction_", paste0(collapse = "_", column_set))
-
-            train[, col_name] <- apply(modified_train[, column_set], 1, prod)
-        }
-    }
+    if(is.data.table(train)) col_means <- unlist(train[, lapply(.SD, mean, na.rm = T), .SDcols = columns])
+    else col_means <- purrr::map_dbl(modified_train, mean, na.rm = T)
 
     predict_pipe <- pipe(.function = feature_interactions_predict, column_means = col_means, columns = columns, max_interactions = max_interactions)
+    train <- invoke(predict_pipe, train)
     return(list("train" = train, "pipe" = predict_pipe))
 }
 
@@ -309,15 +304,21 @@ pipe_feature_interactions <- function(train, response, columns = 10L, max_intera
 feature_interactions_predict <- function(data, columns, column_means, max_interactions){
     stopifnot(
         is.data.frame(data),
-        is.character(columns), !any(!columns %in% colnames(data)),
-        !any(!purrr::map_lgl(data[, columns], is.numeric)),
+        is.character(columns), !any(!columns %in% colnames(data))
+    )
+    modified_data <- select(data, columns)
+    stopifnot(
+        !any(!purrr::map_lgl(modified_data, is.numeric)),
         is.numeric(column_means), !any(!columns %in% names(column_means)),
         is.numeric(max_interactions) && max_interactions >= 2
     )
 
-    modified_data <- data[, columns]
-    for(col in columns){
-        modified_data[, col] <- modified_data[, col] - column_means[col]
+    if(is.data.table(data)) {
+        modified_data[, c(columns) := purrr::map2(.x = .SD, .y = column_means[columns], .f = function(x, y) x - y)]
+    } else {
+        for(col in columns){
+            modified_data[, col] <- modified_data[, col] - column_means[col]
+        }
     }
 
     for(level in seq_len(max_interactions - 1) + 1){
@@ -325,8 +326,29 @@ feature_interactions_predict <- function(data, columns, column_means, max_intera
         for(column_set in seq_len(ncol(combinations))){
             column_set <- combinations[, column_set]
             col_name <- paste0("interaction_", paste0(collapse = "_", column_set))
-            data[, col_name] <- apply(modified_data[, column_set], 1, prod)
+            command <- paste0(collapse = " * ", column_set)
+
+            if(is.data.table(data)) data[, c(col_name) := eval(parse(text = command), envir = modified_data)]
+            else data[, col_name] <- eval(parse(text = command), envir = modified_data)
         }
     }
     return(data)
+}
+
+colapply <- function(f, ..., .args) {
+    stopifnot(is.function(f))
+    inputs <- list(...)
+    stopifnot(length(inputs) > 0 | !missing(.args))
+
+    if(!missing(.args)) {
+        stopifnot(is.list(.args))
+        inputs <- c(inputs, .args)
+    }
+    lengths <- purrr::map_dbl(.x = inputs, .f = length)
+    stopifnot(!any(lengths != lengths[1])) # Ensure all vectors are of the same length
+
+    res <- inputs[[1]]
+    inputs <- inputs[-1]
+    for(vec in inputs) res <- f(res, vec)
+    return(res)
 }

@@ -289,4 +289,11 @@ describe("pipe_feature_interactions", {
         ctest_for_no_errors(datapiper::pipe_feature_interactions(dataset1, response = "x", max_interactions = 2, columns = 2),
                             error_message = "pipe_feature_interactions can handle missing values")
     })
+
+    it("can use either a data.table or data.frame as input and use the result on either", {
+        ctest_dt_df(pipe_func = pipe_feature_interactions, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
+                    max_interactions = 2, response = "x")
+        ctest_dt_df(pipe_func = pipe_feature_interactions, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
+                    max_interactions = 2, response = "x")
+    })
 })
