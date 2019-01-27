@@ -65,4 +65,9 @@ describe("pipe_clustering()", {
         r <- pipe_clustering(train = test_df, exclude_columns = "x", k = 3)
         expect_equal(r$train$cluster, c(rep("1", 50), rep("2", 100), rep("3", 50)))
     })
+
+    it("can use either a data.table or data.frame as input and use the result on either", {
+        ctest_dt_df(pipe_func = pipe_clustering, dt = data.table(dataset1), df = dataset1, train_by_dt = T)
+        ctest_dt_df(pipe_func = pipe_clustering, dt = data.table(dataset1), df = dataset1, train_by_dt = F)
+    })
 })

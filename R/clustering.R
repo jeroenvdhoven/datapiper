@@ -24,16 +24,18 @@ pipe_clustering <- function(train, cluster_column = "cluster", exclude_columns =
         is.numeric(k)
     )
 
-    if(length(exclude_columns) > 0) train_cluster <- select_(train, .dots = paste0("-", exclude_columns))
+    if(is.data.table(train)) non_numeric_columns <- !unlist(train[, purrr::map(.SD, .f = ~ is.numeric(.) || is.logical(.))])
+    else non_numeric_columns <- !purrr::map_lgl(.x = train, .f = ~ is.numeric(.) || is.logical(.))
+
+    if(any(non_numeric_columns)) {
+        extra_excluded_columns <- colnames(train)[non_numeric_columns]
+        exclude_columns <- unique(c(extra_excluded_columns, exclude_columns))
+    }
+
+    if(length(exclude_columns) > 0) train_cluster <- deselect_cols(train, cols = exclude_columns, inplace = F)
     else train_cluster <- train
 
     # Make sure non-numeric columns are added to excluded columns
-    non_numeric_columns <- !purrr::map_lgl(.x = train_cluster, .f = ~ is.numeric(.) || is.logical(.))
-    if(any(non_numeric_columns)) {
-        extra_excluded_columns <- colnames(train_cluster)[non_numeric_columns]
-        train_cluster <- select_(train_cluster, .dots = paste0("-", extra_excluded_columns))
-        exclude_columns <- unique(c(extra_excluded_columns, exclude_columns))
-    }
 
     stopifnot(
         !any(!purrr::map_lgl(.x = train_cluster, .f = ~ is.numeric(.) || is.logical(.))),
@@ -45,9 +47,10 @@ pipe_clustering <- function(train, cluster_column = "cluster", exclude_columns =
                                  samples = ceiling(sqrt(nrow(train_cluster))), pamLike = T)
 
 
-    train[cluster_column] <- as.character(clustering$clustering)
-    clustering$medoids <- as_data_frame(clustering$medoids)
+    if(is.data.table(train)) train[, c(cluster_column) := as.character(clustering$clustering)]
+    else train[cluster_column] <- as.character(clustering$clustering)
 
+    clustering$medoids <- as_data_frame(clustering$medoids)
     predict_pipe <- pipe(.function = clustering_predict, metric = metric, centroids = clustering$medoids,
                          exclude_columns = exclude_columns, cluster_column = cluster_column)
 
@@ -86,6 +89,8 @@ clustering_predict <- function(data, metric, centroids, cluster_column, exclude_
 
     stopifnot(length(clusters) == nrow(data_cluster))
 
-    data[cluster_column] <- as.character(clusters)
+    if(is.data.table(data)) data[, c(cluster_column) := as.character(clusters)]
+    else data[cluster_column] <- as.character(clusters)
+
     return(data)
 }
