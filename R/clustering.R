@@ -1,6 +1,6 @@
 #' Add cluster labels to a training set
 #'
-#' @param train The train dataset, as a data.frame.
+#' @param train The train dataset, as a data.frame or data.table.
 #' @param cluster_column Name for the new cluster label column
 #' @param exclude_columns Columns to be excluded from the clustering. Should be provided as a character vector.
 #' Non-numerical columns will automatically be excluded
