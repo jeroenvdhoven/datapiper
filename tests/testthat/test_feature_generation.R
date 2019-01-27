@@ -41,7 +41,13 @@ describe("pipe_NA_indicators", {
         expect_true("b_NA_indicator" %in% colnames(r_forced$train))
     })
 
+    it("can use either a data.table or data.frame as input and use the result on either", {
+        ctest_dt_df(pipe_func = pipe_NA_indicators, dt = data.table(dataset1), df = dataset1, train_by_dt = F)
+        ctest_dt_df(pipe_func = pipe_NA_indicators, dt = data.table(dataset1), df = dataset1, train_by_dt = T)
 
+        ctest_dt_df(pipe_func = pipe_NA_indicators, dt = data.table(dataset1), df = dataset1, train_by_dt = F, force_column = T)
+        ctest_dt_df(pipe_func = pipe_NA_indicators, dt = data.table(dataset1), df = dataset1, train_by_dt = T, force_column = T)
+    })
 })
 
 
@@ -193,7 +199,6 @@ describe("pipe_create_stats", {
         ctest_dt_df(pipe_func = pipe_create_stats, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
                     response = "x", functions = f_list)
     })
-
 })
 
 describe("pipe_remove_single_value_columns", {

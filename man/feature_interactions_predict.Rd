@@ -7,7 +7,7 @@
 feature_interactions_predict(data, columns, column_means, max_interactions)
 }
 \arguments{
-\item{data}{Data frame with the new data}
+\item{data}{The new dataset, as a data.frame or data.table.}
 
 \item{columns}{Column names from the \code{\link{pipe_feature_interactions}}'s results}
 

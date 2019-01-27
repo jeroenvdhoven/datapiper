@@ -7,7 +7,7 @@
 NA_indicators_predict(data, condition, columns)
 }
 \arguments{
-\item{data}{The new dataset, as a data.frame.}
+\item{data}{The new dataset, as a data.frame or data.table.}
 
 \item{condition}{Function to test if a value is missing. Should return true when a value is missing and false otherwise.}
 

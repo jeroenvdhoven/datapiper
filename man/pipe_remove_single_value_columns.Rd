@@ -8,7 +8,7 @@ pipe_remove_single_value_columns(train, na_function = function(x) {     F
   })
 }
 \arguments{
-\item{train}{train data frame to select columns from to remove.}
+\item{train}{The train dataset, as a data.frame or data.table.}
 
 \item{na_function}{A function that returns true when a value is considered missing, and should be removed. Defaults to removing no values.}
 }

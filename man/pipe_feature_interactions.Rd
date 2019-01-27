@@ -8,7 +8,7 @@ pipe_feature_interactions(train, response, columns = 10L,
   max_interactions = 2)
 }
 \arguments{
-\item{train}{Data frame containing the train data.}
+\item{train}{The train dataset, as a data.frame or data.table.}
 
 \item{response}{The column containing the response variable.}
 

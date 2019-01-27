@@ -7,7 +7,7 @@
 preserve_columns_predict(data, preserved_columns)
 }
 \arguments{
-\item{data}{New data.frame or data.table to remove same columns from.}
+\item{data}{The new dataset, as a data.frame or data.table.}
 
 \item{preserved_columns}{A vector of columns that should be preserved}
 }

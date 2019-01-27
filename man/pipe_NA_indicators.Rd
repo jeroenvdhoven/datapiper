@@ -8,7 +8,7 @@ pipe_NA_indicators(train, condition = is.na, columns = colnames(train),
   force_column = F)
 }
 \arguments{
-\item{train}{The train dataset, as a data.frame.}
+\item{train}{The train dataset, as a data.frame or data.table.}
 
 \item{condition}{Function to test if a value is missing. Should return true when a value is missing and false otherwise.}
 
