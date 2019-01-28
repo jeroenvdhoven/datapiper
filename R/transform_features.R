@@ -494,8 +494,9 @@ feature_categorical_filter_predict <- function(data, categorical_columns, mappin
         col <- categorical_columns[i]
 
         if(is.data.table(data)) {
-            data[!get(col) %in% names(mapping), c(col) := insufficient_occurance_marker]
-            data[, c(col) := mapping[as.character(get(col))]]
+            mappable_rows <- unlist(data[, get(col) %in% names(mapping)])
+            data[!mappable_rows, c(col) := insufficient_occurance_marker]
+            data[mappable_rows, c(col) := mapping[as.character(get(col))]]
             data[is.na(get(col)), c(col) := insufficient_occurance_marker]
         } else {
             values <- unlist(select_cols(data, col))
