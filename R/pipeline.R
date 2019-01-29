@@ -162,6 +162,7 @@ pipe_dplyr <- function(dplyr_function, stop_on_missing_names = F) {
 
         train <- dplyr_function(train, ...)
         dplyr_wrapper <- function(data, ...) dplyr_function(data, ...)
+        environment(dplyr_wrapper)$train <- NULL
 
         predict_pipe <- pipe(.function = dplyr_wrapper, ...)
         return(list(train = train, pipe = predict_pipe))
