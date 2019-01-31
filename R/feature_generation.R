@@ -81,7 +81,8 @@ NA_indicators_predict <- function(data, condition, columns){
 #'
 #' @export
 #' @importFrom data.table as.data.table
-pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(train, is.character)], response, functions, interaction_level = 1, too_few_observations_cutoff = 30) {
+pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(train, is.character)], response,
+                              functions = list("mean" = mean), interaction_level = 1, too_few_observations_cutoff = 30) {
     stopifnot(is.numeric(interaction_level), interaction_level >= 1)
 
     tables <- list()

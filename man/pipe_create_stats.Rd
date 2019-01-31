@@ -6,7 +6,7 @@
 \usage{
 pipe_create_stats(train,
   stat_cols = colnames(train)[purrr::map_lgl(train, is.character)],
-  response, functions, interaction_level = 1,
+  response, functions = list(mean = mean), interaction_level = 1,
   too_few_observations_cutoff = 30)
 }
 \arguments{

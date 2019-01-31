@@ -4,7 +4,7 @@
 \alias{pipe_pca}
 \title{Apply PCA to a subset of the columns in a dataset}
 \usage{
-pipe_pca(train, columns, pca_tol, keep_old_columns = F)
+pipe_pca(train, columns, pca_tol = 0.1, keep_old_columns = F)
 }
 \arguments{
 \item{train}{Data frame containing the train data.}
