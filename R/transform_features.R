@@ -223,20 +223,7 @@ pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "
     scales <- purrr::map_dbl(subset, scale_func)
     scales[scales == 0] <- 1L
 
-    predict_function <- function(data, centers, scales, columns) {
-        stopifnot(
-            is.data.frame(data),
-            !any(!columns %in% colnames(data)),
-            is.numeric(centers), length(centers) == length(columns),
-            is.numeric(scales), length(scales) == length(columns)
-        )
-        subset <- scale(x = select_cols(data, columns), center = centers, scale = scales)
-        if(is.data.table(data)) {
-            for(col in columns) data[, c(col) := NULL][, c(col) := subset[, col]]
-        } else data[, columns] <- subset
-        return(data)
-    }
-    predict_pipe <- pipe(.function = predict_function, centers = centers, scales = scales, columns = columns)
+    predict_pipe <- pipe(.function = scaler_predict, centers = centers, scales = scales, columns = columns)
     train <- invoke(predict_pipe, train)
     result <- list("train" = train, "pipe" = predict_pipe)
 
@@ -269,6 +256,20 @@ pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "
     }
 
     return(result)
+}
+
+scaler_predict <- function(data, centers, scales, columns) {
+    stopifnot(
+        is.data.frame(data),
+        !any(!columns %in% colnames(data)),
+        is.numeric(centers), length(centers) == length(columns),
+        is.numeric(scales), length(scales) == length(columns)
+    )
+    subset <- scale(x = select_cols(data, columns), center = centers, scale = scales)
+    if(is.data.table(data)) {
+        for(col in columns) data[, c(col) := NULL][, c(col) := subset[, col]]
+    } else data[, columns] <- subset
+    return(data)
 }
 
 #' Train one-hot encoding
@@ -521,7 +522,12 @@ feature_categorical_filter_predict <- function(data, categorical_columns, mappin
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
-pipe_pca <- function(train, columns, pca_tol, keep_old_columns = F) {
+pipe_pca <- function(train, columns, pca_tol = .1, keep_old_columns = F) {
+    stopifnot(is.data.frame(train))
+
+    if(missing(columns))
+        columns <- colnames(train)[purrr::map_lgl(train, is.numeric)]
+
     stopifnot(
         is.data.frame(train),
         is.character(columns),

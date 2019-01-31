@@ -161,10 +161,10 @@ pipe_dplyr <- function(dplyr_function, stop_on_missing_names = F) {
         }
 
         train <- dplyr_function(train, ...)
-        dplyr_wrapper <- function(data, ...) dplyr_function(data, ...)
-        environment(dplyr_wrapper)$train <- NULL
+        dplyr_wrapper <- function(data, ..., dplyr_function) dplyr_function(data, ...)
+        environment(dplyr_wrapper) <- new.env(parent = parent.env(environment(dplyr_wrapper)))
 
-        predict_pipe <- pipe(.function = dplyr_wrapper, ...)
+        predict_pipe <- pipe(.function = dplyr_wrapper, ..., dplyr_function = dplyr_function)
         return(list(train = train, pipe = predict_pipe))
     })
 }
