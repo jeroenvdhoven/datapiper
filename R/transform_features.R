@@ -410,6 +410,7 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
 #' @param response The response column, as a string. Will only be used to ensure this is not included in the \code{categorical_columns} variable.
 #' @param categorical_columns The columns to apply the filter over. Should be a character vector.
 #' @param insufficient_occurance_marker The value to substitute when another value in the categorical column doesn't occur often enough.
+#' This can be a string, integer or numeric.
 #' @param threshold_function A function that takes the train dataset and produces a scalar value: the minimum number of times a value has to occur if it should be preserved.
 #'
 #' @details Be careful: if for instance only one value gets substituted in a column, then the \code{insufficient_occurance_marker} value will just replace that one, preserving the problem.
@@ -426,6 +427,7 @@ pipe_categorical_filter <- function(
     stopifnot(
         is.data.frame(train),
         is.character(categorical_columns),
+        length(insufficient_occurance_marker) == 1, is.vector(insufficient_occurance_marker),
         !any(!categorical_columns %in% colnames(train))
     )
 
@@ -435,7 +437,7 @@ pipe_categorical_filter <- function(
 
     for(i in seq_along(categorical_columns)) {
         col <- categorical_columns[i]
-        new_col <- paste0(col, "_transformed")
+        new_col <- paste0(col, "_transformed_by_categorical_filter")
 
         if(is.data.table(train)) {
             tabulated <- train[, .N, by = col]
@@ -444,7 +446,6 @@ pipe_categorical_filter <- function(
             default_col <- data.table(a = insufficient_occurance_marker, b = insufficient_occurance_marker)
             colnames(default_col) <- c(col, new_col)
             tabulated %<>% rbind(default_col)
-            tabulated[!is.na(get(new_col)) & get(new_col) < threshold, c(col) := insufficient_occurance_marker]
 
             mapping <- hashmap::hashmap(keys = unlist(tabulated[, new_col, with = F]),
                                         values = unlist(tabulated[, col, with = F]))
@@ -456,7 +457,6 @@ pipe_categorical_filter <- function(
             default_col <- data_frame(a = insufficient_occurance_marker, b = insufficient_occurance_marker)
             names(default_col) <- c(col, new_col)
             tabulated %<>% rbind(default_col)
-            tabulated[!is.na(tabulated[new_col]) & tabulated[new_col] < threshold, col] <- insufficient_occurance_marker
 
             mapping <- hashmap::hashmap(keys = unlist(tabulated[, new_col]),
                                         values = unlist(tabulated[, col]))
@@ -486,6 +486,7 @@ feature_categorical_filter_predict <- function(data, categorical_columns, mappin
         is.data.frame(data),
         is.list(mappings),
         !any(purrr::is_logical(is.character)),
+        length(insufficient_occurance_marker) == 1, is.vector(insufficient_occurance_marker),
         !any(purrr::is_logical(~ is.null(names(.))))
     )
     if(any(!categorical_columns %in% colnames(data))) {
@@ -496,10 +497,12 @@ feature_categorical_filter_predict <- function(data, categorical_columns, mappin
     for(i in seq_along(categorical_columns)) {
         mapping <- mappings[[i]]
         col <- categorical_columns[i]
+        new_col <- paste0(col, "_transformed_by_categorical_filter")
 
         if(is.data.table(data)) {
             mapping_available <- unlist(data[, get(col) %in% mapping$keys()])
-            data[, c(col) := ifelse(mapping_available, mapping$find(get(col)), insufficient_occurance_marker)]
+            data[, c(new_col, col) := .(ifelse(mapping_available, mapping$find(get(col)), insufficient_occurance_marker), NULL)]
+            setnames(data, old = new_col, new = col)
             data[is.na(get(col)), c(col) := insufficient_occurance_marker]
         } else {
             values <- unlist(select_cols(data, col))

@@ -14,7 +14,8 @@ pipe_categorical_filter(train, response,
 
 \item{response}{The response column, as a string. Will only be used to ensure this is not included in the \code{categorical_columns} variable.}
 
-\item{insufficient_occurance_marker}{The value to substitute when another value in the categorical column doesn't occur often enough.}
+\item{insufficient_occurance_marker}{The value to substitute when another value in the categorical column doesn't occur often enough.
+This can be a string, integer or numeric.}
 
 \item{categorical_columns}{The columns to apply the filter over. Should be a character vector.}
 

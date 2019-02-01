@@ -406,6 +406,30 @@ testthat::describe("pipe_categorical_filter()", {
         ctest_dt_df(pipe_func = pipe_categorical_filter, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
                     response = "x", threshold_function = function(x) 10 )
     })
+
+    it("can set different types of default values", {
+        default_df <- data_frame(x = seq_len(N), y = x)
+
+        values <- list(0, "a value", 0L)
+        for(v in values) {
+            r <- pipe_categorical_filter(train = default_df, response = "x", categorical_columns = "y",
+                                         insufficient_occurance_marker = v)
+            expect_equal(r$train$y, expected = rep(v, N),
+                         label = paste("Warning, was not able to use", v, "as a marker for pipe_categorical_filter"))
+        }
+    })
+
+    it("can set different types of default values in data.tables", {
+        default_df <- as.data.table(data_frame(x = seq_len(N), y = x))
+
+        values <- list(0, "a value", 0L)
+        for(v in values) {
+            r <- pipe_categorical_filter(train = copy(default_df), response = "x", categorical_columns = "y",
+                                         insufficient_occurance_marker = v)
+            expect_equal(r$train$y, expected = rep(v, N),
+                         label = paste("Warning, was not able to use", v, "as a marker for pipe_categorical_filter"))
+        }
+    })
 })
 
 describe("pipe_pca()", {
