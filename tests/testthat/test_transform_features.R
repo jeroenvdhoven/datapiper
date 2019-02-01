@@ -365,7 +365,14 @@ testthat::describe("pipe_categorical_filter()", {
 
     evaluate_numerical_filter <- function(data, minimum_values, N = 5) {
         set.seed(1)
-        d <- mutate(data, c2 = c(minimum_values, rep(5, nrow(data) - length(minimum_values))))
+
+        if(is.data.table(data)) {
+            d <- data[, c2 := c(minimum_values, rep(5, nrow(data) - length(minimum_values)))]
+            double <- copy(d)
+        } else {
+            d <- mutate(data, c2 = c(minimum_values, rep(5, nrow(data) - length(minimum_values))))
+            double <- (d)
+        }
 
         r <- pipe_categorical_filter(
             train = d, response = "x", categorical_columns = "c2",
@@ -373,6 +380,9 @@ testthat::describe("pipe_categorical_filter()", {
 
         expect_equal(r$train$c2[seq_along(minimum_values)], expected = rep("marker", length(minimum_values)))
         expect_equal(r$train$c2[-seq_along(minimum_values)], expected = rep("5", nrow(d) - length(minimum_values)))
+
+        pred_result <- invoke(r$pipe, double)
+        expect_equal(r$train, pred_result)
     }
 
     it("allows you to select numeric columns as well", {
@@ -391,8 +401,10 @@ testthat::describe("pipe_categorical_filter()", {
     })
 
     it("can take data.table and data.frame as input and for predictions", {
-        ctest_dt_df(pipe_func = pipe_categorical_filter, dt = data.table(dataset1), df = dataset1, train_by_dt = T, response = "x")
-        ctest_dt_df(pipe_func = pipe_categorical_filter, dt = data.table(dataset1), df = dataset1, train_by_dt = F, response = "x")
+        ctest_dt_df(pipe_func = pipe_categorical_filter, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
+                    response = "x", threshold_function = function(x) 10 )
+        ctest_dt_df(pipe_func = pipe_categorical_filter, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
+                    response = "x", threshold_function = function(x) 10 )
     })
 })
 
