@@ -151,6 +151,7 @@ create_stats <- function(train, statistics_col, response, functions, too_few_obs
     setnames(x = statistics_train, old = generated_cols, new = var_names)
 
     statistics_train %<>% merge(y = train_count_table, by = statistics_col)
+    do.call(setkey, args = c(list(x = statistics_train), statistics_col))
 
     defaults <- train[, lapply(functions, function(x, y) x(y), y = get(response))]
     names(defaults) <- names(functions)
@@ -186,8 +187,13 @@ create_stats_predict <- function(data, stat_cols, tables, interaction_level, def
             columns <- combinations[, index]
 
             stats_table <- tables[[tables_index]]
-            if(is_dt) data %<>% merge(x = ., y = stats_table, by = columns, all.x = T, sort = F)
-            else data %<>% dplyr::left_join(y = stats_table, by = columns, all.x = T)
+            if(is_dt) {
+                do.call(setkey, args = c(list(x = data), columns))
+                var_names <- colnames(stats_table)[!colnames(stats_table) %in% columns]
+                target_cols <-  paste0(collapse = ", ", "`i.", var_names, "`")
+                command <- paste0('data[stats_table, c(var_names) := .(', target_cols, ')]')
+                eval(parse(text = command))
+            } else data %<>% dplyr::left_join(y = stats_table, by = columns, all.x = T)
 
             stat_col_names <- paste0(names(defaults), "_", paste0(columns, collapse = "_"))
             for(i in seq_along(defaults)) {

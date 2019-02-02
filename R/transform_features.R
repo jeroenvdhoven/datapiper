@@ -322,6 +322,7 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
         stats_transformer <- list(pipe = NA)
         generated_columns <- NA
     } else {
+        original_columns <- colnames(train)[]
         stats_transformer <- pipe_create_stats(
             train = train, stat_cols = columns, response = response, functions = stat_functions,
             interaction_level = 1, too_few_observations_cutoff = 0)
@@ -330,9 +331,11 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
         names(one_hot_parameters) <- columns
         train_dt_set <- invoke(stats_transformer$pipe, train)
 
-        generated_columns <- colnames(stats_transformer$train)[!colnames(stats_transformer$train) %in% colnames(train)]
-        if(is.data.table(train_dt_set)) train_dt_set <- train_dt_set[, .SD, .SDcols = generated_columns]
-        else train_dt_set %<>% select_(.dots = generated_columns)
+        generated_columns <- colnames(stats_transformer$train)[!colnames(stats_transformer$train) %in% original_columns]
+        if(is.data.table(train_dt_set)) {
+            train_dt_set <- train_dt_set[, .SD, .SDcols = generated_columns]
+            train[, c(generated_columns) := NULL]
+        } else train_dt_set %<>% select_(.dots = generated_columns)
     }
 
     if(use_pca){
@@ -382,8 +385,10 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
         if(length(delete_cols) > 0) test_dt_set[, (delete_cols) := NULL]
     } else {
         test_dt_set <- invoke(stat_transformer, data)
-        if(is.data.table(test_dt_set)) test_dt_set <- test_dt_set[, .SD, .SDcols = generated_columns]
-        else test_dt_set %<>% select_(.dots = generated_columns)
+        if(is.data.table(test_dt_set)) {
+            test_dt_set <- test_dt_set[, .SD, .SDcols = generated_columns]
+            data[, c(generated_columns) := NULL]
+        } else test_dt_set %<>% select_(.dots = generated_columns)
     }
 
     if(use_pca) {
