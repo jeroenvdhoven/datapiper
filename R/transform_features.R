@@ -421,7 +421,6 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
 #' @details Be careful: if for instance only one value gets substituted in a column, then the \code{insufficient_occurance_marker} value will just replace that one, preserving the problem.
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
-#' @importFrom hashmap hashmap
 #' @export
 pipe_categorical_filter <- function(
     train, response, insufficient_occurance_marker = "insignificant_category",
@@ -442,32 +441,16 @@ pipe_categorical_filter <- function(
 
     for(i in seq_along(categorical_columns)) {
         col <- categorical_columns[i]
-        new_col <- paste0(col, "_transformed_by_categorical_filter")
 
         if(is.data.table(train)) {
-            tabulated <- train[, .N, by = col]
-            tabulated[, c(new_col, "N") := .(ifelse(N < threshold, insufficient_occurance_marker, get(col)), NULL) ]
-
-            default_col <- data.table(a = insufficient_occurance_marker, b = insufficient_occurance_marker)
-            colnames(default_col) <- c(col, new_col)
-            tabulated %<>% rbind(default_col)
-
-            mapping <- hashmap::hashmap(keys = unlist(tabulated[, new_col, with = F]),
-                                        values = unlist(tabulated[, col, with = F]))
+            valid_categories <- unlist(train[, .N, by = col][N >= threshold][, col, with = F])
         } else {
-            tabulated <- group_by_(train, col) %>% summarize(n = n()) %>% ungroup
-            tabulated[new_col] <- ifelse(tabulated$n < threshold, insufficient_occurance_marker, unlist(tabulated[col]))
-            tabulated["n"] <- NULL
-
-            default_col <- data_frame(a = insufficient_occurance_marker, b = insufficient_occurance_marker)
-            names(default_col) <- c(col, new_col)
-            tabulated %<>% rbind(default_col)
-
-            mapping <- hashmap::hashmap(keys = unlist(tabulated[, new_col]),
-                                        values = unlist(tabulated[, col]))
+            tabulated <- group_by_(train, col) %>% summarize(n = n()) %>% ungroup %>%
+                filter(threshold <= n)
+            valid_categories <- unlist(tabulated[, col])
         }
 
-        mappings[[i]] <- mapping
+        mappings[[i]] <- valid_categories
     }
 
     predict_pipe <- pipe(.function = feature_categorical_filter_predict, categorical_columns = categorical_columns,
@@ -484,7 +467,6 @@ pipe_categorical_filter <- function(
 #' @param mappings The mapping from \code{feature_categorical_filter}
 #' @param insufficient_occurance_marker The marker from \code{feature_categorical_filter}
 #'
-#' @importFrom hashmap hashmap
 #' @return The transformed dataset
 feature_categorical_filter_predict <- function(data, categorical_columns, mappings, insufficient_occurance_marker) {
     stopifnot(
@@ -499,23 +481,18 @@ feature_categorical_filter_predict <- function(data, categorical_columns, mappin
         stop(paste("Error, columns weren't found in your dataset:", missing_cols))
     }
 
+    filter_vector <- function(vec, possible_values, insufficient_occurance_marker) {
+        ifelse(vec %in% possible_values, vec, insufficient_occurance_marker)
+    }
+
     for(i in seq_along(categorical_columns)) {
         mapping <- mappings[[i]]
         col <- categorical_columns[i]
-        new_col <- paste0(col, "_transformed_by_categorical_filter")
 
         if(is.data.table(data)) {
-            mapping_available <- unlist(data[, get(col) %in% mapping$keys()])
-            data[, c(new_col, col) := .(ifelse(mapping_available, mapping$find(get(col)), insufficient_occurance_marker), NULL)]
-            setnames(data, old = new_col, new = col)
-            data[is.na(get(col)), c(col) := insufficient_occurance_marker]
+            data[, c(col) := filter_vector(get(col), mapping, insufficient_occurance_marker)]
         } else {
-            values <- unlist(select_cols(data, col))
-            temp_mapping <- mapping$find(values)
-            temp_mapping[!values %in% mapping$keys()] <- insufficient_occurance_marker
-
-            data[col] <- temp_mapping
-            data[is.na(values), col] <- insufficient_occurance_marker
+            data[col] <- filter_vector(unlist(data[col]), mapping, insufficient_occurance_marker)
         }
     }
 
