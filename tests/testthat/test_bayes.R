@@ -244,7 +244,7 @@ describe("find_model_through_bayes()", {
 
     it("can take non-numerical arguments for optimisation", {
         glmmodel <- find_template_formula_and_data(response = "boolean", training_function = glm,
-                                                   family = c("binomial", "gaussian"))
+                                                   family = c("binomial", "gaussian"), model = c(T, F))
         suppressWarnings(
             r_glm <- find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
                                               preprocess_pipes = list("one" = p_1), higher_is_better = F,
@@ -254,7 +254,7 @@ describe("find_model_through_bayes()", {
         )
 
         expect_true(is.data.frame(r_glm))
-        expect_equivalent(nrow(r_glm), 2)
+        expect_equivalent(nrow(r_glm), 4)
         expect_named(object = r_glm, c(".train", ".predict", ".id", "params", ".preprocess_pipe", "train_rmse", "test_rmse"), ignore.order = T)
         expect_true(is.list(r_glm))
     })

@@ -237,7 +237,7 @@ test_model_configuration <- function(train, test, f_train, f_predict, metrics, r
     if(seed != 0) set.seed(seed)
 
     args <- list(data = train)
-    args <- c(args, unlist(parameters))
+    args <- c(args, parameters)
 
     requested_arguments <- formalArgs(f_train)
     if(any(!names(args) %in% requested_arguments) && !"..." %in% requested_arguments) {
