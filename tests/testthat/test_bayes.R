@@ -42,16 +42,16 @@ describe("find_model_through_bayes()", {
         r <- ctest_for_no_errors(
             error_message = "find_model_through_bayes does not run without errors on basic settings",
             to_eval = datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                            preprocess_pipes = list("one" = p_1), higher_is_better = F,
-                                            models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
-                                            target_metric = "rmse", seed = 1, prepend_data_checker = F))
+                                                          preprocess_pipes = list("one" = p_1), higher_is_better = F,
+                                                          models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
+                                                          target_metric = "rmse", seed = 1, prepend_data_checker = F))
     })
 
     it("return a dataframe containing the results", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
-                                   models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
-                                   target_metric = "rmse", seed = 1, prepend_data_checker = F)
+                                                 preprocess_pipes = list("one" = p_1), higher_is_better = F,
+                                                 models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
+                                                 target_metric = "rmse", seed = 1, prepend_data_checker = F)
         expect_true(is.data.frame(r))
         expect_equivalent(nrow(r), 1)
         expect_named(object = r, c(".train", ".predict", ".id", "params", ".preprocess_pipe", "train_rmse", "test_rmse"), ignore.order = T)
@@ -74,9 +74,9 @@ describe("find_model_through_bayes()", {
 
     it("trains models as expected", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
-                                   models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
-                                   target_metric = "rmse", seed = 1, prepend_data_checker = F)
+                                                 preprocess_pipes = list("one" = p_1), higher_is_better = F,
+                                                 models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
+                                                 target_metric = "rmse", seed = 1, prepend_data_checker = F)
 
         pipe <- p_1(train)
         model <- model_xgb$.train(pipe$train, nrounds = nrounds)
@@ -89,9 +89,9 @@ describe("find_model_through_bayes()", {
 
     it("can use multiple pipelines", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1, "two" = p_2), higher_is_better = F,
-                                   models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
-                                   target_metric = "rmse", seed = 1, prepend_data_checker = F)
+                                                 preprocess_pipes = list("one" = p_1, "two" = p_2), higher_is_better = F,
+                                                 models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
+                                                 target_metric = "rmse", seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 2)
         expect_equal(r$.id, c("one_xgb", "two_xgb"))
         expect_equal(r$.preprocess_pipe[[1]], p_1(train)$pipe)
@@ -110,9 +110,9 @@ describe("find_model_through_bayes()", {
 
     it("can use multiple models", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
-                                   models = list("xgb" = model_xgb, "forest" = model_forest), metrics = list("rmse" = m_1),
-                                   target_metric = "rmse", seed = 1, prepend_data_checker = F)
+                                                 preprocess_pipes = list("one" = p_1), higher_is_better = F,
+                                                 models = list("xgb" = model_xgb, "forest" = model_forest), metrics = list("rmse" = m_1),
+                                                 target_metric = "rmse", seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 2)
         expect_equal(r$.id, c("one_xgb", "one_forest"))
         expect_equal(r$.train[[1]], model_xgb$.train)
@@ -124,9 +124,9 @@ describe("find_model_through_bayes()", {
 
     it("can use multiple metrics", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
-                                   models = list("xgb" = model_xgb), metrics = list("rmse" = m_1, "rmsle" = m_2),
-                                   target_metric = "rmse", seed = 1, prepend_data_checker = F)
+                                                 preprocess_pipes = list("one" = p_1), higher_is_better = F,
+                                                 models = list("xgb" = model_xgb), metrics = list("rmse" = m_1, "rmsle" = m_2),
+                                                 target_metric = "rmse", seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 1)
         expect_false(any(!c("train_rmsle", "test_rmsle") %in% colnames(r)))
     })
@@ -138,9 +138,9 @@ describe("find_model_through_bayes()", {
             response = "x", training_function = randomForest::randomForest, ntree = ntree, nodesize = nodesize)
 
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
-                                   models = list("forest" = model_forest_w_params), metrics = list("rmse" = m_1, "rmsle" = m_2),
-                                   target_metric = "rmse", seed = 1, prepend_data_checker = F)
+                                                 preprocess_pipes = list("one" = p_1), higher_is_better = F,
+                                                 models = list("forest" = model_forest_w_params), metrics = list("rmse" = m_1, "rmsle" = m_2),
+                                                 target_metric = "rmse", seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 9)
 
         params <- bind_rows(r$params)
@@ -155,9 +155,9 @@ describe("find_model_through_bayes()", {
             response = "x", training_function = randomForest::randomForest, ntree = ntree, nodesize = nodesize)
 
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
-                                   models = list("forest" = model_forest_w_params), metrics = list("rmse" = m_1, "rmsle" = m_2),
-                                   target_metric = "rmse", seed = 1, prepend_data_checker = F)
+                                                 preprocess_pipes = list("one" = p_1), higher_is_better = F,
+                                                 models = list("forest" = model_forest_w_params), metrics = list("rmse" = m_1, "rmsle" = m_2),
+                                                 target_metric = "rmse", seed = 1, prepend_data_checker = F)
 
         pipe <- p_1(train)
         used_params <- as.list(r$params[[1]])
@@ -181,10 +181,10 @@ describe("find_model_through_bayes()", {
             response = "x", training_function = randomForest::randomForest, ntree = ntree, nodesize = nodesize)
 
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1),
-                                   N_init = 5, N_experiment = 20, higher_is_better = F,
-                                   models = list("forest" = model_forest_w_params), metrics = list("rmse" = m_1, "rmsle" = m_2),
-                                   target_metric = "rmse", seed = 1, prepend_data_checker = F)
+                                                 preprocess_pipes = list("one" = p_1),
+                                                 N_init = 5, N_experiment = 20, higher_is_better = F,
+                                                 models = list("forest" = model_forest_w_params), metrics = list("rmse" = m_1, "rmsle" = m_2),
+                                                 target_metric = "rmse", seed = 1, prepend_data_checker = F)
         expect_equal(nrow(r), 25)
 
         params <- bind_rows(r$params)
@@ -197,9 +197,9 @@ describe("find_model_through_bayes()", {
 
     it("can prepend pipeline_check to all pipelines", {
         r <- datapiper::find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
-                                   preprocess_pipes = list("one" = p_1), higher_is_better = F,
-                                   models = list("forest" = model_xgb), metrics = list("rmse" = m_1),
-                                   target_metric = "rmse", seed = 1, prepend_data_checker = T)
+                                                 preprocess_pipes = list("one" = p_1), higher_is_better = F,
+                                                 models = list("forest" = model_xgb), metrics = list("rmse" = m_1),
+                                                 target_metric = "rmse", seed = 1, prepend_data_checker = T)
 
         pipe <- r$.preprocess_pipe[[1]]
 
@@ -220,26 +220,43 @@ describe("find_model_through_bayes()", {
         r <- ctest_for_no_errors(
             error_message = "find_model_through_bayes does not check for response after piping",
             to_eval = find_model_through_bayes(train = dataset1, test = test, response = "target", verbose = F,
-                                 preprocess_pipes = list("one" = p_3), higher_is_better = F,
-                                 models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
-                                 target_metric = "rmse", seed = 1, prepend_data_checker = F))
+                                               preprocess_pipes = list("one" = p_3), higher_is_better = F,
+                                               models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
+                                               target_metric = "rmse", seed = 1, prepend_data_checker = F))
     })
 
     it("can save generated models if asked", {
         r_without <- find_model_through_bayes(train = dataset1, test = test, response = "x", verbose = F,
-                                preprocess_pipes = list("one" = p_1), higher_is_better = F,
-                                models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
-                                target_metric = "rmse", seed = 1, prepend_data_checker = F, save_model = F)
+                                              preprocess_pipes = list("one" = p_1), higher_is_better = F,
+                                              models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
+                                              target_metric = "rmse", seed = 1, prepend_data_checker = F, save_model = F)
         expect_false(".model" %in% colnames(r_without))
 
         r_with <- find_model_through_bayes(train = dataset1, test = test, response = "x", verbose = F,
-                             preprocess_pipes = list("one" = p_1), higher_is_better = F,
-                             models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
-                             target_metric = "rmse", seed = 1, prepend_data_checker = F, save_model = T)
+                                           preprocess_pipes = list("one" = p_1), higher_is_better = F,
+                                           models = list("xgb" = model_xgb), metrics = list("rmse" = m_1),
+                                           target_metric = "rmse", seed = 1, prepend_data_checker = F, save_model = T)
         expect_true(".model" %in% colnames(r_with))
 
         model <- r_with$.model[[1]]
         expect_true("xgb.Booster" %in% class(model))
+    })
+
+    it("can take non-numerical arguments for optimisation", {
+        glmmodel <- find_template_formula_and_data(response = "boolean", training_function = glm,
+                                                   family = c("binomial", "gaussian"))
+        suppressWarnings(
+            r_glm <- find_model_through_bayes(train = train, test = test, response = "x", verbose = F,
+                                              preprocess_pipes = list("one" = p_1), higher_is_better = F,
+                                              N_init = 1, N_experiment = 20,
+                                              models = list("glm" = glmmodel), metrics = list("rmse" = m_1),
+                                              target_metric = "rmse", seed = 1, prepend_data_checker = F, save_model = F)
+        )
+
+        expect_true(is.data.frame(r_glm))
+        expect_equivalent(nrow(r_glm), 2)
+        expect_named(object = r_glm, c(".train", ".predict", ".id", "params", ".preprocess_pipe", "train_rmse", "test_rmse"), ignore.order = T)
+        expect_true(is.list(r_glm))
     })
 })
 

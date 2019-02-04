@@ -176,7 +176,13 @@ run_experiments <- function(train, test, model, model_name, response,
 
     tested_indices <- numeric(length = N_experiment + N_init)
     tested_indices[seq_len(N_init)] <- test_indices
-    parameter_grid_matrix <- as.matrix(parameter_grid)
+
+    if(any(purrr::map_lgl(.x = parameter_grid, .f = ~ !is.numeric(.) && !is.logical(.)))) {
+        parameter_grid_matrix <- as.matrix(pipe_one_hot_encode(train = parameter_grid)$train)
+    } else {
+        parameter_grid_matrix <- as.matrix(parameter_grid)
+    }
+
     for(i in seq_len(N_experiment)) {
         if(verbose) cat(paste("\rComputing iteration", i + N_init, "/", N_init + N_experiment, "out of a maximum of", parameter_grid_size, "iterations"))
 
@@ -296,11 +302,12 @@ kernel_matrix_pairwise <- function(x, kernel) {
 
 distribution_at_x <- function(x, previous_X, y, sigma_noise) {
     stopifnot(
-        is.matrix(x),
-        is.matrix(previous_X),
+        is.matrix(x), is.numeric(x),
+        is.matrix(previous_X), is.numeric(previous_X),
         is.numeric(y),
         length(y) == nrow(previous_X)
     )
+
     scales <- apply(x, 2, function(x) max(x) - min(x))
     scales[scales < 1e-6] <- 1
     # scales <- 1
