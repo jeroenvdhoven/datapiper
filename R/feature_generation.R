@@ -134,7 +134,7 @@ pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(
 #' @details This function will also generate default values for all generated columns that use the entire response column.
 #' This allows us to ensure no NA values will be present in generated columns
 #'
-#' @importFrom data.table is.data.table setnames
+#' @importFrom data.table is.data.table setnames setkey
 #' @import dplyr
 #' @return A list containing the generated statistics tables and defaults per columns
 create_stats <- function(train, statistics_col, response, functions, too_few_observations_cutoff = 30){

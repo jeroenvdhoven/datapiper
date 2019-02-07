@@ -1,1 +1,1 @@
-utils::globalVariables(names = c(".", "feature_create_generic_stats_count", ".id"))
+utils::globalVariables(names = c(".", "feature_create_generic_stats_count", ".id", ".N", "N"))
