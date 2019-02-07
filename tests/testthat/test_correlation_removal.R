@@ -41,7 +41,7 @@ describe("pipe_remove_high_correlation_features", {
         r_full <- datapiper::pipe_remove_high_correlation_features(train = dataset1, threshold = 1)
         expect_equal(dataset1, r_full$train)
 
-        r_none <- datapiper::pipe_remove_high_correlation_features(train = dataset1, threshold = 0)
+        r_none <- datapiper::pipe_remove_high_correlation_features(train = dataset1, threshold = 0.0001)
         expect_true(sum(purrr::map_lgl(r_none$train, is.numeric)) == 1)
 
         r_mid <- datapiper::pipe_remove_high_correlation_features(train = dataset1, threshold = 0.5)
