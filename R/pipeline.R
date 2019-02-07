@@ -253,12 +253,13 @@ pipe_check <- function(train,
 
     # Save column names, excluding the response
     cols = train_names[train_names != response]
-    if(response %in% train_names) train <- train[, c(response, cols)]
-    else train <- train[, cols]
+    if(response %in% train_names) train <- select_cols(train, c(response, cols))
+    else train <- select_cols(train, cols)
     train_names <- colnames(train)
 
     # Save column types
-    col_types = purrr::map_chr(train[train_names != response], class)
+    if(is.data.table(train)) col_types <- train[, lapply(.SD, class), .SDcols = train_names[train_names != response]]
+    else col_types = purrr::map_chr(train[train_names != response], class)
 
     predict_pipe <- pipe(.function = pipe_check_predict, response = response, cols = cols, col_types = col_types,
                          on_missing_column = on_missing_column, on_extra_column = on_extra_column,
@@ -271,18 +272,20 @@ pipe_check_predict <- function(data, response, cols, col_types, on_missing_colum
     stopifnot(is.data.frame(data))
 
     if(response %in% colnames(data)) {
-        response_col <- data[response]
+        response_col <- select_cols(data, response)
         had_response <- T
-        data[response] <- NULL
+        if(is.data.table(data)) data[, c(response) := NULL]
+        else data[response] <- NULL
     } else had_response <- F
-    # cols <- c(response, cols)
 
     columns_present = cols %in% colnames(data)
 
     # If we don't see a column in the dataset that we expect to see, stop or add those columns
     if(any(!columns_present)) {
-        if(on_missing_column == "add") data[, cols[!columns_present]] <- NA
-        else stop(paste("Error: column(s)", paste0(collapse = ", ", "'", cols[!columns_present], "'"), "not present while expected to be present"))
+        if(on_missing_column == "add") {
+            if(is.data.table(data)) data[, c(cols[!columns_present]) := NA]
+            else data[, cols[!columns_present]] <- NA
+        } else stop(paste("Error: column(s)", paste0(collapse = ", ", "'", cols[!columns_present], "'"), "not present while expected to be present"))
     }
 
     # If we see a column in the dataset that we don't expect to see, stop or remove those columns.
@@ -293,7 +296,7 @@ pipe_check_predict <- function(data, response, cols, col_types, on_missing_colum
         if(on_extra_column == "error"){
             stop(paste("Error: column(s)", paste0(collapse = ", ", "'", colnames(data)[!is_expected_column], "'"), "present while expected to not be present"))
         } else {
-            data <- data[, cols]
+            data <- select_cols(data, cols)
         }
     }
     # Stop if the ordering and presence of columns is not exactly the same
@@ -301,16 +304,24 @@ pipe_check_predict <- function(data, response, cols, col_types, on_missing_colum
 
     # Coerce columns to the correct format
     if(on_type_error == "error") tryCatch({
-        data <- purrr::map2_df(.x = data, .y = col_types, as)
+        if(is.data.table(data)) data <- data[, purrr::map2(.x = .SD, .y = col_types, .f = as)]
+        else data <- purrr::map2_df(.x = data, .y = col_types, as)
     }, warning = function(e){
         stop(paste("Error: some column type conversions introduced conversion warnings:\n", e))
     }, error = function(e){
         stop(paste("Error: some column type conversions introduced conversion warnings:\n", e))
-    }) else data <- purrr::map2_df(.x = data, .y = col_types, as)
+    }) else {
+        if(is.data.table(data)) data <- data[, purrr::map2(.x = .SD, .y = col_types, .f = as)]
+        else data <- purrr::map2_df(.x = data, .y = col_types, as)
+    }
 
     if(had_response) {
-        data[response] <- response_col
-        data <- data[, c(response, cols)]
+        if(is.data.table(data)) {
+            data[, c(response) := response_col]
+        } else {
+            data[response] <- response_col
+        }
+        data <- select_cols(data, c(response, cols))
     }
 
     return(data)

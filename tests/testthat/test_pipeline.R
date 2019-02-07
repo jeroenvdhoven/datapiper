@@ -305,7 +305,7 @@ describe("pipe_check", {
         expect_error(invoke(r_type$pipe, mutate(dataset1, a = "b")), info = "Expected crash on type error when configured as such")
 
         t_ <- ctest_for_no_errors(invoke(r_type$pipe, mutate(dataset1, a = as.character(a))),
-                            error_message = "Expected no crash when types are converted without problem")
+                                  error_message = "Expected no crash when types are converted without problem")
     })
 
     it("generates an NA dataset when the most lenient settings are used with identical types", {
@@ -340,6 +340,11 @@ describe("pipe_check", {
         expect_named(object = invoked_result, expected = colnames(dataset1))
         expect_true("x" %in% colnames(invoked_result))
         expect_equal(invoked_result$x, dataset1$x)
+    })
+
+    it("can use either a data.table or data.frame as input and use the result on either", {
+        ctest_dt_df(pipe_func = pipe_check, dt = data.table(dataset1), df = dataset1, train_by_dt = T, response = "x")
+        ctest_dt_df(pipe_func = pipe_check, dt = data.table(dataset1), df = dataset1, train_by_dt = F, response = "x")
     })
 })
 
@@ -442,7 +447,7 @@ describe("train_pipeline()", {
         r <- train_pipeline(
             segment(.segment = pipe_scaler, exclude_columns = "x", retransform_columns = retransform_columns),
             segment(.segment = pipe_feature_transformer, response = "x", retransform_columns = retransform_columns,
-                                                        transform_functions = list("sqrt" = sqrt, "log" = log))
+                    transform_functions = list("sqrt" = sqrt, "log" = log))
         )
 
         pipe_result <- r(dataset1)
@@ -476,7 +481,7 @@ describe("train_pipeline()", {
             "scaler" = segment(.segment = pipe_scaler, exclude_columns = "x", retransform_columns = retransform_columns),
             "x+1" = segment(.segment = pipe_mutate, x = "x + 1"),
             "transformer" = segment(.segment = pipe_feature_transformer, response = "x", retransform_columns = retransform_columns,
-                    transform_functions = list("sqrt" = sqrt, "log" = log))
+                                    transform_functions = list("sqrt" = sqrt, "log" = log))
         )
 
         pipe_result <- r(dataset1)
