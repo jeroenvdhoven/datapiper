@@ -17,9 +17,11 @@ feature_one_hot_encode_predict(data, one_hot_parameters, use_pca, pca,
 \item{pca}{The PCA result from \code{\link{pipe_one_hot_encode}}. Required iff \code{use_pca} is \code{TRUE}}
 
 \item{stat_transformer}{Stat transformer function from \code{\link{pipe_one_hot_encode}}, or NA (for normal one-hot encoding)}
+
+\item{generated_columns}{Names of generated columns}
 }
 \value{
-The test dataframe with the required columns one-hot encoded
+The test dataframe with the required columns one-hot encoded. Only required if stat_transformer is used.
 }
 \description{
 Apply one-hot encoding

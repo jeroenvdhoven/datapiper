@@ -195,6 +195,7 @@ feature_transformer_post_predict <- function(data, retransform_columns, lower_th
 #' @param retransform_columns Columns that should be rescaled later on. A new pipe will be created and returned as a separate list entry.
 #'
 #' @return A list containing the transformed train dataset and a trained pipe. If \code{retransform_columns} was set, the reverting pipe will also be provided.
+#' @importFrom purrr pmap
 #' @export
 pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "[0-1]", retransform_columns){
     stopifnot(
@@ -217,10 +218,15 @@ pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "
         scale_func <- function(x) max(x, na.rm = T) - min(x, na.rm = T)
     }else stop("Error: wrong type of scaling")
 
-    subset <- select_cols(train, columns)
 
-    centers <- purrr::map_dbl(subset, center_func)
-    scales <- purrr::map_dbl(subset, scale_func)
+    if(is.data.table(train)) {
+        centers <- unlist(train[, lapply(.SD, center_func), .SDcols = columns])
+        scales <- unlist(train[, lapply(.SD, scale_func), .SDcols = columns])
+    } else {
+        subset <- select_cols(train, columns)
+        centers <- purrr::map_dbl(subset, center_func)
+        scales <- purrr::map_dbl(subset, scale_func)
+    }
     scales[scales == 0] <- 1L
 
     predict_pipe <- pipe(.function = scaler_predict, centers = centers, scales = scales, columns = columns)
@@ -265,10 +271,16 @@ scaler_predict <- function(data, centers, scales, columns) {
         is.numeric(centers), length(centers) == length(columns),
         is.numeric(scales), length(scales) == length(columns)
     )
-    subset <- scale(x = select_cols(data, columns), center = centers, scale = scales)
     if(is.data.table(data)) {
-        for(col in columns) data[, c(col) := NULL][, c(col) := subset[, col]]
-    } else data[, columns] <- subset
+        data[, c(columns) := purrr::pmap(
+            .l = list(column = columns, center = centers, scale = scales),
+            .f = function(column, center, scale) (get(column) - center) / scale)
+            ]
+    } else {
+        for(i in seq_along(columns)) {
+            data[, columns[i]] <- (data[, columns[i]] - centers[i]) / scales[i]
+        }
+    }
     return(data)
 }
 
@@ -360,8 +372,9 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
 #' @param use_pca Whether PCA transformation is required.
 #' @param pca The PCA result from \code{\link{pipe_one_hot_encode}}. Required iff \code{use_pca} is \code{TRUE}
 #' @param stat_transformer Stat transformer function from \code{\link{pipe_one_hot_encode}}, or NA (for normal one-hot encoding)
+#' @param generated_columns Names of generated columns
 #'
-#' @return The test dataframe with the required columns one-hot encoded
+#' @return The test dataframe with the required columns one-hot encoded. Only required if stat_transformer is used.
 feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pca, stat_transformer, generated_columns){
     stopifnot(
         is.data.frame(data),
