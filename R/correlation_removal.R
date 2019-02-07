@@ -8,6 +8,11 @@
 #' @export
 #' @importFrom igraph graph.data.frame V
 pipe_remove_high_correlation_features <- function(train, exclude_columns = character(0), threshold = .8) {
+    stopifnot(
+        is.data.frame(train),
+        !any(!exclude_columns %in% colnames(train)),
+        is.numeric(threshold), threshold <= 1, threshold > 0
+    )
     numeric_df <- train[, !purrr::map_lgl(train, is.character)]
 
     node_df <- high_correlation_features(numeric_df, exclude_columns, threshold) %>% igraph::graph.data.frame(directed = F)
