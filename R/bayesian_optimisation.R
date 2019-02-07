@@ -349,7 +349,8 @@ expected_improvement <- function(mu, sigma, y_max, tolerance = 1e-10) {
     normal_cummulative <- pnorm(q = Z)
 
     res[!sigma_is_0] <- mu_diff[!sigma_is_0] * normal_cummulative + sigma[!sigma_is_0] * normal_pdf
-    return(res)
+    if(any(res > 0)) return(res)
+    else return(mu)
 }
 
 gaussian_kernel <- function(x, y, sigma = 1) {
