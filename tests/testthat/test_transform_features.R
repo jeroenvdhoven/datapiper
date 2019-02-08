@@ -497,4 +497,14 @@ describe("pipe_pca()", {
 
         expect_equal(pca_set, predicted_set)
     })
+
+    it("can take data.table and data.frame as input and for predictions", {
+        target_set <- dataset1[!apply(dataset1, MARGIN = 1, anyNA), ]
+
+        ctest_dt_df(pipe_func = pipe_pca, dt = data.table(target_set), df = target_set, train_by_dt = T, keep_old_columns = T)
+        ctest_dt_df(pipe_func = pipe_pca, dt = data.table(target_set), df = target_set, train_by_dt = F, keep_old_columns = T)
+
+        ctest_dt_df(pipe_func = pipe_pca, dt = data.table(target_set), df = target_set, train_by_dt = T, keep_old_columns = F)
+        ctest_dt_df(pipe_func = pipe_pca, dt = data.table(target_set), df = target_set, train_by_dt = F, keep_old_columns = F)
+    })
 })

@@ -536,13 +536,13 @@ pipe_pca <- function(train, columns, pca_tol = .1, keep_old_columns = F) {
         pca_tol >= 0, pca_tol <= 1
     )
 
-    pca_set <- train[, columns]
+    pca_set <- select_cols(train, columns)
     numeric_cols <- purrr::map_lgl(pca_set, ~ is.numeric(.) || is.logical(.))
     if(any(!numeric_cols)) stop("Some selected columns aren't numeric or logical")
 
     na_rows <- apply(pca_set, 1, anyNA)
     if(any(na_rows)) {
-        pca_set <- pca_set[!na_rows, ]
+        pca_set <- select_cols(pca_set, rows = !na_rows)
         if(nrow(pca_set) == 0) stop("No rows were left after checking for NA's")
 
         warning("Removed ", round(mean(na_rows) * 100, digits = 2), "% of rows due to missing values")
@@ -565,14 +565,16 @@ pca_predict <- function(data, pca, columns, keep_old_columns) {
         "prcomp" %in% class(pca)
     )
 
-    subset <- data[, columns]
+    subset <- select_cols(data, columns)
     if(anyNA(subset)) {
         warning("Encountered missing values in data to be used for PCA transformation")
     }
 
-    subset_pca <- predict(pca, subset)
-    if(!keep_old_columns) data <- dplyr::select_(data, .dots = paste0("-", columns))
-    data <- cbind(data, subset_pca)
+    subset_pca <- as_data_frame(predict(pca, subset))
+    if(!keep_old_columns) data <- deselect_cols(data, cols = columns, inplace = T)
+
+    if(is.data.table(data)) data <- cbind(data, subset_pca)
+    else data <- bind_cols(data, subset_pca)
 
     return(data)
 }
