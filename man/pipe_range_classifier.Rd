@@ -11,7 +11,7 @@ pipe_range_classifier(train, response, exclude_columns = response,
   "xgboost")[1], controls)
 }
 \arguments{
-\item{train}{Data frame containing the train data.}
+\item{train}{Data.frame or data.table containing the train data.}
 
 \item{response}{String denoting the name of the column that should be used as the response variable.}
 

@@ -96,7 +96,7 @@ describe("pipe_range_classifier", {
 
     it("should throw an error when the temporary column name is already in the dataset", {
         expect_error(pipe_range_classifier(dataset1, response = col, quantiles = 5, base_temporary_column_name = col,
-                                        exclude_columns = c("z", "z2", "y", "s"), model = "xgboost"),
+                                           exclude_columns = c("z", "z2", "y", "s"), model = "xgboost"),
                      regexp = "is not TRUE$", info = "Checks on temporary column names are not in place")
     })
 
@@ -109,5 +109,17 @@ describe("pipe_range_classifier", {
         generated_columns <- columns[grepl(pattern = base_name, x = columns)]
 
         expect_equal(object = length(generated_columns), expected = n_quantile)
+    })
+
+    it("can use either a data.table or data.frame as input and use the result on either", {
+        n_quantile <- 5
+        suppressWarnings(
+            for(model in c("glm", "xgboost")) {
+                ctest_dt_df(pipe_func = pipe_range_classifier, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
+                            response = "x", quantiles = n_quantile, exclude_columns = c("z", "z2", "y", "s"), model = model)
+                ctest_dt_df(pipe_func = pipe_range_classifier, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
+                            response = "x", quantiles = n_quantile, exclude_columns = c("z", "z2", "y", "s"), model = model)
+            }
+        )
     })
 })
