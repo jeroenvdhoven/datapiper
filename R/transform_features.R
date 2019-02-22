@@ -40,7 +40,7 @@ pipe_feature_transformer <- function(train, response, transform_columns, missing
         best_function <- res$best_function
 
         if(retransform_requested && (col %in% retransform_columns)) {
-            column_values <- unlist(train[col])
+            column_values <- select_cols(train, col)
             col_min <- min(column_values, na.rm = T)
             col_max <- max(column_values, na.rm = T)
 
@@ -162,7 +162,7 @@ feature_transformer_post_predict <- function(data, retransform_columns, lower_th
     for(i in seq_along(retransform_columns)){
         col <- retransform_columns[i]
         inverse_function <- inverse(retransform_functions[[i]], lower = lower_thresholds[i], upper = upper_thresholds[i])
-        current_col <- unlist(data[, col])
+        current_col <- unlist(select_cols(data, col))
         current_col[!is.na(current_col)] <- purrr::map_dbl(.x = current_col[!is.na(current_col)], .f = function(x) {
             success <- F
             result <- tryCatch({
@@ -176,7 +176,8 @@ feature_transformer_post_predict <- function(data, retransform_columns, lower_th
             if(success) return(result)
             else return(NA)
         })
-        data[, col] <- current_col
+        if(is.data.table(data)) data[, c(col) := current_col]
+        else data[, col] <- current_col
     }
 
     return(data)
@@ -185,7 +186,7 @@ feature_transformer_post_predict <- function(data, retransform_columns, lower_th
 
 #' Rescales data to standardised ranges
 #'
-#' @param train Data frame containing the train data.
+#' @param train The train dataset, as a data.frame or data.table.
 #' @param exclude_columns Names of columns that should be excluded from rescaling
 #' @param type Type of rescales to perform:
 #' \itemize{
@@ -243,22 +244,7 @@ pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "
         retransform_centers <- centers[columns %in% retransform_columns]
         retransform_scales <- scales[columns %in% retransform_columns]
 
-        post_predict_function <- function(data, centers, scales, columns) {
-            stopifnot(
-                is.data.frame(data),
-                !any(!columns %in% colnames(data)),
-                is.numeric(centers), length(centers) == length(columns),
-                is.numeric(scales), length(scales) == length(columns)
-            )
-
-            for(i in seq_along(columns)) {
-                current_col <- unlist(data[, columns[i]])
-                current_col <- current_col * scales[i] + centers[i]
-                data[, columns[i]] <- current_col
-            }
-            return(data)
-        }
-        result$post_pipe <- pipe(.function = post_predict_function, centers = retransform_centers, scales = retransform_scales, columns = retransform_columns)
+        result$post_pipe <- pipe(.function = scaler_post_predict, centers = retransform_centers, scales = retransform_scales, columns = retransform_columns)
     }
 
     return(result)
@@ -284,9 +270,32 @@ scaler_predict <- function(data, centers, scales, columns) {
     return(data)
 }
 
+scaler_post_predict <- function(data, centers, scales, columns) {
+    stopifnot(
+        is.data.frame(data),
+        !any(!columns %in% colnames(data)),
+        is.numeric(centers), length(centers) == length(columns),
+        is.numeric(scales), length(scales) == length(columns)
+    )
+
+    if(is.data.table(data)) {
+        data[, c(columns) := purrr::pmap(
+            .l = list(column = columns, center = centers, scale = scales),
+            .f = function(column, center, scale) get(column) * scale + center)
+            ]
+    } else {
+        for(i in seq_along(columns)) {
+            current_col <- select_cols(data, columns[i])
+            current_col <- current_col * scales[i] + centers[i]
+            data[, columns[i]] <- current_col
+        }
+    }
+    return(data)
+}
+
 #' Train one-hot encoding
 #'
-#' @param train Dataframe to determine one-hot-encoding.
+#' @param train The train dataset, as a data.frame or data.table.
 #' @param columns Columns from \code{train} to use for one-hot-encoding. Will automatically check if theses are column names in \code{train}
 #' @param use_pca Whether PCA transformation is required.
 #' @param pca_tol The \code{tol} of \code{\link[stats]{prcomp}}
@@ -424,7 +433,7 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
 
 #' Remove values from categorical variables that do not occur often enough
 #'
-#' @param train Data.frame or data.table containing the train data. A data.table tends to be faster.
+#' @param train The train dataset, as a data.frame or data.table.
 #' @param response The response column, as a string. Will only be used to ensure this is not included in the \code{categorical_columns} variable.
 #' @param categorical_columns The columns to apply the filter over. Should be a character vector.
 #' @param insufficient_occurance_marker The value to substitute when another value in the categorical column doesn't occur often enough.
@@ -514,7 +523,7 @@ feature_categorical_filter_predict <- function(data, categorical_columns, mappin
 
 #' Apply PCA to a subset of the columns in a dataset
 #'
-#' @param train Data frame containing the train data.
+#' @param train The train dataset, as a data.frame or data.table.
 #' @param columns Columns to use in the PCA transformation.
 #' @param pca_tol The \code{tol} of \code{\link[stats]{prcomp}}
 #' @param keep_old_columns Flag indicating if columns used to perform the PCA transformation should be kept.

@@ -8,7 +8,7 @@ impute_predict_all(data, columns, na_function, models, included_columns,
   verbose = F)
 }
 \arguments{
-\item{data}{data dataset to impute.}
+\item{data}{The new dataset, as a data.frame or data.table.}
 
 \item{columns}{the columns to impute.}
 

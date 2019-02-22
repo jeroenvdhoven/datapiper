@@ -8,7 +8,7 @@ pipe_remove_high_correlation_features(train,
   exclude_columns = character(0), threshold = 0.8)
 }
 \arguments{
-\item{train}{Data frame containing the train data.}
+\item{train}{The train dataset, as a data.frame or data.table.}
 
 \item{exclude_columns}{Columns that should not be considered for removal.}
 

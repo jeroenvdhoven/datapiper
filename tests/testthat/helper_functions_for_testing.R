@@ -76,7 +76,7 @@ util_MAE <- function(labels, predicted) {
 }
 
 
-ctest_dt_df <- function(pipe_func, dt, df, train_by_dt = T, ...) {
+ctest_dt_df <- function(pipe_func, dt, df, train_by_dt = T, .check_post_pipe = F, ...) {
     dt_copy <- data.table::copy(dt)
 
     if(train_by_dt) train_df <- dt_copy else train_df <- df
@@ -97,4 +97,16 @@ ctest_dt_df <- function(pipe_func, dt, df, train_by_dt = T, ...) {
     expect_true(is.data.frame(invoked_df))
 
     expect_equal(invoked_df, as_data_frame(invoked_dt))
+
+    if(.check_post_pipe) {
+        expect_true("post_pipe" %in% names(r), label = "Post-pipe not computed when requested")
+        retransformed_dt <- invoke(x = r$post_pipe, invoked_dt)
+        retransformed_df <- invoke(x = r$post_pipe, invoked_df)
+
+        expect_true(is.data.table(retransformed_dt))
+        expect_false(is.data.table(retransformed_df))
+        expect_true(is.data.frame(retransformed_df))
+
+        expect_equal(retransformed_df, as_data_frame(retransformed_dt))
+    }
 }

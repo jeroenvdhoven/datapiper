@@ -10,7 +10,7 @@ pipe_one_hot_encode(train,
   use_pca = FALSE, pca_tol = 0.1)
 }
 \arguments{
-\item{train}{Dataframe to determine one-hot-encoding.}
+\item{train}{The train dataset, as a data.frame or data.table.}
 
 \item{columns}{Columns from \code{train} to use for one-hot-encoding. Will automatically check if theses are column names in \code{train}}
 

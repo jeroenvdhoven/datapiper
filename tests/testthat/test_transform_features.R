@@ -112,6 +112,20 @@ testthat::describe("pipe_feature_transformer()", {
 
         for(col in retransform_columns) expect_equal(unlist(retransformed[col]), unlist(dataset1[col]))
     })
+
+
+    it("can take data.table and data.frame as input and for predictions", {
+        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = T, type = "[0-1]")
+        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = F, type = "N(0,1)")
+    })
+
+    it("can run post-transformations on data.tables and data.frames", {
+        retransform_columns <- c("m", "m2")
+        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = T, .check_post_pipe = T,
+                    type = "[0-1]", retransform_columns = retransform_columns)
+        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = F, .check_post_pipe = T,
+                    type = "N(0,1)", retransform_columns = retransform_columns)
+    })
 })
 
 ctest_01_range <- function(col) {
@@ -194,6 +208,14 @@ testthat::describe("pipe_scaler()", {
     it("can take data.table and data.frame as input and for predictions", {
         ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = T, type = "[0-1]")
         ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = F, type = "N(0,1)")
+    })
+
+    it("can run post-transformations on data.tables and data.frames", {
+        retransform_columns <- c("a", "b")
+        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = T, .check_post_pipe = T,
+                    type = "[0-1]", retransform_columns = retransform_columns)
+        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = F, .check_post_pipe = T,
+                    type = "N(0,1)", retransform_columns = retransform_columns)
     })
 })
 
