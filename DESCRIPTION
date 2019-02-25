@@ -1,7 +1,7 @@
 Package: datapiper
 Type: Package
 Title: datapiper
-Version: 0.1.2.999
+Version: 0.2.1
 Date: 2016-10-19
 Author: Jeroen van den Hoven <jvandenhoven@mobiquityinc.com>
 Maintainer: Jeroen van den Hoven <jvandenhoven@mobiquityinc.com>

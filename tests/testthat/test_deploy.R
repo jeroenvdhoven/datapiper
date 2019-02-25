@@ -6,24 +6,30 @@ get_library_predictions <- function(library_name, test){
     return(result)
 }
 
-generate_model_function <- function(extra_pipe){
+generate_model_function <- function(extra_pipe, response = "x"){
     if(missing(extra_pipe)){
         trained_pipe <- datapiper::train_pipeline(
-            datapiper::segment(.segment = datapiper::pipe_select, "x", "a", "b", "c", "s")
+            datapiper::segment(.segment = datapiper::pipe_select, "x", "a", "b", "c", "s"),
+            datapiper::segment(.segment = datapiper::pipe_scaler),
+            datapiper::segment(.segment = datapiper::pipe_pca, columns = "a"),
+            response = response
         )
     } else {
         trained_pipe <- datapiper::train_pipeline(
             datapiper::segment(.segment = datapiper::pipe_select, "x", "a", "b", "c", "s"),
-            extra_pipe
+            datapiper::segment(.segment = datapiper::pipe_scaler),
+            datapiper::segment(.segment = datapiper::pipe_pca, columns = "a"),
+            extra_pipe,
+            response = response
         )
     }
-    m <- datapiper::find_template_formula_and_data(response = "x", training_function = lm)
+    m <- datapiper::find_template_formula_and_data(response = response, training_function = lm)
 
     train_indices <- seq_len(nrow(dataset1) / 2)
     train <- dataset1[train_indices,]
     test <- dataset1[-train_indices,]
 
-    find_model_result <- datapiper::find_model(train = train, test = test, response = "x", verbose = F,
+    find_model_result <- datapiper::find_model(train = train, test = test, response = response, verbose = F,
                                                preprocess_pipes = list("one" = trained_pipe),
                                                models = list("lm" = m), metrics = list("rmse" = util_RMSE),
                                                parameter_sample_rate = 1, seed = 1, prepend_data_checker = F)
@@ -185,7 +191,7 @@ describe("build_docker()", {
             library_name <- "test.package"
             image_name <- "model.image"
             process_name <- "datapiper.test"
-            libs <- c("dplyr", "magrittr")
+            libs <- c("dplyr", "magrittr", "data.table")
 
             package_result <- datapiper::build_model_package(trained_pipeline = full_pipe,
                                                              package_name = library_name,
