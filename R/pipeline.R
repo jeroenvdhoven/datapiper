@@ -300,7 +300,9 @@ pipe_check_predict <- function(data, response, cols, col_types, on_missing_colum
         }
     }
     # Stop if the ordering and presence of columns is not exactly the same
-    stopifnot(length(cols) == ncol(data), !any(colnames(data) != cols))
+    stopifnot(length(cols) == ncol(data))
+    data <- select_cols(data, cols = cols)
+    stopifnot(!any(colnames(data) != cols))
 
     # Coerce columns to the correct format
     if(on_type_error == "error") tryCatch({

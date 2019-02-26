@@ -342,6 +342,14 @@ describe("pipe_check", {
         expect_equal(invoked_result$x, dataset1$x)
     })
 
+    it("can handle a different order of columns in new datasets", {
+        r <- pipe_check(dataset1, response = "x", on_missing_column = "add", on_extra_column = "remove", on_type_error = "ignore")
+        invoked_result <- invoke(r$pipe, dataset1[, rev(colnames(dataset1))])
+
+        expect_named(object = invoked_result, expected = colnames(dataset1))
+        expect_equal(invoked_result, r$train)
+    })
+
     it("can use either a data.table or data.frame as input and use the result on either", {
         ctest_dt_df(pipe_func = pipe_check, dt = data.table(dataset1), df = dataset1, train_by_dt = T, response = "x")
         ctest_dt_df(pipe_func = pipe_check, dt = data.table(dataset1), df = dataset1, train_by_dt = F, response = "x")
