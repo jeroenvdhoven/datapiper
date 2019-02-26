@@ -182,7 +182,7 @@ describe("build_docker()", {
             connectivity <- T
         }, error = function(e) return())
 
-        if(connectivity){
+        if(connectivity && is_docker_running()){
             r <- generate_model_function()
             train <- r$train
             test <- r$test
