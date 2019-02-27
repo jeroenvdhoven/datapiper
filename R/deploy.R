@@ -25,6 +25,7 @@ kill_docker_process <- function(process_name) {
 }
 
 delete_image <- function(image_name) {
+    stopifnot(is_docker_running())
     all_images <- system2(command = "docker", "images", stdout = T)
     image_exists <- any(grepl(pattern = image_name, x = all_images, fixed = T))
     if(image_exists) {
@@ -212,8 +213,12 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
     # Determine where we need to pull each library from
     is_cran_lib <- grepl(pattern = "^[a-zA-Z0-9\\.]+$", x = libraries)
     is_github_lib <- grepl(pattern = "/", fixed = T, x = libraries)
+
     cran_libs <- libraries[is_cran_lib]
     github_libs <- libraries[is_github_lib]
+
+    # Make sure we install devtools if we require github libs
+    if(any(is_github_lib) && !"devtools" %in% cran_libs) cran_libs <- c("devtools", cran_libs)
 
     # Concat all additional build commands, separated by \n
     additional_build_commands <- paste0(collapse = "\n", additional_build_commands)

@@ -43,18 +43,17 @@ The next step is to build the pipeline. Say we are interested in predicting the 
 
 ```{r}
 library(datapiper)
-year <- 1973
 stat_functions <- list("mean" = mean)
 
 basic_pipeline <- train_pipeline(
     segment(.segment = pipe_function, f = standard_column_names),
     segment(.segment = pipe_mutate, 
-        date = "as.Date(paste0(year, '-', month, '-', day))",
-        distance_from_july = "as.numeric(difftime(as.Date(paste0(year, '-', 07, '-', 16)), date, units = 'days'))",
-        date = "as.numeric(date)"),
+            date = "as.Date(paste0(1973, '-', month, '-', day))",
+            distance_from_july = "as.numeric(difftime(as.Date(paste0(1973, '-', 07, '-', 16)), date, units = 'days'))",
+            date = "as.numeric(date)"),
     segment(.segment = pipe_impute, columns = c("ozone", "solar_r"), type = "mean"),
     segment(.segment = pipe_create_stats, stat_cols = 'month', response = 'temp', 
-        functions = stat_functions, too_few_observations_cutoff = 10),
+            functions = stat_functions, too_few_observations_cutoff = 10),
     segment(.segment = pipe_select, "-month", "-day")
 )
 
@@ -84,10 +83,10 @@ pipe_list <- list("basic_pipe" = basic_pipeline)
 rmse = function(x,y) mean(sqrt((x-y)^2))
 
 model_results <- find_model(train = train, test = test, response = response, 
-           models = model_list, 
-           metrics = list("rmse" = rmse), 
-           prepend_data_checker = F, 
-           preprocess_pipes = pipe_list)
+                            models = model_list, 
+                            metrics = list("rmse" = rmse), 
+                            prepend_data_checker = F, 
+                            preprocess_pipes = pipe_list)
 
 model_results <- model_results[order(model_results$test_rmse),]
 
@@ -109,16 +108,27 @@ A good start to putting a model into production is to make it stand-alone. The p
 ```{r}
 package_name <- "temperature.predictor"
 tar_file_name <- "temperature.tar.gz"
+libraries <- c("randomForest", "datapiper")
 
 build_model_package(
     trained_pipeline = model, 
     package_name = package_name, 
-    libraries = c("datapiper"), 
+    libraries = libraries, 
     tar_file = tar_file_name, 
     may_overwrite_tar_file = F
 )
-
 install.packages(pkgs = "temperature.tar.gz", repos = NULL, type = "source")
+```
+
+Let's remove the variables we don't need anymore. The package should be stand-alone at this point
+```{r}
+current_vars <- ls()
+rm(list = current_vars[!current_vars %in% c("train", "test", "package_name", "tar_file_name", "libraries")])
+```
+
+And to get the predictions:
+```{r}
+temperature.predictor::predict_model(train)
 temperature.predictor::predict_model(test)
 ```
 
@@ -130,7 +140,7 @@ Note: building the image can take some time. Also, you need to have Docker insta
 
 ```{r}
 image_name = "temperature.image"
-build_docker(model_library_file = tar_file_name, package_name = package_name, libraries = "datapiper", 
+build_docker(model_library_file = tar_file_name, package_name = package_name, libraries = libraries, 
              docker_image_name = image_name, may_overwrite_docker_image = F)
 
 test_docker(data = test, image_name = image_name, process_name = "docker.test", package_name = package_name, batch_size = 100)

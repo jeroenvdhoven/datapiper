@@ -22,7 +22,6 @@ Imports:
   httr,
   cluster,
   methods,
-  hashmap,
   jsonlite,
   usethis
 Suggests: 
