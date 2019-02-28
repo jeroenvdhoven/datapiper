@@ -10,7 +10,7 @@ pipe_create_stats(train,
   too_few_observations_cutoff = 30)
 }
 \arguments{
-\item{train}{The train dataset, as a data.frame or data.table.}
+\item{train}{The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.}
 
 \item{stat_cols}{A character vector of column names. Please ensure that you only choose column names of non-numeric columns}
 

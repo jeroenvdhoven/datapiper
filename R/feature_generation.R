@@ -2,7 +2,7 @@
 #'
 #' Takes the dataset, scans the given columns for values that have been listed as indicating NA, and adds a column indicating if this is a NA
 #'
-#' @param train The train dataset, as a data.frame or data.table.
+#' @param train The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.
 #' @param condition Function to test if a value is missing. Should return true when a value is missing and false otherwise.
 #' @param columns Names of the columns to check for missing values.
 #' @param force_column If true, always add new columns, even if no missing values were found.
@@ -65,7 +65,7 @@ NA_indicators_predict <- function(data, condition, columns){
 
 #' Generic function for creating statistics on the response column, based on custom columns.
 #'
-#' @param train The train dataset, as a data.frame or data.table.
+#' @param train The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.
 #' @param stat_cols A character vector of column names. Please ensure that you only choose column names of non-numeric columns
 #' @param response The column containing the response variable.
 #' @param functions A (named) list of functions to be used to generate statistics. Will take a vector and should return a scalar, e.g. mean / sd.
@@ -214,7 +214,7 @@ create_stats_predict <- function(data, stat_cols, tables, interaction_level, def
 
 #' Remove all columns that have only a single value
 #'
-#' @param train The train dataset, as a data.frame or data.table.
+#' @param train The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.
 #' @param na_function A function that returns true when a value is considered missing, and should be removed. Defaults to removing no values.
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
@@ -251,7 +251,7 @@ preserve_columns_predict <- function(data, preserved_columns) {
 
 #' Generates permutation interaction effects between sets of numeric variables
 #'
-#' @param train The train dataset, as a data.frame or data.table.
+#' @param train The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.
 #' @param response The column containing the response variable.
 #' @param columns Columns to use for interaction effects. Can be a character vector referencing numeric columns, or an integer larger than 2 denoting
 #' the minimum number of unique values in any column except \code{response} for that column to be considered for interaction effects. This is intended to exclude

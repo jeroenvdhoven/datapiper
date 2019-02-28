@@ -7,7 +7,7 @@
 pipe_pca(train, columns, pca_tol = 0.1, keep_old_columns = F)
 }
 \arguments{
-\item{train}{The train dataset, as a data.frame or data.table.}
+\item{train}{The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.}
 
 \item{columns}{Columns to use in the PCA transformation.}
 

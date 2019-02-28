@@ -8,7 +8,7 @@ pipe_scaler(train, exclude_columns = character(length = 0),
   type = "[0-1]", retransform_columns)
 }
 \arguments{
-\item{train}{The train dataset, as a data.frame or data.table.}
+\item{train}{The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.}
 
 \item{exclude_columns}{Names of columns that should be excluded from rescaling}
 

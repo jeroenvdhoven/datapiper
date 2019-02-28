@@ -8,7 +8,7 @@ pipe_clustering(train, cluster_column = "cluster",
   exclude_columns = character(0), k = 4, metric = "euclidean")
 }
 \arguments{
-\item{train}{The train dataset, as a data.frame or data.table.}
+\item{train}{The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.}
 
 \item{cluster_column}{Name for the new cluster label column}
 

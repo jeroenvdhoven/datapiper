@@ -1,6 +1,6 @@
 #' Removes highly correlated features whilst keeping as many as possible, using heuristics.
 #'
-#' @param train The train dataset, as a data.frame or data.table.
+#' @param train The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.
 #' @param exclude_columns Columns that should not be considered for removal.
 #' @param threshold If the correlation is between two columns is larger than this, both will be considered for removal
 #'

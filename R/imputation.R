@@ -117,7 +117,7 @@ impute_predict_all <- function(data, columns, na_function, models, included_colu
 
 #' Impute multiple missing columns using lm, mean, or xgboost, and perform imputation
 #'
-#' @param train The train dataset, as a data.frame or data.table.
+#' @param train The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.
 #' @param columns The columns to impute, as strings.
 #' @param na_function A function which returns TRUE when a value is missing and FALSE otherwise. Will apply this function to each column. Must take one column vector as input.
 #' @param exclude_columns Columns that should not be used in imputation. If lm is chosen, this will always include \code{columns}. Should be strings.

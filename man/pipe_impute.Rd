@@ -8,7 +8,7 @@ pipe_impute(train, columns, na_function = is.na, exclude_columns,
   type = "lm", controls = NA, verbose = F)
 }
 \arguments{
-\item{train}{The train dataset, as a data.frame or data.table.}
+\item{train}{The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.}
 
 \item{columns}{The columns to impute, as strings.}
 

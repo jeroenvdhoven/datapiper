@@ -2,7 +2,7 @@
 #'
 #' Use classification models to classify if the response is larger than a series of given values for regression tasks
 #'
-#' @param train The train dataset, as a data.frame or data.table.
+#' @param train The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.
 #' @param response String denoting the name of the column that should be used as the response variable.
 #' @param exclude_columns Columns that shouldn't be used in the models. Defaults to the response column and will ALWAYS include the response column.
 #' @param base_temporary_column_name Base name that will be used to create a temporary variable for training the classifier. Use this to ensure no existing columns are overwritten.

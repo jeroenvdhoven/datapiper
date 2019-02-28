@@ -10,7 +10,7 @@ pipe_categorical_filter(train, response,
   is.character)], threshold_function = function(data) 30)
 }
 \arguments{
-\item{train}{The train dataset, as a data.frame or data.table.}
+\item{train}{The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.}
 
 \item{response}{The response column, as a string. Will only be used to ensure this is not included in the \code{categorical_columns} variable.}
 

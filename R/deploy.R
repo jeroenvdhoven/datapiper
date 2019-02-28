@@ -1,7 +1,7 @@
 sed_inplace <- function(previous, new, file) {
     previous <- gsub(pattern = '"', replacement = '\\"', fixed = T, x = previous)
     new <- gsub(pattern = '"', replacement = '\\"', fixed = T, x = new)
-    return(paste0("sed -i \"s/", previous, "/", new, "/g\" ", file))
+    return(paste0("sed -i \"\" \"s/", previous, "/", new, "/g\" ", file))
 }
 to_string_array <- function(s) paste0("c(", paste0('"', s, '"', collapse = ", "), ")")
 

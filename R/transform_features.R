@@ -186,7 +186,7 @@ feature_transformer_post_predict <- function(data, retransform_columns, lower_th
 
 #' Rescales data to standardised ranges
 #'
-#' @param train The train dataset, as a data.frame or data.table.
+#' @param train The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.
 #' @param exclude_columns Names of columns that should be excluded from rescaling
 #' @param type Type of rescales to perform:
 #' \itemize{
@@ -295,7 +295,7 @@ scaler_post_predict <- function(data, centers, scales, columns) {
 
 #' Train one-hot encoding
 #'
-#' @param train The train dataset, as a data.frame or data.table.
+#' @param train The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.
 #' @param columns Columns from \code{train} to use for one-hot-encoding. Will automatically check if theses are column names in \code{train}
 #' @param use_pca Whether PCA transformation is required.
 #' @param pca_tol The \code{tol} of \code{\link[stats]{prcomp}}
@@ -433,7 +433,7 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
 
 #' Remove values from categorical variables that do not occur often enough
 #'
-#' @param train The train dataset, as a data.frame or data.table.
+#' @param train The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.
 #' @param response The response column, as a string. Will only be used to ensure this is not included in the \code{categorical_columns} variable.
 #' @param categorical_columns The columns to apply the filter over. Should be a character vector.
 #' @param insufficient_occurance_marker The value to substitute when another value in the categorical column doesn't occur often enough.
@@ -523,7 +523,7 @@ feature_categorical_filter_predict <- function(data, categorical_columns, mappin
 
 #' Apply PCA to a subset of the columns in a dataset
 #'
-#' @param train The train dataset, as a data.frame or data.table.
+#' @param train The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.
 #' @param columns Columns to use in the PCA transformation.
 #' @param pca_tol The \code{tol} of \code{\link[stats]{prcomp}}
 #' @param keep_old_columns Flag indicating if columns used to perform the PCA transformation should be kept.
