@@ -44,12 +44,13 @@ The next step is to build the pipeline. Say we are interested in predicting the 
 ```{r}
 library(datapiper)
 stat_functions <- list("mean" = mean)
+year <- 1973
 
 basic_pipeline <- train_pipeline(
     segment(.segment = pipe_function, f = standard_column_names),
     segment(.segment = pipe_mutate, 
-            date = "as.Date(paste0(1973, '-', month, '-', day))",
-            distance_from_july = "as.numeric(difftime(as.Date(paste0(1973, '-', 07, '-', 16)), date, units = 'days'))",
+            date = "as.Date(paste0(year, '-', month, '-', day))",
+            distance_from_july = "as.numeric(difftime(as.Date(paste0(year, '-', 07, '-', 16)), date, units = 'days'))",
             date = "as.numeric(date)"),
     segment(.segment = pipe_impute, columns = c("ozone", "solar_r"), type = "mean"),
     segment(.segment = pipe_create_stats, stat_cols = 'month', response = 'temp', 
@@ -115,6 +116,7 @@ build_model_package(
     package_name = package_name, 
     libraries = libraries, 
     tar_file = tar_file_name, 
+    extra_functions = "year",
     may_overwrite_tar_file = F
 )
 install.packages(pkgs = "temperature.tar.gz", repos = NULL, type = "source")
@@ -167,5 +169,3 @@ See LICENSE file
 #### Other
 - Visualise tool for sanity_check
 - Expand toolkit for sanity_check
-
-## Contact
