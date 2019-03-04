@@ -11,14 +11,14 @@ generate_model_function <- function(extra_pipe, response = "x"){
         trained_pipe <- datapiper::train_pipeline(
             datapiper::segment(.segment = datapiper::pipe_select, "x", "a", "b", "c", "s"),
             datapiper::segment(.segment = datapiper::pipe_scaler),
-            datapiper::segment(.segment = datapiper::pipe_pca, columns = "a"),
+            datapiper::segment(.segment = datapiper::pipe_clustering, exclude_columns = response),
             response = response
         )
     } else {
         trained_pipe <- datapiper::train_pipeline(
             datapiper::segment(.segment = datapiper::pipe_select, "x", "a", "b", "c", "s"),
             datapiper::segment(.segment = datapiper::pipe_scaler),
-            datapiper::segment(.segment = datapiper::pipe_pca, columns = "a"),
+            datapiper::segment(.segment = datapiper::pipe_clustering, exclude_columns = response),
             extra_pipe,
             response = response
         )
@@ -191,7 +191,7 @@ describe("build_docker()", {
             library_name <- "test.package"
             image_name <- "model.image"
             process_name <- "datapiper.test"
-            libs <- c("dplyr", "magrittr", "data.table")
+            libs <- c("datapiper")
 
             package_result <- datapiper::build_model_package(trained_pipeline = full_pipe,
                                                              package_name = library_name,

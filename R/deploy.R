@@ -104,6 +104,8 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
         save(invoke, file = "data/invoke.rda")
         save(invoke.pipe, file = "data/invoke.pipe.rda")
         save(invoke.pipeline, file = "data/invoke.pipeline.rda")
+        save(select_cols, file = "data/select_cols.rda")
+        save(deselect_cols, file = "data/deselect_cols.rda")
 
         target_script_file <- file(description = "file://R/predictions.R", open = "w")
         script <- paste0(
@@ -256,7 +258,7 @@ COPY ", model_library_file, " /", model_library_file, "
 RUN R -e 'install.packages(pkgs = \"/", model_library_file, "\", repos = NULL, type = \"source\")'
 
 # Preloaded library command
-RUN ", add_preloaded_library_command, "
+# RUN ", add_preloaded_library_command, "
 ", additional_build_commands)
 
         # cat(dockerfile_content)
