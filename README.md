@@ -22,6 +22,14 @@ All of this should help you be more efficient at testing different combinations 
 
 ## Usage
 
+### Installation
+
+For now datapiper is only available on github. Using devtools makes it easy to install the package:
+
+```{r}
+devtools::install_github("jeroenvdhoven/datapiper")
+```
+
 ### Pipelines
 
 As an example, start by taking a standard dataset and splitting it into a train and test set.
