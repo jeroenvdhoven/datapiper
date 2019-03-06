@@ -1,13 +1,15 @@
 context("Bayesian optimization")
 p_1 <- datapiper::train_pipeline(
-    segment(.segment = datapiper::pipe_categorical_filter, threshold_function = function(x) 2, response = "x"),
+    segment(.segment = datapiper::pipe_categorical_filter, threshold_function = function(x) 2),
     segment(.segment = datapiper::pipe_remove_single_value_columns, na_function = is.na),
     segment(.segment = datapiper::pipe_one_hot_encode),
-    segment(.segment = datapiper::pipe_impute, exclude_columns = "x", columns = c("m", "m2"), type = "mean")
+    segment(.segment = datapiper::pipe_impute, exclude_columns = "x", columns = c("m", "m2"), type = "mean"),
+    response = "x"
 )
 p_2 <- datapiper::train_pipeline(
     segment(.segment = p_1),
-    segment(.segment = datapiper::pipe_scaler, retransform_columns = "a", exclude_columns = "x")
+    segment(.segment = datapiper::pipe_scaler, retransform_columns = "a", exclude_columns = "x"),
+    response = "x"
 )
 m_1 <- util_RMSE
 m_2 <- util_RMSLE
@@ -214,7 +216,8 @@ describe("find_model_through_bayes()", {
         p_3 <- datapiper::train_pipeline(
             segment(.segment = p_1),
             segment(.segment = pipe_mutate, Target = "x"),
-            segment(.segment = pipe_function, f = standard_column_names)
+            segment(.segment = pipe_function, f = standard_column_names),
+            response = "x"
         )
 
         r <- ctest_for_no_errors(

@@ -69,6 +69,10 @@ describe("pipe_remove_high_correlation_features", {
         ctest_dt_df(pipe_func = pipe_remove_high_correlation_features, dt = data.table(dataset1), df = dataset1,
                     train_by_dt = F, threshold = .8)
     })
+
+    it("can check some common inputs", {
+        ctest_if_pipes_check_common_inputs(pipe_func = pipe_remove_high_correlation_features, data = dataset1)
+    })
 })
 
 

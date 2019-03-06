@@ -30,14 +30,16 @@ pipe_range_classifier <- function(train, response, exclude_columns = response,
                                   base_temporary_column_name = "base_temporary_column_name",
                                   base_definitive_column_name = paste0(response, "_quantile"),
                                   quantiles = 0, even_spreads = 0, values, model = c("glm", "xgboost")[1], controls){
+    stopifnot(
+        is.data.frame(train),
+        is.character(response), length(response) == 1, response %in% colnames(train)
+    )
     env <- environment()
     tryCatch(exclude_columns, error = function(e) env[["exclude_columns"]] <- env[["response"]])
     if(missing(base_definitive_column_name)) {
         base_definitive_column_name <- paste0(response, "_quantile")
     }
     stopifnot(
-        !missing(train), is.data.frame(train),
-        is.character(response), length(response) == 1, response %in% colnames(train),
         is.character(exclude_columns), !any(!exclude_columns %in% colnames(train)),
         is.character(base_temporary_column_name), length(base_temporary_column_name) == 1,
         !any(grepl(pattern = base_temporary_column_name, colnames(train)))

@@ -122,4 +122,8 @@ describe("pipe_range_classifier", {
             }
         )
     })
+
+    it("can check some common inputs", {
+        ctest_if_pipes_check_common_inputs(pipe_func = pipe_range_classifier, data = dataset1)
+    })
 })

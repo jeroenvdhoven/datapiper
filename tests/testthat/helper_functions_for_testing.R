@@ -30,9 +30,12 @@ dataset1 <- dplyr::data_frame(
 #     it("can apply its results to a new dataset using pipe, a wrapper for <function_name>_predict()", {})
 #     it("ignores non-numeric input", {})
 #     it("runs without errors on basic settings", {})
+#     it("check some common inputs", {
+#       ctest_if_pipes_check_common_inputs(pipe_func = <pipe_function>, data = dataset1)
+#     })
 #
 #     it("handles missing values", {})
-#     it("can take data.table and data.frame as input and for predictions", {}) # Make sure this test covers all flows in your function
+#     it("can take data.table and data.frame as input and for predictions", {}) # Make sure this test covers all flows in your function. ctest_dt_df can help for pipes
 # })
 
 ctest_pipe_has_correct_fields <- function(pipe_res) {
@@ -108,5 +111,41 @@ ctest_dt_df <- function(pipe_func, dt, df, train_by_dt = T, .check_post_pipe = F
         expect_true(is.data.frame(retransformed_df))
 
         expect_equal(retransformed_df, as_data_frame(retransformed_dt))
+    }
+}
+
+ctest_if_pipes_check_common_inputs <- function(pipe_func, data, ...) {
+    pipe_name <- deparse(match.call()$pipe_func)
+    arguments <- formalArgs(pipe_func)
+    default_label <- paste("Pipe", pipe_name, "did not check some default inputs:")
+
+    # train: present and dataframe
+    expect_true("train" %in% arguments)
+    expect_error(pipe_func(...), regexp = 'train', fixed = T, label = default_label)
+    expect_error(pipe_func(train = "", ...), regexp = 'is.data.frame(train)', fixed = T, label = default_label)
+
+    # response: is.character, %in% colnames(data)
+    if("response" %in% arguments) {
+        expect_error(pipe_func(train = data, response = 1, ...), regexp = 'is.character(response)', fixed = T, label = default_label)
+
+        cols <- colnames(data)
+        definitely_not_present_column_names <- paste0(cols[nchar(cols) == max(nchar(cols))], "_someotherstuff")
+        expect_error(pipe_func(train = data, response = definitely_not_present_column_names, ...), regexp = 'response %in% colnames(train)',
+                     fixed = T, label = default_label)
+    }
+
+    # exclude_columns: is.character, %in% colnames(data)
+    if("exclude_columns" %in% arguments) {
+        if("response" %in% arguments) expect_error(pipe_func(train = data, response = colnames(data)[1], exclude_columns = 1, ...),
+                                                   regexp = 'exclude_columns.*is not TRUE', fixed = F, label = default_label)
+        else expect_error(pipe_func(train = data, exclude_columns = 1, ...), regexp = 'exclude_columns.*is not TRUE', fixed = F, label = default_label)
+
+        cols <- colnames(data)
+        definitely_not_present_column_names <- paste0(cols[nchar(cols) == max(nchar(cols))], "_someotherstuff")
+
+        if("response" %in% arguments) expect_error(pipe_func(train = data, response = colnames(data)[1], exclude_columns = definitely_not_present_column_names, ...),
+                                                   regexp = 'exclude_columns.*is not TRUE', fixed = F, label = default_label)
+        else expect_error(pipe_func(train = data, exclude_columns = definitely_not_present_column_names, ...),
+                     regexp = 'exclude_columns.*is not TRUE', fixed = F, label = default_label)
     }
 }

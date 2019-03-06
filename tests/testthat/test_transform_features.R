@@ -7,6 +7,10 @@ testthat::describe("pipe_feature_transformer()", {
         ctest_pipe_has_correct_fields(r)
     })
 
+    it("can check some common inputs", {
+        ctest_if_pipes_check_common_inputs(pipe_func = pipe_feature_transformer, data = dataset1)
+    })
+
     it("transforms features to those most linearly predictive of the response", {
         expect_equal(r$train$a, dataset1$x)
         expect_equal(r$train$b, dataset1$x)
@@ -146,6 +150,10 @@ testthat::describe("pipe_scaler()", {
         ctest_pipe_has_correct_fields(r_normal)
     })
 
+    it("can check some common inputs", {
+        ctest_if_pipes_check_common_inputs(pipe_func = pipe_scaler, data = dataset1)
+    })
+
     it("scales numeric features to the predefined range", {
         ctest_01_range(r_01$train$a)
         ctest_01_range(r_01$train$b)
@@ -228,6 +236,8 @@ testthat::describe("pipe_one_hot_encode()", {
         ctest_pipe_has_correct_fields(r_non)
         ctest_pipe_has_correct_fields(r_pca)
     })
+
+    # Basic inputs are currently not tested due to some peculiarities with this function and the use of response
 
     it("can encode character columns in a one-hot way", {
         ctest_dataset_has_columns(r_non$train, columns = c(paste0("y_", dataset1$y), paste0("s_", dataset1$s), paste0("z_", dataset1$z)))
@@ -354,6 +364,10 @@ testthat::describe("pipe_categorical_filter()", {
         ctest_pipe_has_correct_fields(r)
     })
 
+    it("can check some common inputs", {
+        ctest_if_pipes_check_common_inputs(pipe_func = pipe_categorical_filter, data = dataset1)
+    })
+
     it("filters out categorical values that occur not often enough and leaves those that do", {
         expect_equal(dataset1$s, r$train$s)
         expect_equal(dataset1$z, r$train$z)
@@ -461,6 +475,10 @@ describe("pipe_pca()", {
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
+    })
+
+    it("can check some common inputs", {
+        ctest_if_pipes_check_common_inputs(pipe_func = pipe_pca, data = dataset1)
     })
 
     it("create PCA transformations of the requested columns", {

@@ -70,4 +70,8 @@ describe("pipe_clustering()", {
         ctest_dt_df(pipe_func = pipe_clustering, dt = data.table(dataset1), df = dataset1, train_by_dt = T)
         ctest_dt_df(pipe_func = pipe_clustering, dt = data.table(dataset1), df = dataset1, train_by_dt = F)
     })
+
+    it("can check some common inputs", {
+        ctest_if_pipes_check_common_inputs(pipe_func = pipe_clustering, data = dataset1)
+    })
 })

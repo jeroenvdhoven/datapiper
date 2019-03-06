@@ -15,8 +15,8 @@
 pipe_feature_transformer <- function(train, response, transform_columns, missing_func = is.na,
                                      transform_functions = list(sqrt, log, function(x)x^2), retransform_columns){
     stopifnot(
-        response %in% colnames(train), is.numeric(unlist(train[response])),
         is.data.frame(train),
+        is.character(response), response %in% colnames(train), is.numeric(unlist(train[response])),
         is.list(transform_functions), !any(!purrr::map_lgl(transform_functions, is.function))
     )
     if(missing(transform_columns)) {
@@ -449,9 +449,12 @@ pipe_categorical_filter <- function(
     categorical_columns = colnames(train)[purrr::map_lgl(train, is.character)],
     threshold_function = function(data) 30
 ) {
-    categorical_columns <- categorical_columns[categorical_columns != response]
     stopifnot(
         is.data.frame(train),
+        is.character(response), response %in% colnames(train)
+    )
+    categorical_columns <- categorical_columns[categorical_columns != response]
+    stopifnot(
         is.character(categorical_columns),
         length(insufficient_occurance_marker) == 1, is.vector(insufficient_occurance_marker),
         !any(!categorical_columns %in% colnames(train))

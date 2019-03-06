@@ -87,7 +87,9 @@ pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(
                               functions = list("mean" = mean), interaction_level = 1, too_few_observations_cutoff = 30, quantile_trim_threshold = 0) {
     stopifnot(
         is.numeric(interaction_level), interaction_level >= 1,
-        is.numeric(quantile_trim_threshold), quantile_trim_threshold <= .5, quantile_trim_threshold >= 0
+        is.numeric(quantile_trim_threshold), quantile_trim_threshold <= .5, quantile_trim_threshold >= 0,
+        is.data.frame(train),
+        is.character(response), response %in% colnames(train)
     )
 
     tables <- list()
@@ -235,6 +237,10 @@ create_stats_predict <- function(data, stat_cols, tables, interaction_level, def
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 pipe_remove_single_value_columns <- function(train, na_function = function(x){F}){
+    stopifnot(
+        is.data.frame(train),
+        is.function(na_function)
+    )
     more_than_one_unique_value <- purrr::map_lgl(train, function(x) {
         res <- unique(x)
         res <- res[!na_function(res)]
@@ -280,6 +286,11 @@ preserve_columns_predict <- function(data, preserved_columns) {
 #' @export
 #' @importFrom utils combn
 pipe_feature_interactions <- function(train, response, columns = 10L, max_interactions = 2){
+    stopifnot(
+        is.data.frame(train),
+        is.character(response), response %in% colnames(train)
+    )
+
     if(is.numeric(columns) && columns >= 2) {
         columns <- purrr::map_lgl(train, function(x){
             if(!is.numeric(x)) return(FALSE)
@@ -290,7 +301,6 @@ pipe_feature_interactions <- function(train, response, columns = 10L, max_intera
         columns <- columns[columns != response]
     }
     stopifnot(
-        is.data.frame(train),
         is.character(columns), !any(!columns %in% colnames(train)), length(columns) > 0,
         is.numeric(max_interactions) && max_interactions >= 2
     )

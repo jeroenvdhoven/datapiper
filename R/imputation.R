@@ -155,6 +155,10 @@ pipe_impute <- function(train, columns,
         exclude_columns <- c(exclude_columns, columns[!columns %in% exclude_columns])
     }
 
+    stopifnot(
+        !any(!exclude_columns %in% colnames(train))
+    )
+
     models <- purrr::map(.x = columns, .f = function(x, train, columns, na_function, exclude_columns, controls, type){
         if(verbose) print(x)
         impute_model(data = train, column = x, NA_value = na_function, exclude_columns = exclude_columns, controls = controls, type = type)

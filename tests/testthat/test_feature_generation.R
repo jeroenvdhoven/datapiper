@@ -48,6 +48,10 @@ describe("pipe_NA_indicators", {
         ctest_dt_df(pipe_func = pipe_NA_indicators, dt = data.table(dataset1), df = dataset1, train_by_dt = F, force_column = T)
         ctest_dt_df(pipe_func = pipe_NA_indicators, dt = data.table(dataset1), df = dataset1, train_by_dt = T, force_column = T)
     })
+
+    it("can check some common inputs", {
+        ctest_if_pipes_check_common_inputs(pipe_func = pipe_NA_indicators, data = dataset1)
+    })
 })
 
 
@@ -61,6 +65,10 @@ describe("pipe_create_stats", {
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
+    })
+
+    it("can check some common inputs", {
+        ctest_if_pipes_check_common_inputs(pipe_func = pipe_create_stats, data = dataset1)
     })
 
     it("generates statistics for given groups", {
@@ -211,6 +219,10 @@ describe("pipe_create_stats", {
             }
         }
     })
+
+    it("check the trim argument to see if it has reasonable values", {
+
+    })
 })
 
 describe("pipe_remove_single_value_columns", {
@@ -219,6 +231,10 @@ describe("pipe_remove_single_value_columns", {
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
+    })
+
+    it("can check some common inputs", {
+        ctest_if_pipes_check_common_inputs(pipe_func = pipe_remove_single_value_columns, data = dataset1)
     })
 
     it("removes constant columns", {
@@ -271,6 +287,10 @@ describe("pipe_feature_interactions", {
 
     it("returns a list with at least train and pipe names, where the first is a dataset and the second a function", {
         ctest_pipe_has_correct_fields(r)
+    })
+
+    it("can check some common inputs", {
+        ctest_if_pipes_check_common_inputs(pipe_func = pipe_feature_interactions, data = dataset1)
     })
 
     it("calculates interactions between columns", {

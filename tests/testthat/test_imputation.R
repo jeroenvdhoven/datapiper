@@ -75,4 +75,8 @@ describe("pipe_impute", {
         ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = T, type = "xgboost")
         ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = F, type = "xgboost")
     })
+
+    it("can check some common inputs", {
+        ctest_if_pipes_check_common_inputs(pipe_func = pipe_impute, data = dataset1)
+    })
 })
