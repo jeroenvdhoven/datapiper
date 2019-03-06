@@ -179,25 +179,37 @@ describe("pipe_create_stats", {
         expect_false(object = any(!expected_columns %in% colnames(r_3$train)))
     })
 
-    it("can keep the result as a data.table if the input is a data.table", {
-        dt_dataset1 <- data.table::as.data.table(dataset1)
-        r_dt <- datapiper::pipe_create_stats(
-            train = dt_dataset1, response = "x", interaction_level = 2,
-            too_few_observations_cutoff = 1, functions = f_list)
-
-        r_df <- datapiper::pipe_create_stats(
-            train = dataset1, response = "x", interaction_level = 2,
-            too_few_observations_cutoff = 1, functions = f_list)
-
-        expect_true(is.data.table(r_dt$train))
-        expect_equal(object = as_data_frame(r_dt$train), expected = r_df$train)
-    })
-
     it("can use either a data.table or data.frame as input and use the result on either", {
         ctest_dt_df(pipe_func = pipe_create_stats, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
                     response = "x", functions = f_list)
         ctest_dt_df(pipe_func = pipe_create_stats, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
                     response = "x", functions = f_list)
+    })
+
+    it("can trim generated statistics", {
+        stat_cols <- c("m", "s")
+        thresholds <- c(0, .25, .4, .5)
+
+        for(threshold in thresholds) {
+            r_trimmed <- datapiper::pipe_create_stats(
+                train = dataset1, response = "x", interaction_level = 1,
+                stat_cols = stat_cols, quantile_trim_threshold = threshold,
+                too_few_observations_cutoff = 0, functions = f_list)
+
+            for(stat_col in stat_cols) for(i in seq_along(f_list)) {
+                colname <- paste0(names(f_list)[i], "_", stat_col)
+                f <- f_list[[i]]
+
+                stat_values <- dataset1 %>% group_by_(stat_col) %>%
+                    summarize(stat = f(x)) %>%
+                    .$stat
+
+                expect_false(any(unlist(select_(r_trimmed$train, colname)) < quantile(x = stat_values, probs = threshold)),
+                             label = paste0("Column `", colname, "` did not trim for function `", names(f_list)[i], "` and threshold `", threshold, "`"))
+                expect_false(any(unlist(select_(r_trimmed$train, colname)) > quantile(x = stat_values, probs = 1 - threshold)),
+                             label = paste0("Column `", colname, "` did not trim for function `", names(f_list)[i], "` and threshold `", threshold, "`"))
+            }
+        }
     })
 })
 

@@ -7,7 +7,7 @@
 pipe_create_stats(train,
   stat_cols = colnames(train)[purrr::map_lgl(train, is.character)],
   response, functions = list(mean = mean), interaction_level = 1,
-  too_few_observations_cutoff = 30)
+  too_few_observations_cutoff = 30, quantile_trim_threshold = 0)
 }
 \arguments{
 \item{train}{The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.}
@@ -23,6 +23,9 @@ If names are provided, the name will be prepended to the generate column. If the
 
 \item{too_few_observations_cutoff}{An integer denoting the minimum required observations for a combination of values in statistics_col to be used.
 If not enough observations are present, the statistics will be generated on the entire response column. Default: 30.}
+
+\item{quantile_trim_threshold}{Determines the quantile to which we'll trim the generated statistics. For instance, when this is set to .1,
+the generated statistics will be capped by the 0.1 and 0.9 quantile. Therefor, this should be a value between 0 and 0.5.}
 }
 \value{
 A list containing the transformed train dataset and a trained pipe.

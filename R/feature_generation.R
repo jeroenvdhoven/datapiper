@@ -73,6 +73,8 @@ NA_indicators_predict <- function(data, condition, columns){
 #' @param interaction_level An integer of 1 or higher. Should we gather statistics only for one column, or also for combinations of columns?
 #' @param too_few_observations_cutoff An integer denoting the minimum required observations for a combination of values in statistics_col to be used.
 #' If not enough observations are present, the statistics will be generated on the entire response column. Default: 30.
+#' @param quantile_trim_threshold Determines the quantile to which we'll trim the generated statistics. For instance, when this is set to .1,
+#' the generated statistics will be capped by the 0.1 and 0.9 quantile. Therefor, this should be a value between 0 and 0.5.
 #' @return A list containing the transformed train dataset and a trained pipe.
 #'
 #' #' @details This function will also generate default values for all generated columns that use the entire response column.
@@ -82,8 +84,11 @@ NA_indicators_predict <- function(data, condition, columns){
 #' @export
 #' @importFrom data.table as.data.table
 pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(train, is.character)], response,
-                              functions = list("mean" = mean), interaction_level = 1, too_few_observations_cutoff = 30) {
-    stopifnot(is.numeric(interaction_level), interaction_level >= 1)
+                              functions = list("mean" = mean), interaction_level = 1, too_few_observations_cutoff = 30, quantile_trim_threshold = 0) {
+    stopifnot(
+        is.numeric(interaction_level), interaction_level >= 1,
+        is.numeric(quantile_trim_threshold), quantile_trim_threshold <= .5, quantile_trim_threshold >= 0
+    )
 
     tables <- list()
     defaults <- list()
@@ -100,7 +105,8 @@ pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(
                 statistics_col = cols,
                 response = response,
                 functions = functions,
-                too_few_observations_cutoff = too_few_observations_cutoff)
+                too_few_observations_cutoff = too_few_observations_cutoff,
+                quantile_trim_threshold = quantile_trim_threshold)
 
             tables %<>% c(list(stats$table))
             defaults %<>% c(list(stats$defaults))
@@ -130,6 +136,8 @@ pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(
 #' If names are provided, the name will be prepended to the generate column. If they are not provided, gen<index of function>_ will be prepended.
 #' @param too_few_observations_cutoff An integer denoting the minimum required observations for a combination of values in statistics_col to be used.
 #' If not enough observations are present, the statistics will be generated on the entire response column. Default: 30.
+#' @param quantile_trim_threshold Determines the quantile to which we'll trim the generated statistics. For instance, when this is set to .1,
+#' the generated statistics will be capped by the 0.1 and 0.9 quantile. Therefor, this should be a value between 0 and 0.5.
 #'
 #' @details This function will also generate default values for all generated columns that use the entire response column.
 #' This allows us to ensure no NA values will be present in generated columns
@@ -137,7 +145,7 @@ pipe_create_stats <- function(train, stat_cols = colnames(train)[purrr::map_lgl(
 #' @importFrom data.table is.data.table setnames setkey
 #' @import dplyr
 #' @return A list containing the generated statistics tables and defaults per columns
-create_stats <- function(train, statistics_col, response, functions, too_few_observations_cutoff = 30){
+create_stats <- function(train, statistics_col, response, functions, too_few_observations_cutoff = 30, quantile_trim_threshold = 0){
     if(is.null(names(functions))) names(functions) <- paste("gen", 1:length(functions))
     stopifnot(data.table::is.data.table(train))
 
@@ -149,6 +157,13 @@ create_stats <- function(train, statistics_col, response, functions, too_few_obs
     statistics_train <- train_target[, purrr::map(.x = functions, .f = function(x, col) x(col), col = get(response)), by = statistics_col]
     generated_cols <- colnames(statistics_train)[!colnames(statistics_train) %in% statistics_col]
     setnames(x = statistics_train, old = generated_cols, new = var_names)
+
+    statistics_train[, c(var_names) := lapply(.SD, function(x) {
+        quantiles <- quantile(x = x, probs = c(quantile_trim_threshold, 1 - quantile_trim_threshold), na.rm = T)
+        x[x < quantiles[1]] <- quantiles[1]
+        x[x > quantiles[2]] <- quantiles[2]
+        return(x)
+    }), .SDcols = var_names]
 
     statistics_train %<>% merge(y = train_count_table, by = statistics_col)
     do.call(setkey, args = c(list(x = statistics_train), statistics_col))

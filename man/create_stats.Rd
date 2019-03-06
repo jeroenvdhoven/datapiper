@@ -5,7 +5,7 @@
 \title{Calculates stats based on custom functions on the response variable for each group provided in stat_cols.}
 \usage{
 create_stats(train, statistics_col, response, functions,
-  too_few_observations_cutoff = 30)
+  too_few_observations_cutoff = 30, quantile_trim_threshold = 0)
 }
 \arguments{
 \item{train}{The train dataset, as a data.table}
@@ -20,6 +20,9 @@ If names are provided, the name will be prepended to the generate column. If the
 
 \item{too_few_observations_cutoff}{An integer denoting the minimum required observations for a combination of values in statistics_col to be used.
 If not enough observations are present, the statistics will be generated on the entire response column. Default: 30.}
+
+\item{quantile_trim_threshold}{Determines the quantile to which we'll trim the generated statistics. For instance, when this is set to .1,
+the generated statistics will be capped by the 0.1 and 0.9 quantile. Therefor, this should be a value between 0 and 0.5.}
 }
 \value{
 A list containing the generated statistics tables and defaults per columns
