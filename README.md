@@ -4,7 +4,7 @@
 ## Introduction
 The application of data science has been growing more and more in recent years. More companies use it in their day-to-day operations and new techniques emerge every day. Building a simple model is easy enough, but doing it well remains an expertise. Getting one into production is an entirely different problem altogether. There are a few problems that keep recurring in the process of preprocessing, training, and deploying, such as:
     
-    - Every preprocessing step applied to the train set needs to be repeated on the test and validation sets.
+- Every preprocessing step applied to the train set needs to be repeated on the test and validation sets.
 - Some preprocessing steps, like adding statistics, some forms of imputation, and one-hot encoding require a proper separation between train / test / validate sets. Since these steps use information from the train dataset and test / validate sets are supposed to mimick new unseen data, these steps should not use information from the test or validation data.
 - Once a model is ready for deployment, the preprocessing steps need to be repeated on new and unseen data. Apart from that, the model tends to need to be able to integrate with other applications.
 
@@ -13,7 +13,7 @@ This is difficult enough. However, when we throw model selection, hyperparameter
 ## Goal
 This package tries to address some of the above mentioned problems. Our solution is based on one that already exists in the data science community: pipelines. Trainable sequences of data transformations that can be repeated on new, unseen data. However, we provide some additional functionality, such as:
     
-    - A large set of standardised and tested transformations.
+- A large set of standardised and tested transformations.
 - An easily extendable framework for including your own custom transformations. This only requires two functions per transformation: one to train it and one to apply it to new data.
 - Easy testing of model, hyperparameter, and pipeline combinations.
 - Turning your pipelines into standalone R packages, which can then be turned into a REST API via an OpenCPU Docker image.
