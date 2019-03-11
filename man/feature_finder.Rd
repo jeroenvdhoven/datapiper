@@ -4,7 +4,8 @@
 \alias{feature_finder}
 \title{Add features one-by-one to find good small sets of features}
 \usage{
-feature_finder(train, test, response, model, difference, verbose = F)
+feature_finder(train, test, response, model, difference, n_features,
+  verbose = F)
 }
 \arguments{
 \item{train}{The training dataset}
@@ -23,6 +24,10 @@ You can use \code{\link{model_trainer}} as a wrapper for this list. It will also
 
 \item{difference}{A function that calculates the difference between labels and predictions, for example
 \code{function(x,y) abs(x-y)}}
+
+\item{n_features}{The number of features to try before stopping the algorithm. Can be passed as a integer between 1 and \code{ncol(train)} or a
+fraction, in which case the number of features to try will be \code{n_features * ncol(train)}.
+Defaults to \code{ncol(train)}, only taking numeric columns into account.}
 
 \item{verbose}{Flag indicating if intermediate updates should be printed}
 }

@@ -13,12 +13,15 @@
 #' @param difference A function that calculates the difference between labels and predictions, for example
 #' \code{function(x,y) abs(x-y)}
 #' @param verbose Flag indicating if intermediate updates should be printed
+#' @param n_features The number of features to try before stopping the algorithm. Can be passed as a integer between 1 and \code{ncol(train)} or a
+#' fraction, in which case the number of features to try will be \code{n_features * ncol(train)}.
+#' Defaults to \code{ncol(train)}, only taking numeric columns into account.
 #'
 #' @details This function will select features one-by-one depending on the correlation of a feature with the residuals of the train predictions to slowly build up a bigger model.
 #'
 #' @return A dataframe, containing the mean difference for train and test set, as well as the feature that was added at each step.
 #' @export
-feature_finder <- function(train, test, response, model, difference, verbose = F) {
+feature_finder <- function(train, test, response, model, difference, n_features, verbose = F) {
     stopifnot(
         !missing(train), is.data.frame(train),
         !missing(test) , is.data.frame(test),
@@ -34,6 +37,18 @@ feature_finder <- function(train, test, response, model, difference, verbose = F
     if(any(!numerics_train)) {
         if(verbose) warning("Warning: found non-numerics in the train set. Continuing with only numeric columns")
         train <- train[, numerics_train]
+    }
+
+    if(missing(n_features)) n_features <- ncol(train)
+    else {
+        stopifnot(
+            is.numeric(n_features),
+            length(n_features) == 1,
+            n_features <= ncol(train),
+            n_features >= 0
+        )
+        if(n_features < 1) n_features <- n_features * ncol(train)
+        n_features <- round(n_features)
     }
 
     numerics_test <- purrr::map_lgl(.x = test, is.numeric)
@@ -55,7 +70,7 @@ feature_finder <- function(train, test, response, model, difference, verbose = F
     result <- dplyr::data_frame(train = 0, test = 0, column = "")[0,]
 
     model_args <- model[!names(model) %in% c(".train", ".predict")]
-    for(i in seq_along(train)) {
+    for(i in seq_len(n_features)) {
         valid_pos <- colnames(train) != response & !colnames(train) %in% columns
         if(any(valid_pos)){
 

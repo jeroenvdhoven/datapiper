@@ -49,4 +49,17 @@ describe("feature_finder()", {
         expect_named(r, c("train", "test", "column"))
         expect_equal(nrow(r), ncol(train_numeric) - 1)
     })
+
+    it("can limit the number of features to look for", {
+        r_frac <- feature_finder(train = train, test = test, response = "x", model = model, difference = difference_function,
+                                 n_features = .5, verbose = F)
+
+        expect_equal(nrow(r_frac), ncol(train_numeric) / 2)
+
+        n_features <- 2
+        r_count <- feature_finder(train = train, test = test, response = "x", model = model, difference = difference_function,
+                                 n_features = n_features, verbose = F)
+
+        expect_equal(nrow(r_count), n_features)
+    })
 })
