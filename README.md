@@ -124,7 +124,7 @@ build_model_package(
     package_name = package_name, 
     libraries = libraries, 
     tar_file = tar_file_name, 
-    extra_functions = "year",
+    extra_variables = "year",
     may_overwrite_tar_file = F
 )
 install.packages(pkgs = "temperature.tar.gz", repos = NULL, type = "source")

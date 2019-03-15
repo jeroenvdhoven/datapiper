@@ -39,7 +39,8 @@ delete_image <- function(image_name) {
 #' @param package_name The name of the package
 #' @param libraries A list of library names required by the package. Defaults to all loaded non-base packages
 #' @param tar_file The name and path of the final tarred package
-#' @param extra_functions A character vector of function names to be included in the package.
+#' @param extra_variables A character vector of variables names to be included in the package. Used to include extra fuctions and variables in the packages
+#'  that are not contained in any of the packages listed in \code{libraries}.
 #' @param may_overwrite_tar_file Flag indicating if, when \code{tar_file} exists, this function is allowed to override it.
 #' @param verbose Flag indicating if devtools functions should print anything.
 #'
@@ -51,12 +52,12 @@ delete_image <- function(image_name) {
 #' @importFrom devtools document build
 #' @export
 build_model_package <- function(trained_pipeline, package_name = "deploymodel", libraries = names(utils::sessionInfo()$otherPkgs),
-                                tar_file = "deploy.tar.gz", extra_functions = character(0),
+                                tar_file = "deploy.tar.gz", extra_variables = character(0),
                                 may_overwrite_tar_file = F, verbose = F) {
     stopifnot(
         !missing(trained_pipeline),
         is.character(libraries),
-        is.character(extra_functions),
+        is.character(extra_variables),
         is.logical(verbose)
     )
     is_valid_package_name <- grepl(pattern = "^[a-zA-Z0-9\\.]+$", libraries)
@@ -76,7 +77,7 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
     has_succeeded <- F
 
     # If any extra functions are provided, ensure they will be added correctly.
-    for(func in extra_functions) get(x = func)
+    for(func in extra_variables) get(x = func)
 
     tryCatch({
         # Setup temp dir with package
@@ -98,8 +99,8 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
 
         save(trained_pipeline, file = "data/model.rda")
         save(libraries, file = "data/libraries.rda")
-        if(length(extra_functions) > 0)
-            save(list = extra_functions, file = "data/extra_functions.rda")
+        if(length(extra_variables) > 0)
+            save(list = extra_variables, file = "data/extra_variables.rda")
 
         save(invoke, file = "data/invoke.rda")
         save(invoke.pipe, file = "data/invoke.pipe.rda")

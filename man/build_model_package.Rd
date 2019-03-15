@@ -6,7 +6,7 @@
 \usage{
 build_model_package(trained_pipeline, package_name = "deploymodel",
   libraries = names(utils::sessionInfo()$otherPkgs),
-  tar_file = "deploy.tar.gz", extra_functions = character(0),
+  tar_file = "deploy.tar.gz", extra_variables = character(0),
   may_overwrite_tar_file = F, verbose = F)
 }
 \arguments{
@@ -18,7 +18,8 @@ build_model_package(trained_pipeline, package_name = "deploymodel",
 
 \item{tar_file}{The name and path of the final tarred package}
 
-\item{extra_functions}{A character vector of function names to be included in the package.}
+\item{extra_variables}{A character vector of variables names to be included in the package. Used to include extra fuctions and variables in the packages
+that are not contained in any of the packages listed in \code{libraries}.}
 
 \item{may_overwrite_tar_file}{Flag indicating if, when \code{tar_file} exists, this function is allowed to override it.}
 

@@ -35,7 +35,7 @@ generate_model_function <- function(extra_pipe, response = "x"){
                                                parameter_sample_rate = 1, seed = 1, prepend_data_checker = F)
 
     full_pipe <- datapiper::find_best_models(train = train, find_model_result = find_model_result,
-                                  metric = "test_rmse", higher_is_better = F)
+                                             metric = "test_rmse", higher_is_better = F)
 
     return(list(
         train = train,
@@ -49,7 +49,7 @@ describe("build_model_package()", {
     library_name <- "test.package"
     libs <- c("dplyr", "magrittr")
 
-    it("allows you to include extra functions", {
+    it("allows you to include extra variables", {
         # Assigment to global environment like this is unfortunately needed since running the tests automatically causes an error otherwise.
         sqrt_global_name <- "sqrt_substitute_function"
         .GlobalEnv[[sqrt_global_name]] <- sqrt
@@ -64,12 +64,12 @@ describe("build_model_package()", {
         )
 
         result <- build_model_package(trained_pipeline = p,
-                                       package_name = library_name,
-                                       libraries = character(0),
-                                       tar_file = tar_file_name,
-                                       may_overwrite_tar_file = T,
-                                       extra_functions = sqrt_global_name,
-                                       verbose = F)
+                                      package_name = library_name,
+                                      libraries = character(0),
+                                      tar_file = tar_file_name,
+                                      may_overwrite_tar_file = T,
+                                      extra_variables = sqrt_global_name,
+                                      verbose = F)
         expect_true(object = result, info = "Build function returned a success")
         expect_true(file.exists(tar_file_name))
 
@@ -90,11 +90,11 @@ describe("build_model_package()", {
 
         ws_before_package <- getwd()
         result <- build_model_package(trained_pipeline = full_pipe,
-                                                 package_name = library_name,
-                                                 libraries = libs,
-                                                 tar_file = tar_file_name,
-                                                 may_overwrite_tar_file = T,
-                                                 verbose = F)
+                                      package_name = library_name,
+                                      libraries = libs,
+                                      tar_file = tar_file_name,
+                                      may_overwrite_tar_file = T,
+                                      verbose = F)
         expect_equal(ws_before_package, getwd(), info = "Workspace should not have changed")
         expect_true(object = result, info = "Build function returned a success")
         expect_true(file.exists(tar_file_name))
