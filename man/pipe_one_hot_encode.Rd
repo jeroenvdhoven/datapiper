@@ -19,7 +19,7 @@ Any function that return a single value from a scalar would do (e.g. quantile, s
 
 \item{response}{String denoting the name of the column that should be used as the response variable. Mandatory}
 
-\item{quantile_trim_threshold}{Sets \code{quantile_trim_threshold} for \link{\code{pipe_create_stats}} if you provided \code{stat_functions}}
+\item{quantile_trim_threshold}{Sets \code{quantile_trim_threshold} for \code{\link{pipe_create_stats}} if you provided \code{stat_functions}}
 
 \item{use_pca}{Whether PCA transformation is required.}
 

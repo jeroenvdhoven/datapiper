@@ -302,7 +302,7 @@ scaler_post_predict <- function(data, centers, scales, columns) {
 #' @param stat_functions A (named) list of functions for when you want to use mean-encoding. Don't set it if you want to do regular one-hot encoding.
 #' Any function that return a single value from a scalar would do (e.g. quantile, sd).
 #' @param response String denoting the name of the column that should be used as the response variable. Mandatory
-#' @param quantile_trim_threshold Sets \code{quantile_trim_threshold} for \link{\code{pipe_create_stats}} if you provided \code{stat_functions}
+#' @param quantile_trim_threshold Sets \code{quantile_trim_threshold} for \code{\link{pipe_create_stats}} if you provided \code{stat_functions}
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
