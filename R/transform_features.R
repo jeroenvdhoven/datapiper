@@ -302,13 +302,14 @@ scaler_post_predict <- function(data, centers, scales, columns) {
 #' @param stat_functions A (named) list of functions for when you want to use mean-encoding. Don't set it if you want to do regular one-hot encoding.
 #' Any function that return a single value from a scalar would do (e.g. quantile, sd).
 #' @param response String denoting the name of the column that should be used as the response variable. Mandatory
+#' @param quantile_trim_threshold Sets \code{quantile_trim_threshold} for \link{\code{pipe_create_stats}} if you provided \code{stat_functions}
 #'
 #' @return A list containing the transformed train dataset and a trained pipe.
 #' @export
 #' @importFrom data.table .SD :=
 #' @importFrom stats prcomp
 pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(train, function(x) return(!(is.numeric(x) || is.logical(x))))],
-                                stat_functions, response,
+                                stat_functions, response, quantile_trim_threshold = 0,
                                 use_pca = FALSE, pca_tol = .1){
     stopifnot(
         is.data.frame(train),
@@ -319,7 +320,10 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
                  !any(is.null(names(stat_functions))) &&
                  !any(!purrr::map_lgl(stat_functions, is.function)) &&
                  is.character(response) &&
-                 response %in% colnames(train)
+                 response %in% colnames(train) &&
+                 is.numeric(quantile_trim_threshold) &&
+                 quantile_trim_threshold >= 0 &&
+                 quantile_trim_threshold <= .5
             ),
         is.logical(use_pca),
         is.numeric(pca_tol),
@@ -346,6 +350,7 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
         original_columns <- colnames(train)[]
         stats_transformer <- pipe_create_stats(
             train = train, stat_cols = columns, response = response, functions = stat_functions,
+            quantile_trim_threshold = quantile_trim_threshold,
             interaction_level = 1, too_few_observations_cutoff = 0)
 
         one_hot_parameters <- as.list(columns)

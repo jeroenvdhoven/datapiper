@@ -353,6 +353,32 @@ testthat::describe("pipe_one_hot_encode()", {
         ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
                     use_pca = F)
     })
+
+    it("can set quantile_trim_threshold when using mean encoding", {
+        stat_cols <- c("m", "s")
+        thresholds <- c(0, .25, .4, .5)
+        f_list <- list("mean" = mean, "sd" = sd)
+
+        for(threshold in thresholds) {
+            r_trimmed <- datapiper::pipe_one_hot_encode(
+                train = dataset1, response = "x", stat_functions = f_list,
+                columns = stat_cols, quantile_trim_threshold = threshold)
+
+            for(stat_col in stat_cols) for(i in seq_along(f_list)) {
+                colname <- paste0(names(f_list)[i], "_", stat_col)
+                f <- f_list[[i]]
+
+                stat_values <- dataset1 %>% group_by_(stat_col) %>%
+                    summarize(stat = f(x)) %>%
+                    .$stat
+
+                expect_false(any(unlist(select_(r_trimmed$train, colname)) < quantile(x = stat_values, probs = threshold)),
+                             label = paste0("Column `", colname, "` did not trim for function `", names(f_list)[i], "` and threshold `", threshold, "`"))
+                expect_false(any(unlist(select_(r_trimmed$train, colname)) > quantile(x = stat_values, probs = 1 - threshold)),
+                             label = paste0("Column `", colname, "` did not trim for function `", names(f_list)[i], "` and threshold `", threshold, "`"))
+            }
+        }
+    })
 })
 
 # Skeleton

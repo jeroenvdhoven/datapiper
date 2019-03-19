@@ -7,7 +7,7 @@
 pipe_one_hot_encode(train,
   columns = colnames(train)[purrr::map_lgl(train, function(x)
   return(!(is.numeric(x) || is.logical(x))))], stat_functions, response,
-  use_pca = FALSE, pca_tol = 0.1)
+  quantile_trim_threshold = 0, use_pca = FALSE, pca_tol = 0.1)
 }
 \arguments{
 \item{train}{The train dataset, as a data.frame or data.table. Data.tables may be changed by reference.}
@@ -18,6 +18,8 @@ pipe_one_hot_encode(train,
 Any function that return a single value from a scalar would do (e.g. quantile, sd).}
 
 \item{response}{String denoting the name of the column that should be used as the response variable. Mandatory}
+
+\item{quantile_trim_threshold}{Sets \code{quantile_trim_threshold} for \link{\code{pipe_create_stats}} if you provided \code{stat_functions}}
 
 \item{use_pca}{Whether PCA transformation is required.}
 
