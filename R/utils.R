@@ -17,6 +17,7 @@ standard_column_names <- function(data) {
         gsub(pattern = "[^a-zA-Z0-9_]", replacement = "_", x = .) %>%
         gsub(pattern = "([^_])([A-Z][a-z0-9])", replacement = "\\1_\\2", x = .) %>%
         gsub(pattern = "^([0-9])", replacement = "n\\1", x = .) %>%
+        gsub(pattern = "_+", replacement = "_", x = .) %>%
         tolower
 
     return(data)
