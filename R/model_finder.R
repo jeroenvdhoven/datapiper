@@ -117,7 +117,7 @@ find_model <- function(train, test, response,
                 set.seed(seed)
 
                 args <- list(data = piped_train)
-                args <- c(args, unlist(parameter_grid[r,]))
+                args <- c(args, parameter_grid[r,])
 
                 requested_arguments <- formalArgs(f_train)
                 if(any(!names(args) %in% requested_arguments) && !"..." %in% requested_arguments) {

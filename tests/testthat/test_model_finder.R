@@ -239,6 +239,17 @@ describe("find_model()", {
         model <- r_with$.model[[1]]
         expect_true("xgb.Booster" %in% class(model))
     })
+
+    it("can handle both numeric and character arguments", {
+        model_xgb_objectives <- find_xgb(response = "x", nrounds = nrounds, booster = c("gblinear", "gbtree"))
+
+        r_character <- find_model(train = dataset1, test = test, response = "x", verbose = F,
+                             preprocess_pipes = list("one" = p_1),
+                             models = list("xgb" = model_xgb_objectives), metrics = list("rmse" = m_1),
+                             parameter_sample_rate = 1, seed = 1, prepend_data_checker = F, save_model = T)
+
+        expect_equal(expected = nrow(r_character), 2L)
+    })
 })
 
 
