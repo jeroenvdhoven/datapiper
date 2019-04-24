@@ -112,8 +112,10 @@ find_model <- function(train, test, response,
 
             # Try each combination of parameters
             for(r in seq_len(nrow(parameter_grid))) {
-                update_message <- paste("\rComputing preprocess pipeline", preprocess_index, "/", length(preprocess_pipes), "model", model_index, "/", length(models), "iteration", r, "/", nrow(parameter_grid))
-                if(verbose) cat("\r", update_message, sep = "")
+                if(verbose) {
+                    update_message <- paste("\rComputing preprocess pipeline", preprocess_index, "/", length(preprocess_pipes), "model", model_index, "/", length(models), "iteration", r, "/", nrow(parameter_grid))
+                    cat(update_message)
+                }
                 set.seed(seed)
 
                 args <- list(data = piped_train)
@@ -142,6 +144,7 @@ find_model <- function(train, test, response,
                 res <- bind_rows(res, tmp)
             }
         }
+        cat("\n")
     }
 
     return(res)
