@@ -140,6 +140,12 @@ describe("pipeline", {
         r <- pipeline("my_pipe" = p1, p2)
         expect_named(r, expected = c("my_pipe", "pipe_1"))
     })
+
+    it("can run with empty arguments. The resulting pipeline will do nothing", {
+        r <- pipeline()
+        invoked_df <- invoke(r, dataset1)
+        expect_identical(invoked_df, dataset1)
+    })
 })
 
 describe("is.pipeline", {

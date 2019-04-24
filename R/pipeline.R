@@ -417,7 +417,7 @@ pipeline <- function(...) {
     name <- names(pipes)
     if(is.null(name)) name <- paste0("pipe_", seq_along(pipes))
     else if("" %in% name) name[name == ""] <- paste0("pipe_", seq_len(sum(name == "")))
-    names(pipes) <- name
+    if(length(pipes) > 0) names(pipes) <- name
 
     class(pipes) <- c("pipeline", "list")
     return(pipes)
