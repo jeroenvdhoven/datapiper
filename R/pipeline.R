@@ -113,7 +113,7 @@ train_pipeline <- function(..., response){
             }
         }
 
-        names(trained_pipelines) <- pipe_names
+        if(length(trained_pipelines) > 0) names(trained_pipelines) <- pipe_names
         trained_pipeline <- do.call(what = pipeline, args = trained_pipelines)
         result <- list("train" = train, "pipe" = trained_pipeline)
 

@@ -568,4 +568,11 @@ describe("flatten_pipeline()", {
     it("can print updates if requested", {
         expect_output(p_1(dataset1, verbose = T), regexp = "(Training pipe_\\d+ \\.\\.\\.\\n)+")
     })
+
+    it("can run with empty arguments. The resulting pipeline will do nothing", {
+        r <- train_pipeline()
+        p <- r(dataset1)
+        invoked_df <- invoke(p$pipe, dataset1)
+        expect_identical(invoked_df, dataset1)
+    })
 })
