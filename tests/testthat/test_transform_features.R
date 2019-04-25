@@ -379,6 +379,22 @@ testthat::describe("pipe_one_hot_encode()", {
             }
         }
     })
+
+    it("can handle 0 columns as input", {
+        # For one hot encoding
+        df <- select(dataset1, x, a, b)
+        r <- pipe_one_hot_encode(train = df)
+
+        expect_identical(df, r$train)
+        expect_identical(invoke(r$pipe, df), r$train)
+
+        # For one hot encoding using PCA
+        df <- select(dataset1, x, a, b)
+        r <- pipe_one_hot_encode(train = df, use_pca = T)
+
+        expect_identical(df, r$train)
+        expect_identical(invoke(r$pipe, df), r$train)
+    })
 })
 
 # Skeleton

@@ -330,6 +330,8 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
         pca_tol <= 1, pca_tol > 0
     )
 
+    if(length(columns) < 1) use_pca <- FALSE
+
     if(missing(stat_functions)){
         train_dt_set <- train %>% data.table::as.data.table() %>% .[, columns, with = F]
 
@@ -370,7 +372,7 @@ pipe_one_hot_encode <- function(train, columns = colnames(train)[purrr::map_lgl(
     } else pca <- NA
 
     if(is.data.table(train)) train[, c(columns) := NULL]
-    else train %<>% select_(.dots = paste0("-", columns))
+    else if(length(columns) > 0) train %<>% select_(.dots = paste0("-", columns))
     train %<>% dplyr::bind_cols(train_dt_set)
 
     predict_pipe <- pipe(.function = feature_one_hot_encode_predict, one_hot_parameters = one_hot_parameters,
@@ -393,7 +395,7 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
     stopifnot(
         is.data.frame(data),
         is.list(one_hot_parameters),
-        !is.null(names(one_hot_parameters)) || is.function(stat_transformer)
+        !is.null(names(one_hot_parameters)) || is.function(stat_transformer) || length(one_hot_parameters) == 0 # No non-numeric columns were found
     )
     columns <- names(one_hot_parameters)
 
@@ -430,7 +432,7 @@ feature_one_hot_encode_predict <- function(data, one_hot_parameters, use_pca, pc
     }
 
     if(is.data.table(data)) data[, c(columns) := NULL]
-    else data %<>% select_(.dots = paste0("-", columns))
+    else if(length(columns) > 0) data %<>% select_(.dots = paste0("-", columns))
     data %<>% dplyr::bind_cols(test_dt_set)
 
     return(data)
