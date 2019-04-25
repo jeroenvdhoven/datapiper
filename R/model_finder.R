@@ -144,7 +144,7 @@ find_model <- function(train, test, response,
                 res <- bind_rows(res, tmp)
             }
         }
-        cat("\n")
+        if(verbose) cat("\n")
     }
 
     return(res)
