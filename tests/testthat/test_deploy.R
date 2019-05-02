@@ -49,6 +49,71 @@ describe("build_model_package()", {
     library_name <- "test.package"
     libs <- c("dplyr", "magrittr")
 
+    it("can build a package around a model pipeline", {
+        r <- generate_model_function()
+        train <- r$train
+        test <- r$test
+        full_pipe <- r$full_pipe
+
+        ws_before_package <- getwd()
+        result <- build_model_package(trained_pipeline = full_pipe,
+                                      package_name = library_name,
+                                      libraries = libs,
+                                      tar_file = tar_file_name,
+                                      may_overwrite_tar_file = T,
+                                      verbose = F)
+        expect_equal(ws_before_package, getwd(), info = "Workspace should not have changed")
+        expect_true(object = result, info = "Build function returned a success")
+        expect_true(file.exists(tar_file_name))
+
+        install.packages(tar_file_name, repos = NULL, verbose = F, quiet = T)
+
+        lib_predictions <- get_library_predictions(library_name = library_name, test = test)
+        lib_df_predictions <- predict_model(test)
+        function_predictions <- invoke(full_pipe, test)
+
+        expect_equal(lib_predictions$one_lm_1, function_predictions$one_lm_1)
+        expect_equal(lib_df_predictions$one_lm_1, function_predictions$one_lm_1)
+
+        it("also adds dependencies to NAMESPACE and DESCRIPTION exports", {
+            extract_dir <- paste(Sys.time(), "tmp file for testing datapiper")
+            if(file.exists(extract_dir)) stop("Error: expected output directory already exists for testing NAMESPACE and DESCRIPTION files")
+            untar(tarfile = tar_file_name, exdir = extract_dir)
+
+            namespace_file <- paste0(extract_dir, "/", library_name, "/NAMESPACE")
+            description_file <- paste0(extract_dir, "/", library_name, "/DESCRIPTION")
+
+            expect_true(file.exists(namespace_file))
+            namespace_contents <- scan(file = namespace_file, what = "character", sep = "\n", quiet = T)
+            for(lib in libs) expect_true(any(grepl(pattern = lib, x = namespace_contents)), info = paste(lib, "not found in namespace file"))
+
+            expect_true(file.exists(description_file))
+            description_contents <- scan(file = description_file, what = "character", sep = "\n", quiet = T)
+            for(lib in libs) expect_true(any(grepl(pattern = lib, x = description_contents)), info = paste(lib, "not found in description file"))
+
+            unlink(x = extract_dir, recursive = T)
+        })
+
+        it("also allows you to create a plumber endpoint", {
+            if("plumber" %in% list.files(.libPaths())) {
+                expect_true(exists("create_plumber_endpoint"))
+                plumber_endpoint <- create_plumber_endpoint()
+
+                expect_true("plumber" %in% class(plumber_endpoint))
+
+                model_endpoint <- plumber_endpoint$endpoints$`__no-preempt__`[[1]]
+
+                model_path <- paste0("/", library_name, "/predict_model")
+                expect_equal(object = model_endpoint$path, expected = model_path)
+            } else {
+                warning("Did not find plumber in your library, not testing the creation of a plumber endpoint")
+            }
+        })
+
+        remove.packages(pkgs = library_name)
+        expect_true(file.remove(tar_file_name))
+    })
+
     it("allows you to include extra variables", {
         # Assigment to global environment like this is unfortunately needed since running the tests automatically causes an error otherwise.
         sqrt_global_name <- "sqrt_substitute_function"
@@ -79,55 +144,6 @@ describe("build_model_package()", {
         expect_equal(r, transformed_df)
 
         remove.packages(pkgs = library_name)
-        expect_true(file.remove(tar_file_name))
-    })
-
-    it("can build a package around a model pipeline", {
-        r <- generate_model_function()
-        train <- r$train
-        test <- r$test
-        full_pipe <- r$full_pipe
-
-        ws_before_package <- getwd()
-        result <- build_model_package(trained_pipeline = full_pipe,
-                                      package_name = library_name,
-                                      libraries = libs,
-                                      tar_file = tar_file_name,
-                                      may_overwrite_tar_file = T,
-                                      verbose = F)
-        expect_equal(ws_before_package, getwd(), info = "Workspace should not have changed")
-        expect_true(object = result, info = "Build function returned a success")
-        expect_true(file.exists(tar_file_name))
-
-        install.packages(tar_file_name, repos = NULL, verbose = F, quiet = T)
-
-        lib_predictions <- get_library_predictions(library_name = library_name, test = test)
-        lib_df_predictions <- predict_model(test)
-        function_predictions <- invoke(full_pipe, test)
-
-        expect_equal(lib_predictions$one_lm_1, function_predictions$one_lm_1)
-        expect_equal(lib_df_predictions$one_lm_1, function_predictions$one_lm_1)
-        remove.packages(pkgs = library_name)
-
-        it("also adds dependencies to NAMESPACE and DESCRIPTION exports", {
-            extract_dir <- paste(Sys.time(), "tmp file for testing datapiper")
-            if(file.exists(extract_dir)) stop("Error: expected output directory already exists for testing NAMESPACE and DESCRIPTION files")
-            untar(tarfile = tar_file_name, exdir = extract_dir)
-
-            namespace_file <- paste0(extract_dir, "/", library_name, "/NAMESPACE")
-            description_file <- paste0(extract_dir, "/", library_name, "/DESCRIPTION")
-
-            expect_true(file.exists(namespace_file))
-            namespace_contents <- scan(file = namespace_file, what = "character", sep = "\n", quiet = T)
-            for(lib in libs) expect_true(any(grepl(pattern = lib, x = namespace_contents)), info = paste(lib, "not found in namespace file"))
-
-            expect_true(file.exists(description_file))
-            description_contents <- scan(file = description_file, what = "character", sep = "\n", quiet = T)
-            for(lib in libs) expect_true(any(grepl(pattern = lib, x = description_contents)), info = paste(lib, "not found in description file"))
-
-            unlink(x = extract_dir, recursive = T)
-        })
-
         expect_true(file.remove(tar_file_name))
     })
 

@@ -96,6 +96,7 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
 
         # Always add jsonlite since we need it for exporting / importing data
         if(!"jsonlite" %in% libraries) libraries <- c(libraries, "jsonlite")
+        if(!"plumber" %in% libraries) libraries <- c(libraries, "plumber")
 
         save(trained_pipeline, file = "data/model.rda")
         save(libraries, file = "data/libraries.rda")
@@ -145,6 +146,28 @@ predict_model <- function(input){
 #-------------------#
 # Script stops here #
 #-------------------#
+
+#------------------#
+# Plumber function #
+#------------------#
+#\' Turns the predict_model function into a plumber endpoint
+#\'
+#\' @param current_plumber_env NULL or a previously initialised plumber object, using \\code{plumber::plumber$new()}
+#\'
+#\' @return \\code{current_plumber_env} with an endpoint added for this package\'s predict_model function. It can be found on
+#\' <package_name>/predict_model
+#\' @export
+#\' @importFrom plumber plumber
+create_plumber_endpoint <- function(current_plumber_env = NULL) {
+    is_plumber <- function(x) "plumber" %in% class(x)
+
+    if(is.null(current_plumber_env)) {
+        current_plumber_env <- plumber::plumber$new()
+    } else stopifnot(is_plumber(current_plumber_env))
+
+    current_plumber_env$handle(methods = "GET", path = "/', package_name, '/predict_model", handler = predict_model)
+    return(current_plumber_env)
+}
 ')
         cat(script, file = target_script_file, append = F)
         close(target_script_file)
