@@ -74,4 +74,11 @@ describe("pipe_clustering()", {
     it("can check some common inputs", {
         ctest_if_pipes_check_common_inputs(pipe_func = pipe_clustering, data = dataset1)
     })
+
+    it("can run on a single input", {
+        r <- pipe_clustering(train = dataset1, exclude_columns = "x", k = 3)
+        res <- invoke(r$pipe, data = dataset1[1,])
+
+        expect_equal(object = res, expected = r$train[1,])
+    })
 })

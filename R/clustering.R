@@ -85,6 +85,7 @@ clustering_predict <- function(data, metric, centroids, cluster_column, exclude_
     }
 
     clusters <- apply(centroids, 1, dist_func, points = data_cluster) %>%
+        matrix(nrow = nrow(data)) %>%
         apply(1, which.min)
 
     stopifnot(length(clusters) == nrow(data_cluster))
