@@ -188,10 +188,34 @@ describe("build_model_package()", {
     })
 })
 
+evaluate_images <- function(docker_prediction, docker_single_prediction, test, image_name, process_name, library_name, tar_file_name, full_pipe) {
+
+    install.packages(tar_file_name, repos = NULL, verbose = F, quiet = T)
+    lib_prediction <- get_library_predictions(library_name = library_name, test = test)
+    lib_single_prediction <- unlist(lib_prediction[1,])
+
+    pipe_prediction <- invoke(full_pipe, test)
+    pipe_single_prediction <- unlist(pipe_prediction[1,])
+
+    # Multi predictions
+    mean_abs_error_pipe <- mean(abs(unlist(pipe_prediction - docker_prediction)))
+    expect_lte(mean_abs_error_pipe / mean(test$x), 1e-5, label = "Prediction error from docker differ too much from pipe prediction")
+
+    mean_abs_error_lib <- mean(abs(unlist(lib_prediction - docker_prediction)))
+    expect_lte(mean_abs_error_lib / mean(test$x), 1e-5, label = "Prediction error from docker differ too much from pipe prediction")
+
+    # Single predictions
+    mean_abs_error_pipe_single <- mean(abs(unlist(pipe_single_prediction - docker_single_prediction)))
+    expect_lte(mean_abs_error_pipe_single / mean(test$x), 1e-5, label = "Prediction error from docker differ too much from pipe prediction")
+
+    mean_abs_error_lib_single <- mean(abs(unlist(lib_single_prediction - docker_single_prediction)))
+    expect_lte(mean_abs_error_lib_single / mean(test$x), 1e-5, label = "Prediction error from docker differ too much from pipe prediction")
+}
+
 # This test takes a VERY VERY LONG time to run, since it has to install dependencies.
 describe("build_docker()", {
 
-    it("can build a docker image around a previously packaged model image", {
+    it("can build a docker image around a previously packaged model image using opencpu", {
         connectivity <- F
         tryCatch({
             curl::nslookup("www.r-project.org")
@@ -205,9 +229,10 @@ describe("build_docker()", {
             full_pipe <- r$full_pipe
             tar_file_name <- "tmp_test_package.tar.gz"
             library_name <- "test.package"
-            image_name <- "model.image"
+            image_name <- "model.image.opencpu"
             process_name <- "datapiper.test"
             libs <- c("datapiper")
+            type <- "opencpu"
 
             package_result <- datapiper::build_model_package(trained_pipeline = full_pipe,
                                                              package_name = library_name,
@@ -218,21 +243,19 @@ describe("build_docker()", {
 
             tryCatch({
                 result <- build_docker(model_library_file = tar_file_name, package_name = library_name, libraries = libs,
+                                       docker_image_type = type,
                                        docker_image_name = image_name, may_overwrite_docker_image = T)
-                expect_true(object = result, info = "Build function returned a success")
 
                 docker_prediction <- test_docker(data = test, image_name = image_name, process_name = process_name,
                                                  package_name = library_name, batch_size = 1e3, ping_time = 5, verbose = T)
+                docker_single_prediction <- test_docker(data = test[1,], image_name = image_name, process_name = process_name,
+                                                        package_name = library_name, batch_size = 1e3, ping_time = 5, verbose = T)
 
-                install.packages(tar_file_name, repos = NULL, verbose = F, quiet = T)
-                lib_prediction <- get_library_predictions(library_name = library_name, test = test)
-                pipe_prediction <- invoke(full_pipe, test)
+                expect_true(object = result, info = "Build function returned a success")
 
-                mean_abs_error_pipe <- mean(abs(unlist(pipe_prediction - docker_prediction)))
-                expect_lte(mean_abs_error_pipe / mean(test$x), 1e-5, label = "Prediction error from docker differ too much from pipe prediction")
-
-                mean_abs_error_lib <- mean(abs(unlist(lib_prediction - docker_prediction)))
-                expect_lte(mean_abs_error_lib / mean(test$x), 1e-5, label = "Prediction error from docker differ too much from pipe prediction")
+                evaluate_images(docker_prediction = docker_prediction, docker_single_prediction = docker_single_prediction,
+                                test = test, image_name = image_name, process_name = process_name, library_name = library_name,
+                                tar_file_name = tar_file_name, full_pipe = full_pipe)
 
                 delete_image(image_name = image_name)
                 remove.packages(pkgs = library_name)
@@ -251,7 +274,64 @@ describe("build_docker()", {
         }
     })
 
-    it("can pass additional build commands to docker", {
+    it("can build a docker image around a previously packaged model image using plumber", {
+        connectivity <- F
+        tryCatch({
+            curl::nslookup("www.r-project.org")
+            connectivity <- T
+        }, error = function(e) return())
 
+        if(connectivity && is_docker_running()){
+            r <- generate_model_function()
+            train <- r$train
+            test <- r$test
+            full_pipe <- r$full_pipe
+            tar_file_name <- "tmp_test_package.tar.gz"
+            library_name <- "test.package"
+            image_name <- "model.image.plumber"
+            process_name <- "datapiper.test"
+            libs <- c("datapiper")
+            type <- "plumber"
+
+            package_result <- datapiper::build_model_package(trained_pipeline = full_pipe,
+                                                             package_name = library_name,
+                                                             libraries = libs,
+                                                             tar_file = tar_file_name,
+                                                             may_overwrite_tar_file = T, verbose = F)
+            expect_true(object = package_result, info = "Build function returned a success")
+
+            tryCatch({
+                # http://localhost:8000/test.package/predict_model?input=[{%22x%22:1,%22a%22:1,%22b%22:0,%22c%22:2,%22y%22:%22b%22,%22s%22:%22A%22,%22m%22:5,%22z%22:%22A%22,%22boolean%22:true,%22z2%22:%22A%22},{%22x%22:2,%22a%22:4,%22b%22:0.6931,%22c%22:8,%22y%22:%22c%22,%22s%22:%22A%22,%22m2%22:3,%22z%22:%22A%22,%22boolean%22:true,%22z2%22:%22A%22}]
+                result <- build_docker(model_library_file = tar_file_name, package_name = library_name, libraries = libs,
+                                       docker_image_type = type,
+                                       docker_image_name = image_name, may_overwrite_docker_image = T)
+                docker_prediction <- test_docker(data = test, image_name = image_name, process_name = process_name,
+                                                 docker_image_type = type, port = 8000,
+                                                 package_name = library_name, batch_size = 1e3, ping_time = 5, verbose = T)
+                docker_single_prediction <- test_docker(data = test[1,], image_name = image_name, process_name = process_name,
+                                                        docker_image_type = type, port = 8000,
+                                                        package_name = library_name, batch_size = 1e3, ping_time = 5, verbose = T)
+
+                expect_true(object = result, info = "Build function returned a success")
+
+                evaluate_images(docker_prediction = docker_prediction, docker_single_prediction = docker_single_prediction,
+                                test = test, image_name = image_name, process_name = process_name, library_name = library_name,
+                                tar_file_name = tar_file_name, full_pipe = full_pipe)
+
+                delete_image(image_name = image_name)
+                remove.packages(pkgs = library_name)
+            }, error = function(e) {
+                error_message <- as.character(e)
+                if(grepl(x = error_message, pattern = "is_docker_running() is not TRUE", fixed = T)) {
+                    warning(error_message)
+                } else {
+                    expect_true(F, info = "Error building docker image")
+                }
+            })
+
+            expect_true(file.remove(tar_file_name))
+        } else {
+            warning("Error: no internet connectivity, can't test build_docker")
+        }
     })
 })

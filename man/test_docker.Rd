@@ -6,6 +6,7 @@
 \usage{
 test_docker(data, package_name, image_name = package_name,
   process_name = image_name, base_url = "localhost", port = 8004,
+  docker_image_type = c("opencpu", "plumber")[1],
   batch_size = nrow(data), ping_time = 5, verbose = T)
 }
 \arguments{

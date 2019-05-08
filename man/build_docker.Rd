@@ -6,7 +6,8 @@
 \usage{
 build_docker(model_library_file, package_name = "deploymodel",
   libraries = names(utils::sessionInfo()$otherPkgs),
-  docker_image_name = "model_image", additional_build_commands = "",
+  docker_image_name = "model_image", docker_image_type = c("opencpu",
+  "plumber")[1], additional_build_commands = "",
   may_overwrite_docker_image = F)
 }
 \arguments{

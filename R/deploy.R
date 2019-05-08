@@ -214,7 +214,9 @@ create_plumber_endpoint <- function(current_plumber_env = NULL) {
 #'
 #' @return A logical: TRUE for success and FALSE for failure
 #' @export
-build_docker <- function(model_library_file, package_name = "deploymodel", libraries = names(utils::sessionInfo()$otherPkgs), docker_image_name = "model_image",
+build_docker <- function(model_library_file, package_name = "deploymodel", libraries = names(utils::sessionInfo()$otherPkgs),
+                         docker_image_name = "model_image",
+                         docker_image_type = c("opencpu", "plumber")[1],
                          additional_build_commands = "", may_overwrite_docker_image = F){
 
     # TODO
@@ -224,15 +226,41 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
         is_docker_running(),
         may_overwrite_docker_image || !file.exists(docker_image_name),
         !any(!is_valid_library_name),
+        is.character(model_library_file), !any(!file.exists(model_library_file)),
+        is.character(package_name), length(package_name) == length(model_library_file),
+        length(docker_image_type) == 1, docker_image_type %in% c("plumber", "opencpu"),
         is.character(additional_build_commands)
     )
 
+
     # Datapiper will be installed separately at the beginning to improve the installation process.
-    # if(!"jsonlite" %in% libraries) libraries <- c(libraries, "jsonlite")
     if(any(libraries == "datapiper")) libraries[libraries == "datapiper"] <- "jeroenvdhoven/datapiper"
+    if(!"jsonlite" %in% libraries) libraries <- c(libraries, "jsonlite")
+    if(!"plumber" %in% libraries) libraries <- c(libraries, "plumber")
 
     # Prep directory for building
-    daemon_name = "opencpu/base"
+    if(docker_image_type == "opencpu") {
+        daemon_name = "opencpu/base"
+        pre_installation_command <- ""
+
+        preload_libraries <- sed_inplace(
+            previous = '"preload": \\["lattice"\\]',
+            new = paste0('"preload": \\["lattice", "', package_name, '"\\]'),
+            file = "'/etc/opencpu/server.conf'")
+
+        additional_build_commands <- c(additional_build_commands, preload_libraries)
+    } else if(docker_image_type == "plumber") {
+        daemon_name = "r-base"
+
+        pre_installation_command <- "RUN apt-get update && apt-get -y install libcurl4-gnutls-dev libssl-dev --no-install-recommends && rm -rf /var/lib/apt/lists/*"
+        run_plumber_command <- c(
+            'EXPOSE 8000',
+            paste0('CMD ["R", "-e", "pr <- ', package_name, '::create_plumber_endpoint(); pr$run(host=\'0.0.0.0\', port=8000)"]')
+        )
+
+        additional_build_commands <- c(additional_build_commands, run_plumber_command)
+    }
+
     build_dir <- tempdir()
     file.copy(model_library_file, build_dir)
 
@@ -261,28 +289,21 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
                                  yes = paste0(
                                      "RUN R -e 'devtools::install_github(", to_string_array(github_libs), ")'"
                                  ))
-        add_preloaded_library_command <- sed_inplace(
-            previous = '"preload": \\["lattice"\\]',
-            new = paste0('"preload": \\["lattice", "', package_name, '"\\]'),
-            file = "'/etc/opencpu/server.conf'")
-
         # Create dockerfile
         dockerfile_content <- paste0("
 FROM ", daemon_name, "
-# Install base dependencies
-# RUN R -e 'install.packages(\"devtools\")'
-# RUN R -e 'devtools::install_github(\"jeroenvdhoven/datapiper\")'
+# Make sure we can install the devtools package
+", pre_installation_command, "
 
 # Install other required R packages
 ", cran_command, "
 ", github_command, "
 
 # Install model package
-COPY ", model_library_file, " /", model_library_file, "
-RUN R -e 'install.packages(pkgs = \"/", model_library_file, "\", repos = NULL, type = \"source\")'
+COPY ", model_library_file, " /datapiper_raw_packages/
+RUN R -e 'install.packages(pkgs = paste0(\"datapiper_raw_packages/\", list.files(\"datapiper_raw_packages\")), repos = NULL, type = \"source\")'
 
 # Preloaded library command
-# RUN ", add_preloaded_library_command, "
 ", additional_build_commands)
 
         # cat(dockerfile_content)
@@ -319,22 +340,28 @@ RUN R -e 'install.packages(pkgs = \"/", model_library_file, "\", repos = NULL, t
 #' @importFrom httr POST GET
 test_docker <- function(data, package_name, image_name = package_name, process_name = image_name,
                         base_url = "localhost", port = 8004,
+                        docker_image_type = c("opencpu", "plumber")[1],
                         batch_size = nrow(data), ping_time = 5, verbose = T) {
     stopifnot(
         is.data.frame(data),
         is.character(image_name),
         length(image_name) == 1,
         length(package_name) == 1,
+        length(docker_image_type) == 1, docker_image_type %in% c("plumber", "opencpu"),
         length(process_name) == 1
     )
 
-    model_url <- paste0("http://", base_url, ":", port, "/ocpu/library/", package_name, "/R/predict_model/json")
+    if(docker_image_type == "opencpu") {
+        model_url <- paste0("http://", base_url, ":", port, "/ocpu/library/", package_name, "/R/predict_model/json")
+    } else if(docker_image_type == "plumber"){
+        model_url <- paste0("http://", base_url, ":", port, "/", package_name, "/predict_model")
+    }
     if(verbose) cat("Url:", model_url, "\n")
 
     if(base_url == "localhost"){
         stopifnot(is_docker_running())
         if(verbose) cat("Starting image\n")
-        system2(command = "docker", args = paste0("run --name ", process_name, " -t -p ", port, ":8004 ", image_name), wait = F, stdout = F)
+        system2(command = "docker", args = paste0("run --name ", process_name, " -t -p ", port, ":", port, " ", image_name), wait = F, stdout = F)
     }
 
     if(verbose) cat("Start pinging for server to be up\n")
@@ -354,6 +381,7 @@ test_docker <- function(data, package_name, image_name = package_name, process_n
     if(verbose) cat("Start predictions\n")
     result <- data.frame()
     batch_start_indices <- seq.int(from = 1, to = nrow(data), by = batch_size)
+
     for(batch_start in batch_start_indices){
         tryCatch({
             batch_end <- min(nrow(data), batch_start + batch_size - 1)
@@ -365,7 +393,11 @@ test_docker <- function(data, package_name, image_name = package_name, process_n
                 factor = "string", complex = "list", raw = "base64", null = "null",
                 na = "null", digits = 8, pretty = F)
 
-            response <- httr::POST(url = model_url, encode = "json", body = list("input" = data_json))
+            if(docker_image_type == "opencpu") {
+                response <- httr::POST(url = model_url, encode = "json", body = list("input" = data_json))
+            } else if(docker_image_type == "plumber") {
+                response <- httr::GET(url = model_url, query = list("input" = data_json))
+            }
             predictions <- jsonlite::fromJSON(flatten = T, txt = rawToChar(response$content))
 
             if(nrow(result) == 0) result <- predictions
@@ -391,33 +423,3 @@ test_docker <- function(data, package_name, image_name = package_name, process_n
 
     return(result)
 }
-
-# train <- readr::read_csv("train.csv")
-# load("tmp.Rdata")
-
-# package_n <- "the.model"
-# lib_file <- paste0(package_n, ".tar.gz")
-# image_name <- paste0(package_n, ".image")
-# build_model_package(trained_pipeline = best_models$.predict, tar_file = lib_file, libraries = c("dplyr", "xgboost", "magrittr", "datapiper"), may_overwrite_tar_file = T, package_name = package_n)
-# build_docker(model_library_file = lib_file, docker_image_name = image_name, libraries = c("dplyr", "xgboost"), package_name = package_n)
-# res <- test_docker(data = train, image_name = image_name, process_name = image_name, package_name = package_n)
-
-# FINAL_TEST <- readr::read_csv("test.csv")
-# res <- test_docker(data = FINAL_TEST, image_name = image_name, process_name = image_name, package_name = package_n)
-
-# install.packages("deploy.tar.gz", type = "source", repos = NULL)
-# tst_json <- jsonlite::toJSON(x = train, dataframe = "rows", Date = "ISO8601", POSIXt = "ISO8601",
-#   factor = "string", complex = "list", raw = "base64", null = "null", na = "null", digits = 8, pretty = F)
-# the.model::predict_model(tst_json)
-
-# docker run --name deployed_model -t -p 8004:8004 the.model &
-# docker stop deployed_model; docker rm deployed_model
-# curl http://localhost:8004/ocpu/library/the.model/R/predict_model/json  -H "Content-Type: application/json"  -d '{"input" : "[ {\"Id\":1,\"MSSubClass\":60,\"MSZoning\":\"RL\",\"LotFrontage\":65,\"LotArea\":8450,\"Street\":\"Pave\",\"Alley\":null,\"LotShape\":\"Reg\",\"LandContour\":\"Lvl\",\"Utilities\":\"AllPub\",\"LotConfig\":\"Inside\",\"LandSlope\":\"Gtl\",\"Neighborhood\":\"CollgCr\",\"Condition1\":\"Norm\",\"Condition2\":\"Norm\",\"BldgType\":\"1Fam\",\"HouseStyle\":\"2Story\",\"OverallQual\":7,\"OverallCond\":5,\"YearBuilt\":2003,\"YearRemodAdd\":2003,\"RoofStyle\":\"Gable\",\"RoofMatl\":\"CompShg\",\"Exterior1st\":\"VinylSd\",\"Exterior2nd\":\"VinylSd\",\"MasVnrType\":\"BrkFace\",\"MasVnrArea\":196,\"ExterQual\":\"Gd\",\"ExterCond\":\"TA\",\"Foundation\":\"PConc\",\"BsmtQual\":\"Gd\",\"BsmtCond\":\"TA\",\"BsmtExposure\":\"No\",\"BsmtFinType1\":\"GLQ\",\"BsmtFinSF1\":706,\"BsmtFinType2\":\"Unf\",\"BsmtFinSF2\":0,\"BsmtUnfSF\":150,\"TotalBsmtSF\":856,\"Heating\":\"GasA\",\"HeatingQC\":\"Ex\",\"CentralAir\":\"Y\",\"Electrical\":\"SBrkr\",\"1stFlrSF\":856,\"2ndFlrSF\":854,\"LowQualFinSF\":0,\"GrLivArea\":1710,\"BsmtFullBath\":1,\"BsmtHalfBath\":0,\"FullBath\":2,\"HalfBath\":1,\"BedroomAbvGr\":3,\"KitchenAbvGr\":1,\"KitchenQual\":\"Gd\",\"TotRmsAbvGrd\":8,\"Functional\":\"Typ\",\"Fireplaces\":0,\"FireplaceQu\":null,\"GarageType\":\"Attchd\",\"GarageYrBlt\":2003,\"GarageFinish\":\"RFn\",\"GarageCars\":2,\"GarageArea\":548,\"GarageQual\":\"TA\",\"GarageCond\":\"TA\",\"PavedDrive\":\"Y\",\"WoodDeckSF\":0,\"OpenPorchSF\":61,\"EnclosedPorch\":0,\"3SsnPorch\":0,\"ScreenPorch\":0,\"PoolArea\":0,\"PoolQC\":null,\"Fence\":null,\"MiscFeature\":null,\"MiscVal\":0,\"MoSold\":2,\"YrSold\":2008,\"SaleType\":\"WD\",\"SaleCondition\":\"Normal\",\"SalePrice\":208500} ]"}'
-# docker rmi $(docker images -f "dangling=true" -q) -f
-
-# for build_docker
-# RUN R -e 'install.packages(pkgs = c(\"purrr\", \"dplyr\", \"data.table\", \"xgboost\"))'
-#
-# # Install datapiper
-# COPY datapiper_0.1.2.999.tar.gz /datapiper
-# RUN R -e 'install.packages(pkgs = \"/datapiper\", repos = NULL, type = \"source\")'
