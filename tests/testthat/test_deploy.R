@@ -264,7 +264,7 @@ describe("build_docker()", {
                 if(grepl(x = error_message, pattern = "is_docker_running() is not TRUE", fixed = T)) {
                     warning(error_message)
                 } else {
-                    expect_true(F, info = "Error building docker image")
+                    expect_true(F, info = "Error building docker image", label = as.character(e))
                 }
             })
 
@@ -325,11 +325,89 @@ describe("build_docker()", {
                 if(grepl(x = error_message, pattern = "is_docker_running() is not TRUE", fixed = T)) {
                     warning(error_message)
                 } else {
-                    expect_true(F, info = "Error building docker image")
+                    expect_true(F, info = "Error building docker image", label = as.character(e))
                 }
             })
 
             expect_true(file.remove(tar_file_name))
+        } else {
+            warning("Error: no internet connectivity, can't test build_docker")
+        }
+    })
+
+
+    it("can build a docker image around multiple previously packaged model image using plumber", {
+        connectivity <- F
+        tryCatch({
+            curl::nslookup("www.r-project.org")
+            connectivity <- T
+        }, error = function(e) return())
+
+        if(connectivity && is_docker_running()){
+            r <- generate_model_function()
+            train <- r$train
+            test <- r$test
+            full_pipe <- r$full_pipe
+            library_name_1 <- "test.package.1"
+            library_name_2 <- "test.package.2"
+            tar_file_name_1 <- paste0("tmp_", library_name_1, ".tar.gz")
+            tar_file_name_2 <- paste0("tmp_", library_name_2, ".tar.gz")
+            image_name <- "model.image.plumber"
+            process_name <- "datapiper.test"
+            libs <- c("datapiper")
+            type <- "plumber"
+
+            package_result_1 <- datapiper::build_model_package(trained_pipeline = full_pipe,
+                                                             package_name = library_name_1,
+                                                             libraries = libs,
+                                                             tar_file = tar_file_name_1,
+                                                             may_overwrite_tar_file = T, verbose = F)
+            expect_true(object = package_result_1, info = "Build function returned a success")
+            package_result_2 <- datapiper::build_model_package(trained_pipeline = full_pipe,
+                                                               package_name = library_name_2,
+                                                               libraries = libs,
+                                                               tar_file = tar_file_name_2,
+                                                               may_overwrite_tar_file = T, verbose = F)
+            expect_true(object = package_result_2, info = "Build function returned a success")
+
+            tryCatch({
+                # http://localhost:8000/test.package/predict_model?input=[{%22x%22:1,%22a%22:1,%22b%22:0,%22c%22:2,%22y%22:%22b%22,%22s%22:%22A%22,%22m%22:5,%22z%22:%22A%22,%22boolean%22:true,%22z2%22:%22A%22},{%22x%22:2,%22a%22:4,%22b%22:0.6931,%22c%22:8,%22y%22:%22c%22,%22s%22:%22A%22,%22m2%22:3,%22z%22:%22A%22,%22boolean%22:true,%22z2%22:%22A%22}]
+                result <- build_docker(model_library_file = c(tar_file_name_1, tar_file_name_2),
+                                       package_name = c(library_name_1, library_name_2), libraries = libs,
+                                       docker_image_type = type,
+                                       docker_image_name = image_name, may_overwrite_docker_image = T)
+
+                validate <- function(libname, tarname) {
+                    docker_prediction <- test_docker(data = test, image_name = image_name, process_name = process_name,
+                                                     docker_image_type = type, port = 8000,
+                                                     package_name = libname, batch_size = 1e3, ping_time = 5, verbose = T)
+                    docker_single_prediction <- test_docker(data = test[1,], image_name = image_name, process_name = process_name,
+                                                            docker_image_type = type, port = 8000,
+                                                            package_name = libname, batch_size = 1e3, ping_time = 5, verbose = T)
+
+                    expect_true(object = result, info = "Build function returned a success")
+
+                    evaluate_images(docker_prediction = docker_prediction, docker_single_prediction = docker_single_prediction,
+                                    test = test, image_name = image_name, process_name = process_name, library_name = libname,
+                                    tar_file_name = tarname, full_pipe = full_pipe)
+                }
+                validate(libname = library_name_1, tarname = tar_file_name_1)
+                validate(libname = library_name_2, tarname = tar_file_name_2)
+
+                delete_image(image_name = image_name)
+                remove.packages(pkgs = library_name_1)
+                remove.packages(pkgs = library_name_2)
+            }, error = function(e) {
+                error_message <- as.character(e)
+                if(grepl(x = error_message, pattern = "is_docker_running() is not TRUE", fixed = T)) {
+                    warning(error_message)
+                } else {
+                    expect_true(F, info = "Error building docker image", label = as.character(e))
+                }
+            })
+
+            expect_true(file.remove(tar_file_name_1))
+            expect_true(file.remove(tar_file_name_2))
         } else {
             warning("Error: no internet connectivity, can't test build_docker")
         }

@@ -1,7 +1,7 @@
 sed_inplace <- function(previous, new, file) {
     previous <- gsub(pattern = '"', replacement = '\\"', fixed = T, x = previous)
     new <- gsub(pattern = '"', replacement = '\\"', fixed = T, x = new)
-    return(paste0("sed -i \"\" \"s/", previous, "/", new, "/g\" ", file))
+    return(paste0("sed -i \"\" ", file, " \"s/", previous, "/", new, "/g\" "))
 }
 to_string_array <- function(s) paste0("c(", paste0('"', s, '"', collapse = ", "), ")")
 
@@ -243,19 +243,27 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
         daemon_name = "opencpu/base"
         pre_installation_command <- ""
 
-        preload_libraries <- sed_inplace(
-            previous = '"preload": \\["lattice"\\]',
-            new = paste0('"preload": \\["lattice", "', package_name, '"\\]'),
-            file = "'/etc/opencpu/server.conf'")
+        # preload_libraries <- paste("RUN", sed_inplace(
+        #     previous = '"preload": ["lattice"]',
+        #     new = paste0('"preload": ["lattice", "', package_name, '"]'),
+        #     file = "'/etc/opencpu/server.conf'"))
 
-        additional_build_commands <- c(additional_build_commands, preload_libraries)
+        # additional_build_commands <- c(additional_build_commands, preload_libraries)
     } else if(docker_image_type == "plumber") {
         daemon_name = "r-base"
+
+        prepare_plumber_endpoints <- paste0('pr <- ', package_name[1], '::create_plumber_endpoint()')
+        if(length(package_name) > 1) {
+            generate_other_endpoints <- paste0(
+                collapse = ";", 'pr <- ', package_name[-1], '::create_plumber_endpoint(pr)'
+            )
+            prepare_plumber_endpoints <- paste(sep = ";", prepare_plumber_endpoints, generate_other_endpoints)
+        }
 
         pre_installation_command <- "RUN apt-get update && apt-get -y install libcurl4-gnutls-dev libssl-dev --no-install-recommends && rm -rf /var/lib/apt/lists/*"
         run_plumber_command <- c(
             'EXPOSE 8000',
-            paste0('CMD ["R", "-e", "pr <- ', package_name, '::create_plumber_endpoint(); pr$run(host=\'0.0.0.0\', port=8000)"]')
+            paste0('CMD ["R", "-e", "', prepare_plumber_endpoints, '; pr$run(host=\'0.0.0.0\', port=8000)"]')
         )
 
         additional_build_commands <- c(additional_build_commands, run_plumber_command)
@@ -300,7 +308,7 @@ FROM ", daemon_name, "
 ", github_command, "
 
 # Install model package
-COPY ", model_library_file, " /datapiper_raw_packages/
+COPY ", paste(model_library_file, collapse = " "), " /datapiper_raw_packages/
 RUN R -e 'install.packages(pkgs = paste0(\"datapiper_raw_packages/\", list.files(\"datapiper_raw_packages\")), repos = NULL, type = \"source\")'
 
 # Preloaded library command
