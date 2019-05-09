@@ -195,8 +195,8 @@ create_plumber_endpoint <- function(current_plumber_env = NULL) {
 
 #' Build a docker image out of a model function
 #'
-#' @param model_library_file A model package created using \code{\link{build_model_package}}
-#' @param package_name The name of the package
+#' @param model_library_file A vector of paths to model packages created using \code{\link{build_model_package}}.
+#' @param package_name A vector containing the names of the packages to be installed. Should be the same length as \code{model_library_file}.
 #' @param libraries A list of library names required by the package. Defaults to all loaded non-base packages.
 #' Has support for github (\code{\link[devtools]{install_github}}) and CRAN packages.
 #' Any library with a \code{/} in it will be assumed to be a github package, others will be assumed to be CRAN packages.
@@ -207,10 +207,12 @@ create_plumber_endpoint <- function(current_plumber_env = NULL) {
 #' @param docker_image_name The name of the docker image
 #' @param additional_build_commands Additional build command that need to be executed. Will be executed after all other commands have run. Character vector.
 #' @param may_overwrite_docker_image Flag indicating if, when \code{model_library_file} exists, this function is allowed to override it.
+#' @param docker_image_type The type of docker image to be created. Currently `opencpu` and `plumber` are supported.
+#' Both will run by default on port 8004 of the created image.
 #'
-#' @details Note: by default ports 80 and 8004 are exposed on the image. This function does not change anything about that. Furthermore, this
+#' @details Note: by default ports 80 (OpenCPU only) and 8004 are exposed on the image. This function does not change anything about that. Furthermore, this
 #' function does not handle security for you. That is your responsibility.
-#' By default we use the opencpu/base image. See opencpu.org for details on configuration.
+#' By default we use the opencpu/base image for OpenCPU and r-base for plumber. See their respective websites for further details.
 #'
 #' @return A logical: TRUE for success and FALSE for failure
 #' @export
@@ -262,8 +264,8 @@ build_docker <- function(model_library_file, package_name = "deploymodel", libra
 
         pre_installation_command <- "RUN apt-get update && apt-get -y install libcurl4-gnutls-dev libssl-dev --no-install-recommends && rm -rf /var/lib/apt/lists/*"
         run_plumber_command <- c(
-            'EXPOSE 8000',
-            paste0('CMD ["R", "-e", "', prepare_plumber_endpoints, '; pr$run(host=\'0.0.0.0\', port=8000)"]')
+            'EXPOSE 8004',
+            paste0('CMD ["R", "-e", "', prepare_plumber_endpoints, '; pr$run(host=\'0.0.0.0\', port=8004)"]')
         )
 
         additional_build_commands <- c(additional_build_commands, run_plumber_command)
@@ -341,6 +343,8 @@ RUN R -e 'install.packages(pkgs = paste0(\"datapiper_raw_packages/\", list.files
 #' @param batch_size Allows you to set how many rows you want to send each time.
 #' @param ping_time How many seconds we'll try to ping the docker image before declaring the launch a failure.
 #' @param verbose Flag indicating if you want status updates printed.
+#' @param docker_image_type The type of docker image to be created. Currently `opencpu` and `plumber` are supported.
+#' Both will run by default on port 8004 of the created image.
 #'
 #' @return A dataframe of predictions, one row per row in \code{data}
 #' @export

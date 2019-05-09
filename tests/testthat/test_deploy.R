@@ -301,15 +301,15 @@ describe("build_docker()", {
             expect_true(object = package_result, info = "Build function returned a success")
 
             tryCatch({
-                # http://localhost:8000/test.package/predict_model?input=[{%22x%22:1,%22a%22:1,%22b%22:0,%22c%22:2,%22y%22:%22b%22,%22s%22:%22A%22,%22m%22:5,%22z%22:%22A%22,%22boolean%22:true,%22z2%22:%22A%22},{%22x%22:2,%22a%22:4,%22b%22:0.6931,%22c%22:8,%22y%22:%22c%22,%22s%22:%22A%22,%22m2%22:3,%22z%22:%22A%22,%22boolean%22:true,%22z2%22:%22A%22}]
+                # http://localhost:8004/test.package/predict_model?input=[{%22x%22:1,%22a%22:1,%22b%22:0,%22c%22:2,%22y%22:%22b%22,%22s%22:%22A%22,%22m%22:5,%22z%22:%22A%22,%22boolean%22:true,%22z2%22:%22A%22},{%22x%22:2,%22a%22:4,%22b%22:0.6931,%22c%22:8,%22y%22:%22c%22,%22s%22:%22A%22,%22m2%22:3,%22z%22:%22A%22,%22boolean%22:true,%22z2%22:%22A%22}]
                 result <- build_docker(model_library_file = tar_file_name, package_name = library_name, libraries = libs,
                                        docker_image_type = type,
                                        docker_image_name = image_name, may_overwrite_docker_image = T)
                 docker_prediction <- test_docker(data = test, image_name = image_name, process_name = process_name,
-                                                 docker_image_type = type, port = 8000,
+                                                 docker_image_type = type, port = 8004,
                                                  package_name = library_name, batch_size = 1e3, ping_time = 5, verbose = T)
                 docker_single_prediction <- test_docker(data = test[1,], image_name = image_name, process_name = process_name,
-                                                        docker_image_type = type, port = 8000,
+                                                        docker_image_type = type, port = 8004,
                                                         package_name = library_name, batch_size = 1e3, ping_time = 5, verbose = T)
 
                 expect_true(object = result, info = "Build function returned a success")
@@ -371,7 +371,7 @@ describe("build_docker()", {
             expect_true(object = package_result_2, info = "Build function returned a success")
 
             tryCatch({
-                # http://localhost:8000/test.package/predict_model?input=[{%22x%22:1,%22a%22:1,%22b%22:0,%22c%22:2,%22y%22:%22b%22,%22s%22:%22A%22,%22m%22:5,%22z%22:%22A%22,%22boolean%22:true,%22z2%22:%22A%22},{%22x%22:2,%22a%22:4,%22b%22:0.6931,%22c%22:8,%22y%22:%22c%22,%22s%22:%22A%22,%22m2%22:3,%22z%22:%22A%22,%22boolean%22:true,%22z2%22:%22A%22}]
+                # http://localhost:8004/test.package/predict_model?input=[{%22x%22:1,%22a%22:1,%22b%22:0,%22c%22:2,%22y%22:%22b%22,%22s%22:%22A%22,%22m%22:5,%22z%22:%22A%22,%22boolean%22:true,%22z2%22:%22A%22},{%22x%22:2,%22a%22:4,%22b%22:0.6931,%22c%22:8,%22y%22:%22c%22,%22s%22:%22A%22,%22m2%22:3,%22z%22:%22A%22,%22boolean%22:true,%22z2%22:%22A%22}]
                 result <- build_docker(model_library_file = c(tar_file_name_1, tar_file_name_2),
                                        package_name = c(library_name_1, library_name_2), libraries = libs,
                                        docker_image_type = type,
@@ -379,10 +379,10 @@ describe("build_docker()", {
 
                 validate <- function(libname, tarname) {
                     docker_prediction <- test_docker(data = test, image_name = image_name, process_name = process_name,
-                                                     docker_image_type = type, port = 8000,
+                                                     docker_image_type = type, port = 8004,
                                                      package_name = libname, batch_size = 1e3, ping_time = 5, verbose = T)
                     docker_single_prediction <- test_docker(data = test[1,], image_name = image_name, process_name = process_name,
-                                                            docker_image_type = type, port = 8000,
+                                                            docker_image_type = type, port = 8004,
                                                             package_name = libname, batch_size = 1e3, ping_time = 5, verbose = T)
 
                     expect_true(object = result, info = "Build function returned a success")

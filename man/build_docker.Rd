@@ -11,9 +11,9 @@ build_docker(model_library_file, package_name = "deploymodel",
   may_overwrite_docker_image = F)
 }
 \arguments{
-\item{model_library_file}{A model package created using \code{\link{build_model_package}}}
+\item{model_library_file}{A vector of paths to model packages created using \code{\link{build_model_package}}.}
 
-\item{package_name}{The name of the package}
+\item{package_name}{A vector containing the names of the packages to be installed. Should be the same length as \code{model_library_file}.}
 
 \item{libraries}{A list of library names required by the package. Defaults to all loaded non-base packages.
 Has support for github (\code{\link[devtools]{install_github}}) and CRAN packages.
@@ -24,6 +24,9 @@ for the pipe functions you use. See \code{\link[datapiper]{pipe}} for details if
 It is strongly recommended to use the same libraries here as used in \code{\link{build_model_package}}, since \code{\link{build_model_package}} will try loading those libraries.}
 
 \item{docker_image_name}{The name of the docker image}
+
+\item{docker_image_type}{The type of docker image to be created. Currently `opencpu` and `plumber` are supported.
+Both will run by default on port 8004 of the created image.}
 
 \item{additional_build_commands}{Additional build command that need to be executed. Will be executed after all other commands have run. Character vector.}
 
@@ -36,7 +39,7 @@ A logical: TRUE for success and FALSE for failure
 Build a docker image out of a model function
 }
 \details{
-Note: by default ports 80 and 8004 are exposed on the image. This function does not change anything about that. Furthermore, this
+Note: by default ports 80 (OpenCPU only) and 8004 are exposed on the image. This function does not change anything about that. Furthermore, this
 function does not handle security for you. That is your responsibility.
-By default we use the opencpu/base image. See opencpu.org for details on configuration.
+By default we use the opencpu/base image for OpenCPU and r-base for plumber. See their respective websites for further details.
 }

@@ -22,6 +22,9 @@ test_docker(data, package_name, image_name = package_name,
 
 \item{port}{The host port on which the docker image is accessible. Defaults to 8004.}
 
+\item{docker_image_type}{The type of docker image to be created. Currently `opencpu` and `plumber` are supported.
+Both will run by default on port 8004 of the created image.}
+
 \item{batch_size}{Allows you to set how many rows you want to send each time.}
 
 \item{ping_time}{How many seconds we'll try to ping the docker image before declaring the launch a failure.}
