@@ -119,16 +119,12 @@ testthat::describe("pipe_feature_transformer()", {
 
 
     it("can take data.table and data.frame as input and for predictions", {
-        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = T, type = "[0-1]")
-        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = F, type = "N(0,1)")
+        ctest_dt_df(pipe_func = pipe_feature_transformer, dt = data.table(dataset1), df = dataset1, train_by_dt = T, response = "x")
     })
 
     it("can run post-transformations on data.tables and data.frames", {
         retransform_columns <- c("m", "m2")
-        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = T, .check_post_pipe = T,
-                    type = "[0-1]", retransform_columns = retransform_columns)
-        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = F, .check_post_pipe = T,
-                    type = "N(0,1)", retransform_columns = retransform_columns)
+        ctest_dt_df(pipe_func = pipe_feature_transformer, dt = data.table(dataset1), df = dataset1, train_by_dt = T, response = "x", retransform_columns = retransform_columns)
     })
 })
 

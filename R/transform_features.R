@@ -16,7 +16,7 @@ pipe_feature_transformer <- function(train, response, transform_columns, missing
                                      transform_functions = list(sqrt, log, function(x)x^2), retransform_columns){
     stopifnot(
         is.data.frame(train),
-        is.character(response), response %in% colnames(train), is.numeric(unlist(train[response])),
+        is.character(response), response %in% colnames(train), is.numeric(unlist(select_cols(train, response))),
         is.list(transform_functions), !any(!purrr::map_lgl(transform_functions, is.function))
     )
     if(missing(transform_columns)) {
@@ -78,10 +78,10 @@ pipe_feature_transformer <- function(train, response, transform_columns, missing
 }
 
 feature_transform_col <- function(train, response, transform_functions, transform_column, missing_func = is.na){
-    vec_train <- unlist(train[, transform_column])
+    vec_train <- unlist(select_cols(train, transform_column))
     missing_vector <- missing_func(vec_train)
     vec_train %<>% .[!missing_vector]
-    response <- unlist(train[response])[!missing_vector]
+    response <- unlist(select_cols(train, response))[!missing_vector]
     #Include option to remove na's from vec_train
 
     new_features <- suppressWarnings(purrr::map(transform_functions, function(x)
@@ -97,7 +97,6 @@ feature_transform_col <- function(train, response, transform_functions, transfor
         original_correlation <- cor(response, vec_train, use = "na.or.complete")
         if(max(correlations) > original_correlation){
             best_function <- transform_functions[correlations == max(correlations)][[1]]
-            train[transform_column] %<>% best_function %>% unlist %>% as.vector
         }else best_function <- function(x) x
     }else best_function <- function(x) x
     res <- list("train" = train, "best_function" = best_function)
@@ -121,7 +120,8 @@ feature_transformer_predict <- function(data, transform_columns, transform_funct
 
     for(i in seq_along(transform_columns)){
         col <- transform_columns[i]
-        data[, col] %<>% unlist %>% {transform_functions[[i]](.)}
+        if(is.data.table(data)) data[, c(col) := transform_functions[[i]](get(col))]
+        else data[, col] %<>% unlist %>% {transform_functions[[i]](.)}
     }
 
     return(data)
