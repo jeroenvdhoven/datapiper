@@ -36,8 +36,7 @@ pipe_feature_transformer <- function(train, response, transform_columns, missing
     lower_thresholds <- numeric(0)
     upper_thresholds <- numeric(0)
     for(col in transform_columns){
-        res <- feature_transform_col(train, response, transform_functions, col, missing_func)
-        best_function <- res$best_function
+        best_function <- feature_transform_col(train, response, transform_functions, col, missing_func)
 
         if(retransform_requested && (col %in% retransform_columns)) {
             column_values <- select_cols(train, col)
@@ -58,12 +57,11 @@ pipe_feature_transformer <- function(train, response, transform_columns, missing
             upper_thresholds <- c(upper_thresholds, upper_threshold)
         }
 
-        train <- res$train
         func_list <- c(func_list, best_function)
     }
     names(func_list) <- transform_columns
     predict_pipe <- pipe(.function = feature_transformer_predict, transform_columns = transform_columns, transform_functions = func_list)
-    result <- list("train" = train, "pipe" = predict_pipe)
+    result <- list("train" = invoke(predict_pipe, train), "pipe" = predict_pipe)
 
     if(retransform_requested){
         retransform_functions <- func_list[retransform_columns]
@@ -99,8 +97,7 @@ feature_transform_col <- function(train, response, transform_functions, transfor
             best_function <- transform_functions[correlations == max(correlations)][[1]]
         }else best_function <- function(x) x
     }else best_function <- function(x) x
-    res <- list("train" = train, "best_function" = best_function)
-    return(res)
+    return(best_function)
 }
 
 #' Uses the results of \code{\link{pipe_feature_transformer}} on new datasets
