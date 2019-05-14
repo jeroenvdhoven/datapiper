@@ -197,6 +197,7 @@ feature_transformer_post_predict <- function(data, retransform_columns, lower_th
 #'
 #' @return A list containing the transformed train dataset and a trained pipe. If \code{retransform_columns} was set, the reverting pipe will also be provided.
 #' @importFrom purrr pmap
+#' @importFrom stats sd
 #' @export
 pipe_scaler <- function(train, exclude_columns = character(length = 0), type = "[0-1]", retransform_columns){
     stopifnot(
