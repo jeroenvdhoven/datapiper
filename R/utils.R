@@ -11,7 +11,8 @@
 #'                           `j&d` = 0, `spac ed` = 0)
 #' standard_column_names(data)
 standard_column_names <- function(data) {
-    colnames(data) <- gsub(pattern = ".", replacement = " ", x = colnames(data), fixed = T) %>%
+    stopifnot(is.data.frame(data))
+    new_colnames <- gsub(pattern = ".", replacement = " ", x = colnames(data), fixed = T) %>%
         trimws %>%
         gsub(pattern = " ", replacement = "_", x = ., fixed = T) %>%
         gsub(pattern = "[^a-zA-Z0-9_]", replacement = "_", x = .) %>%
@@ -19,6 +20,9 @@ standard_column_names <- function(data) {
         gsub(pattern = "^([0-9])", replacement = "n\\1", x = .) %>%
         gsub(pattern = "_+", replacement = "_", x = .) %>%
         tolower
+
+    if(is.data.table(data)) setnames(data, new_colnames)
+    else colnames(data) <- new_colnames
 
     return(data)
 }
