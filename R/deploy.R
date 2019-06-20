@@ -85,8 +85,12 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
         package_path <- paste0(tmpdir, "/", package_name)
         if(dir.exists(package_path)) unlink(package_path, recursive = T)
 
+        # Always add jsonlite and plumber since we need it for exporting / importing data
+        if(!"jsonlite" %in% libraries) libraries <- c(libraries, "jsonlite")
+        if(!"plumber" %in% libraries) libraries <- c(libraries, "plumber")
+
         usethis::create_package(path = package_path, rstudio = F, fields = list(
-            "Imports" = libraries,
+            # "Imports" = paste0(libraries, collapse = " "),
             "Version" = "1.0.0",
             "Date" = Sys.Date(),
             "Description" = "Data pipeline deployed automatically with datapiper"
@@ -94,9 +98,6 @@ build_model_package <- function(trained_pipeline, package_name = "deploymodel", 
         dir.create(file.path(package_path, "data"), showWarnings = FALSE)
         setwd(package_path)
 
-        # Always add jsonlite since we need it for exporting / importing data
-        if(!"jsonlite" %in% libraries) libraries <- c(libraries, "jsonlite")
-        if(!"plumber" %in% libraries) libraries <- c(libraries, "plumber")
 
         save(trained_pipeline, file = "data/model.rda")
         save(libraries, file = "data/libraries.rda")
@@ -129,7 +130,7 @@ utils::data(model, package = pkg, envir = parent.env(environment()))
 #\'
 #\' @return Predictions from the pipeline
 #\' @export
-#\' @import ', paste0(libraries, collapse = " "), '
+', paste0("#\' @import ", libraries, collapse = "\n"), '
 predict_model <- function(input){
     for(lib in libraries) {
         library(lib, character.only = T)
