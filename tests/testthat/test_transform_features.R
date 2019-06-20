@@ -367,9 +367,10 @@ testthat::describe("pipe_one_hot_encode()", {
                     summarize(stat = f(x)) %>%
                     .$stat
 
-                expect_false(any(unlist(select_(r_trimmed$train, colname)) < quantile(x = stat_values, probs = threshold)),
+                target_column <- unlist(select_(r_trimmed$train, colname))
+                expect_equivalent(min(target_column), quantile(x = stat_values, probs = threshold),
                              label = paste0("Column `", colname, "` did not trim for function `", names(f_list)[i], "` and threshold `", threshold, "`"))
-                expect_false(any(unlist(select_(r_trimmed$train, colname)) > quantile(x = stat_values, probs = 1 - threshold)),
+                expect_equivalent(max(target_column), quantile(x = stat_values, probs = 1 - threshold),
                              label = paste0("Column `", colname, "` did not trim for function `", names(f_list)[i], "` and threshold `", threshold, "`"))
             }
         }

@@ -136,7 +136,7 @@ describe("pipe_create_stats", {
                     summarize_(value = paste0(stat_col, "[1]")) %>%
                     arrange_(col)
 
-                expect_identical(stats, generated_stats, info = paste("Is column", col, "generated correctly using function", names(f_list)[i]))
+                expect_equivalent(stats$value, generated_stats$value, info = paste("Is column", col, "generated correctly using function", names(f_list)[i]))
             }
         }
     })
@@ -212,9 +212,10 @@ describe("pipe_create_stats", {
                     summarize(stat = f(x)) %>%
                     .$stat
 
-                expect_false(any(unlist(select_(r_trimmed$train, colname)) < quantile(x = stat_values, probs = threshold)),
+                target_column <- unlist(select_(r_trimmed$train, colname))
+                expect_equivalent(min(target_column, na.rm = T), quantile(x = stat_values, probs = threshold),
                              label = paste0("Column `", colname, "` did not trim for function `", names(f_list)[i], "` and threshold `", threshold, "`"))
-                expect_false(any(unlist(select_(r_trimmed$train, colname)) > quantile(x = stat_values, probs = 1 - threshold)),
+                expect_equivalent(max(target_column, na.rm = T), quantile(x = stat_values, probs = 1 - threshold),
                              label = paste0("Column `", colname, "` did not trim for function `", names(f_list)[i], "` and threshold `", threshold, "`"))
             }
         }
