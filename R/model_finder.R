@@ -99,6 +99,7 @@ find_model <- function(train, test, response,
             model_name <- model_names[model_index]
             f_train <- model[[".train"]]
             f_predict <- model[[".predict"]]
+            training_wrapper <- function(...) f_train(data = piped_train, ...)
 
             parameter_grid <- expand.grid(stringsAsFactors = F, model[!names(model) %in% c(".train", ".predict")])
             if(parameter_sample_rate < 1) {
@@ -118,17 +119,16 @@ find_model <- function(train, test, response,
                 }
                 set.seed(seed)
 
-                args <- list(data = piped_train)
-                args <- c(args, parameter_grid[r,])
+                args <- as.list(parameter_grid[r,])
 
-                requested_arguments <- formalArgs(f_train)
+                requested_arguments <- formalArgs(f_train) %>% .[. != "train"]
                 if(any(!names(args) %in% requested_arguments) && !"..." %in% requested_arguments) {
                     faulty_args <- names(args)[!names(args) %in% requested_arguments]
                     text_args <- paste0(collapse = ", ", faulty_args)
                     stop(paste0("Warning in preprocess pipeline ", preprocess_index, ", model ", model_index , ": arguments `", text_args, "` were not arguments of the provided .train function"))
                 }
 
-                model <- do.call(what = f_train, args = args)
+                model <- do.call(what = training_wrapper, args = args)
 
                 # Do train and test predictions and calculate metrics
                 train_preds <- f_predict(model, piped_train)
