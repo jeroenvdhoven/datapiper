@@ -83,19 +83,23 @@ train_pipeline <- function(..., response){
         for (i in seq_along(pipes)) {
             pipe_ <- pipes[[i]]
             f <- pipe_$.segment
+            # The training wrapper is added so we don't have to add `train` to the arg list, drastically reducing the failure time
+            # in case the pipeline training failes.
+            training_wrapper <- function(...) f(train = train, ...)
+
             other_args <- pipe_[names(pipe_) != ".segment"]
-            other_args$train <- train
 
             # Set response if needed
             if(has_response && !"response" %in% names(other_args) && "response" %in% formalArgs(def = f))
                 other_args <- c(other_args, list(response = response))
 
             # Set the other arguments to the defaults for the function f, remove the ... argument.
-            defaults <- formals(f) %>% .[!names(.) %in% names(other_args)] %>% .[names(.) != "..."]
+            defaults <- formals(f) %>% .[!names(.) %in% names(other_args)] %>% .[!names(.) %in% c("...", "train")]
             other_args <- c(other_args, defaults)
 
             if(verbose) cat("Training", pipe_names[i], "...\n")
-            pipe_res <- do.call(what = f, args = other_args)
+            pipe_res <- do.call(what = training_wrapper, args = other_args)
+
 
             # Check if pipe_res contains train arguments
             if(!is.list(pipe_res) || is.data.frame(pipe_res) || any(!mandatory_variables %in% names(pipe_res))) {
@@ -444,8 +448,8 @@ invoke <- function(x, data, ...) UseMethod("invoke", x)
 #' @export
 invoke.pipe <- function(x, data, ...) {
     arg_list <- x$args
-    arg_list$data <- data
-    return(do.call(what = x$predict_function, args = arg_list))
+    invoke_wrapper <- function(...) x$predict_function(data = data, ...)
+    return(do.call(what = invoke_wrapper, args = arg_list))
 }
 
 #' Applies a pipeline to new data

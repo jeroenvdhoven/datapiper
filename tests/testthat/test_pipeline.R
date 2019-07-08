@@ -503,6 +503,22 @@ describe("train_pipeline()", {
 
         expect_equal(names(pipe_result$post_pipe), c("post_transformer", "post_scaler"))
     })
+
+    it("does not take a long time to crash in case anything goes wrong", {
+        N <- 2e5
+        time_threshold_s <- .3
+
+        new_dataset <- dataset1[sample.int(n = nrow(dataset1), size = N, replace = T), ]
+        new_dataset$m <- NULL
+
+        failing_pipeline <- datapiper::train_pipeline(
+            segment(.segment = pipe_impute, exclude_columns = "x", columns = c("m", "m2"), type = "mean"),
+            response = "x"
+        )
+
+        z <- system.time(expect_error(failing_pipeline(new_dataset), regexp = "object 'm' not found"))
+        expect_lt(object = z['elapsed'], expected = time_threshold_s, label = "Pipeline failure takes too long")
+    })
 })
 
 describe("flatten_pipeline()", {
