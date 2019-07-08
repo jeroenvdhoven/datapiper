@@ -121,7 +121,7 @@ find_model <- function(train, test, response,
 
                 args <- as.list(parameter_grid[r,])
 
-                requested_arguments <- formalArgs(f_train) %>% .[. != "train"]
+                requested_arguments <- formalArgs(f_train)
                 if(any(!names(args) %in% requested_arguments) && !"..." %in% requested_arguments) {
                     faulty_args <- names(args)[!names(args) %in% requested_arguments]
                     text_args <- paste0(collapse = ", ", faulty_args)
