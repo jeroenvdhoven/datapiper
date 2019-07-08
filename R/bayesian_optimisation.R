@@ -236,8 +236,7 @@ test_model_configuration <- function(train, test, f_train, f_predict, metrics, r
                                      save_model = F) {
     if(seed != 0) set.seed(seed)
 
-    args <- list(data = train)
-    args <- c(args, parameters)
+    args <- as.list(parameters)
 
     requested_arguments <- formalArgs(f_train)
     if(any(!names(args) %in% requested_arguments) && !"..." %in% requested_arguments) {
@@ -246,7 +245,8 @@ test_model_configuration <- function(train, test, f_train, f_predict, metrics, r
         stop(paste0("Warning: arguments `", text_args, "` were not arguments of the provided .train function"))
     }
 
-    model <- do.call(what = f_train, args = args)
+    training_wrapper <- function(...) f_train(data = train, ...)
+    model <- do.call(what = training_wrapper, args = args)
 
     # Do train and test predictions and calculate metrics
     train_preds <- f_predict(model, train)
