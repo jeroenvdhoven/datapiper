@@ -13,7 +13,9 @@ pipe_remove_high_correlation_features <- function(train, exclude_columns = chara
         !any(!exclude_columns %in% colnames(train)),
         is.numeric(threshold), threshold <= 1, threshold > 0
     )
-    numeric_df <- train[, !purrr::map_lgl(train, is.character)]
+    numeric_columns <- colnames(train)[purrr::map_lgl(train, is.numeric)]
+    if(is.data.table(train)) numeric_df <- train[, .SD, .SDcols = numeric_columns]
+    else numeric_df <- train[, numeric_columns]
 
     node_df <- high_correlation_features(numeric_df, exclude_columns, threshold) %>% igraph::graph.data.frame(directed = F)
 

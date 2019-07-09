@@ -33,8 +33,19 @@ describe("pipe_remove_high_correlation_features", {
         d$a[5] <- NA
 
         r_sub <- datapiper::pipe_remove_high_correlation_features(train = d)
-        expect_gte(sum(c("a", "b", "x") %in% colnames(r_sub$train)), 1)
-        expect_lt(sum(c("a", "b", "x") %in% colnames(r_sub$train)), 3)
+        n_present_columns <- sum(c("a", "b", "x") %in% colnames(r_sub$train))
+        expect_gte(n_present_columns, 1)
+        expect_lt(n_present_columns, 3)
+    })
+
+    it("handles missing values in data.tables", {
+        d <- as.data.table(dataset1)
+        d[5, a := NA]
+
+        r_sub <- datapiper::pipe_remove_high_correlation_features(train = d)
+        n_present_columns <- sum(c("a", "b", "x") %in% colnames(r_sub$train))
+        expect_gte(n_present_columns, 1)
+        expect_lt(n_present_columns, 3)
     })
 
     it("can set different values for the correlation threshold", {
