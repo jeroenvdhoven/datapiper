@@ -118,12 +118,13 @@ testthat::describe("pipe_feature_transformer()", {
 
 
     it("can take data.table and data.frame as input and for predictions", {
-        ctest_dt_df(pipe_func = pipe_feature_transformer, dt = data.table(dataset1), df = dataset1, train_by_dt = T, response = "x")
+        ctest_dt_df_compatibility(pipe_func = pipe_feature_transformer, df = dataset1, response = "x")
     })
 
     it("can run post-transformations on data.tables and data.frames", {
         retransform_columns <- c("m", "m2")
-        ctest_dt_df(pipe_func = pipe_feature_transformer, dt = data.table(dataset1), df = dataset1, train_by_dt = T, response = "x", retransform_columns = retransform_columns)
+        ctest_dt_df_compatibility(pipe_func = pipe_feature_transformer, df = dataset1, response = "x",
+                                  retransform_columns = retransform_columns, .check_post_pipe = T)
     })
 })
 
@@ -209,16 +210,13 @@ testthat::describe("pipe_scaler()", {
     })
 
     it("can take data.table and data.frame as input and for predictions", {
-        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = T, type = "[0-1]")
-        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = F, type = "N(0,1)")
+        ctest_dt_df_compatibility(pipe_func = pipe_scaler, df = dataset1, type = "[0-1]")
     })
 
     it("can run post-transformations on data.tables and data.frames", {
         retransform_columns <- c("a", "b")
-        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = T, .check_post_pipe = T,
+        ctest_dt_df_compatibility(pipe_func = pipe_scaler, df = dataset1, .check_post_pipe = T,
                     type = "[0-1]", retransform_columns = retransform_columns)
-        ctest_dt_df(pipe_func = pipe_scaler, dt = data.table(dataset1), df = dataset1, train_by_dt = F, .check_post_pipe = T,
-                    type = "N(0,1)", retransform_columns = retransform_columns)
     })
 })
 
@@ -335,17 +333,11 @@ testthat::describe("pipe_one_hot_encode()", {
     it("can use either a data.table or data.frame as input and use the result on either", {
         # Mean
         stats_functions <- list("mean" = mean)
-        ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
-                    use_pca = F, stat_functions = stats_functions, response = "x")
-
-        ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
+        ctest_dt_df_compatibility(pipe_func = pipe_one_hot_encode, df = dataset1,
                     use_pca = F, stat_functions = stats_functions, response = "x")
 
         # Base
-        ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
-                    use_pca = F)
-
-        ctest_dt_df(pipe_func = pipe_one_hot_encode, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
+        ctest_dt_df_compatibility(pipe_func = pipe_one_hot_encode, df = dataset1,
                     use_pca = F)
     })
 
@@ -475,9 +467,7 @@ testthat::describe("pipe_categorical_filter()", {
     })
 
     it("can take data.table and data.frame as input and for predictions", {
-        ctest_dt_df(pipe_func = pipe_categorical_filter, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
-                    response = "x", threshold_function = function(x) 10 )
-        ctest_dt_df(pipe_func = pipe_categorical_filter, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
+        ctest_dt_df_compatibility(pipe_func = pipe_categorical_filter, df = dataset1,
                     response = "x", threshold_function = function(x) 10 )
     })
 
@@ -579,10 +569,7 @@ describe("pipe_pca()", {
     it("can take data.table and data.frame as input and for predictions", {
         target_set <- dataset1[!apply(dataset1, MARGIN = 1, anyNA), ]
 
-        ctest_dt_df(pipe_func = pipe_pca, dt = data.table(target_set), df = target_set, train_by_dt = T, keep_old_columns = T)
-        ctest_dt_df(pipe_func = pipe_pca, dt = data.table(target_set), df = target_set, train_by_dt = F, keep_old_columns = T)
-
-        ctest_dt_df(pipe_func = pipe_pca, dt = data.table(target_set), df = target_set, train_by_dt = T, keep_old_columns = F)
-        ctest_dt_df(pipe_func = pipe_pca, dt = data.table(target_set), df = target_set, train_by_dt = F, keep_old_columns = F)
+        ctest_dt_df_compatibility(pipe_func = pipe_pca, df = target_set, keep_old_columns = T)
+        ctest_dt_df_compatibility(pipe_func = pipe_pca, df = target_set, keep_old_columns = F)
     })
 })

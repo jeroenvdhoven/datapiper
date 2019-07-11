@@ -357,8 +357,7 @@ describe("pipe_check", {
     })
 
     it("can use either a data.table or data.frame as input and use the result on either", {
-        ctest_dt_df(pipe_func = pipe_check, dt = data.table(dataset1), df = dataset1, train_by_dt = T, response = "x")
-        ctest_dt_df(pipe_func = pipe_check, dt = data.table(dataset1), df = dataset1, train_by_dt = F, response = "x")
+        ctest_dt_df_compatibility(pipe_func = pipe_check, df = dataset1, response = "x")
     })
 })
 

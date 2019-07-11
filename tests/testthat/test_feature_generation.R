@@ -42,11 +42,9 @@ describe("pipe_NA_indicators", {
     })
 
     it("can use either a data.table or data.frame as input and use the result on either", {
-        ctest_dt_df(pipe_func = pipe_NA_indicators, dt = data.table(dataset1), df = dataset1, train_by_dt = F)
-        ctest_dt_df(pipe_func = pipe_NA_indicators, dt = data.table(dataset1), df = dataset1, train_by_dt = T)
+        ctest_dt_df_compatibility(pipe_func = pipe_NA_indicators, df = dataset1)
 
-        ctest_dt_df(pipe_func = pipe_NA_indicators, dt = data.table(dataset1), df = dataset1, train_by_dt = F, force_column = T)
-        ctest_dt_df(pipe_func = pipe_NA_indicators, dt = data.table(dataset1), df = dataset1, train_by_dt = T, force_column = T)
+        ctest_dt_df_compatibility(pipe_func = pipe_NA_indicators, df = dataset1, force_column = T)
     })
 
     it("can check some common inputs", {
@@ -57,6 +55,7 @@ describe("pipe_NA_indicators", {
 
 describe("pipe_create_stats", {
     f_list <- list("mean" = mean, "sd" = sd)
+
     r <- ctest_for_no_errors(
         datapiper::pipe_create_stats(
             train = dataset1, response = "x", interaction_level = 1,
@@ -188,10 +187,7 @@ describe("pipe_create_stats", {
     })
 
     it("can use either a data.table or data.frame as input and use the result on either", {
-        ctest_dt_df(pipe_func = pipe_create_stats, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
-                    response = "x", functions = f_list)
-        ctest_dt_df(pipe_func = pipe_create_stats, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
-                    response = "x", functions = f_list)
+        ctest_dt_df_compatibility(pipe_func = pipe_create_stats, df = dataset1, response = "x", functions = f_list)
     })
 
     it("can trim generated statistics", {
@@ -263,8 +259,7 @@ describe("pipe_remove_single_value_columns", {
     })
 
     it("can use either a data.table or data.frame as input and use the result on either", {
-        ctest_dt_df(pipe_func = pipe_remove_single_value_columns, dt = data.table(dataset1), df = dataset1, train_by_dt = T)
-        ctest_dt_df(pipe_func = pipe_remove_single_value_columns, dt = data.table(dataset1), df = dataset1, train_by_dt = F)
+        ctest_dt_df_compatibility(pipe_func = pipe_remove_single_value_columns, df = dataset1)
     })
 })
 
@@ -329,9 +324,6 @@ describe("pipe_feature_interactions", {
     })
 
     it("can use either a data.table or data.frame as input and use the result on either", {
-        ctest_dt_df(pipe_func = pipe_feature_interactions, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
-                    max_interactions = 2, response = "x")
-        ctest_dt_df(pipe_func = pipe_feature_interactions, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
-                    max_interactions = 2, response = "x")
+        ctest_dt_df_compatibility(pipe_func = pipe_feature_interactions, df = dataset1, max_interactions = 2, response = "x")
     })
 })

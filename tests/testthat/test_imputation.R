@@ -64,16 +64,13 @@ describe("pipe_impute", {
         target_df <- select(dataset1, -y)
 
         # lm
-        ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = T, type = "lm")
-        ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = F, type = "lm")
+        ctest_dt_df_compatibility(pipe_func = pipe_impute, df = target_df, type = "lm")
 
         # mean
-        ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = T, type = "mean")
-        ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = F, type = "mean")
+        ctest_dt_df_compatibility(pipe_func = pipe_impute, df = target_df, type = "mean")
 
         # xgboost
-        ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = T, type = "xgboost")
-        ctest_dt_df(pipe_func = pipe_impute, dt = data.table(target_df), df = target_df, train_by_dt = F, type = "xgboost")
+        ctest_dt_df_compatibility(pipe_func = pipe_impute, df = target_df, type = "xgboost")
     })
 
     it("can check some common inputs", {

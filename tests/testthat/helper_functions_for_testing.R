@@ -35,7 +35,7 @@ dataset1 <- dplyr::data_frame(
 #     })
 #
 #     it("handles missing values", {})
-#     it("can take data.table and data.frame as input and for predictions", {}) # Make sure this test covers all flows in your function. ctest_dt_df can help for pipes
+#     it("can take data.table and data.frame as input and for predictions", {}) # Make sure this test covers all flows in your function. ctest_dt_df_compatibility can help for pipes
 # })
 
 ctest_pipe_has_correct_fields <- function(pipe_res) {
@@ -78,6 +78,13 @@ util_MAE <- function(labels, predicted) {
     mean(abs(labels - predicted))
 }
 
+ctest_dt_df_compatibility <- function(pipe_func, df, .check_post_pipe = F, ...) {
+    dt = as.data.table(df)
+    df_trained <- ctest_dt_df(pipe_func = pipe_func, dt = copy(dt), df = df, train_by_dt = F, .check_post_pipe = F, ...)
+    dt_trained <- ctest_dt_df(pipe_func = pipe_func, dt = copy(dt), df = df, train_by_dt = T, .check_post_pipe = F, ...)
+
+    expect_equal(df_trained, as.data.frame(dt_trained))
+}
 
 ctest_dt_df <- function(pipe_func, dt, df, train_by_dt = T, .check_post_pipe = F, ...) {
     dt_copy <- data.table::copy(dt)
@@ -112,6 +119,8 @@ ctest_dt_df <- function(pipe_func, dt, df, train_by_dt = T, .check_post_pipe = F
 
         expect_equal(retransformed_df, as_data_frame(retransformed_dt))
     }
+
+    return(r$train)
 }
 
 ctest_if_pipes_check_common_inputs <- function(pipe_func, data, ...) {

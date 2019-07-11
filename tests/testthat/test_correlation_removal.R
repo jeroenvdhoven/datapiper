@@ -73,12 +73,8 @@ describe("pipe_remove_high_correlation_features", {
     })
 
     it("can use either a data.table or data.frame as input and use the result on either", {
-        # Mean
-        ctest_dt_df(pipe_func = pipe_remove_high_correlation_features, dt = data.table(dataset1), df = dataset1,
-                    train_by_dt = T, threshold = .8)
-
-        ctest_dt_df(pipe_func = pipe_remove_high_correlation_features, dt = data.table(dataset1), df = dataset1,
-                    train_by_dt = F, threshold = .8)
+        ctest_dt_df_compatibility(pipe_func = pipe_remove_high_correlation_features, df = dataset1,
+                                  threshold = .8)
     })
 
     it("can check some common inputs", {

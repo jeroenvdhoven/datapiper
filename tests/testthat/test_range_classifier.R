@@ -115,9 +115,7 @@ describe("pipe_range_classifier", {
         n_quantile <- 5
         suppressWarnings(
             for(model in c("glm", "xgboost")) {
-                ctest_dt_df(pipe_func = pipe_range_classifier, dt = data.table(dataset1), df = dataset1, train_by_dt = T,
-                            response = "x", quantiles = n_quantile, exclude_columns = c("z", "z2", "y", "s"), model = model)
-                ctest_dt_df(pipe_func = pipe_range_classifier, dt = data.table(dataset1), df = dataset1, train_by_dt = F,
+                ctest_dt_df_compatibility(pipe_func = pipe_range_classifier, df = dataset1,
                             response = "x", quantiles = n_quantile, exclude_columns = c("z", "z2", "y", "s"), model = model)
             }
         )
